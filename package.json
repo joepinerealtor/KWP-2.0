@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "node node_modules/next/dist/bin/next dev",
     "build": "node node_modules/next/dist/bin/next build",
-    "start": "node node_modules/next/dist/bin/next start"
+    "start": "node node_modules/next/dist/bin/next start",
+    "content:validate": "node scripts/validate-portal-content.js",
+    "content:sync": "node scripts/sync-portal-content.js"
   },
   "dependencies": {
     "next": "^16.0.0",
