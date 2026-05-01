@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { createCourseGridHtml } from "@/components/CourseCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
+import portalContent from "@/data/portal-content.json";
 import { portalPages } from "@/lib/portal-config";
 
 function readLegacyHtml(source) {
@@ -62,9 +64,24 @@ function getLegacyPortalFragments(source) {
   const mainOpenEnd = html.indexOf(">", mainOpen) + 1;
 
   return {
-    mainHtml: html.slice(mainOpenEnd, mainClose).trim(),
+    mainHtml: hydrateLegacyMainHtml(source, html.slice(mainOpenEnd, mainClose).trim()),
     overlaysHtml: html.slice(shellCloseEnd).trim()
   };
+}
+
+function hydrateLegacyMainHtml(source, mainHtml) {
+  if (source !== "index.html") {
+    return mainHtml;
+  }
+
+  return replaceLegacyCourseGrid(mainHtml);
+}
+
+function replaceLegacyCourseGrid(mainHtml) {
+  const courseGridHtml = createCourseGridHtml(portalContent.courses);
+  const legacyCourseGridPattern = /(<section class="panel" id="training">[\s\S]*?)<div class="course-grid">\s*(?:<a class="course-card"[\s\S]*?<\/a>\s*)+<\/div>/;
+
+  return mainHtml.replace(legacyCourseGridPattern, `$1${courseGridHtml}`);
 }
 
 export function LegacyPortalPage({ pageKey, source }) {

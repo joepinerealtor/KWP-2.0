@@ -2,6 +2,53 @@
   "settings": {
     "viewerPasscode": "0715"
   },
+  "courses": [
+    {
+      "id": "new-agent-launch",
+      "tag": "Onboarding",
+      "title": "New Agent Launch",
+      "summary": "First steps, setup, and structure for a new start.",
+      "href": "https://agent.kwleadingedge.com/courses/new-agent-first-30-days/",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "working-with-buyers",
+      "tag": "Sales",
+      "title": "Working With Buyers",
+      "summary": "Practical buyer-side training agents can jump into quickly.",
+      "href": "https://agent.kwleadingedge.com/courses/working-with-buyers/",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "practice-deal-number-1",
+      "tag": "Practice",
+      "title": "Practice Deal Number 1",
+      "summary": "Hands-on guided practice for early deals.",
+      "href": "https://agent.kwleadingedge.com/courses/practice-deal-number-1/",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "open-house-certification",
+      "tag": "Certification",
+      "title": "Open House Certification",
+      "summary": "Milestone training that should stay easy to find.",
+      "href": "https://agent.kwleadingedge.com/courses/open-house-certification/",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "lead-conversion",
+      "tag": "Growth",
+      "title": "Lead Conversion",
+      "summary": "Business-building education as part of the portal routine.",
+      "href": "https://agent.kwleadingedge.com/courses/lead-conversion/",
+      "external": true,
+      "active": true
+    }
+  ],
   "leadership": [
     {
       "id": "lou-barrows",
