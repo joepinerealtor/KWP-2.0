@@ -368,7 +368,7 @@ function renderPortalContent() {
   }
 
   Object.entries(vendorGrids).forEach(([section, grid]) => {
-    if (grid) {
+    if (grid && grid.dataset.reactRendered !== "true") {
       grid.innerHTML = getActiveVendors(section).map(createVendorCard).join("");
     }
   });

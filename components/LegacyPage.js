@@ -3,6 +3,7 @@ import path from "node:path";
 import { createCourseGridHtml } from "@/components/CourseCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
+import { createVendorGridHtml } from "@/components/VendorCards";
 import portalContent from "@/data/portal-content.json";
 import { portalPages } from "@/lib/portal-config";
 
@@ -74,7 +75,7 @@ function hydrateLegacyMainHtml(source, mainHtml) {
     return mainHtml;
   }
 
-  return replaceLegacyCourseGrid(mainHtml);
+  return replaceLegacyCourseGrid(replaceLegacyVendorGrids(mainHtml));
 }
 
 function replaceLegacyCourseGrid(mainHtml) {
@@ -82,6 +83,18 @@ function replaceLegacyCourseGrid(mainHtml) {
   const legacyCourseGridPattern = /(<section class="panel" id="training">[\s\S]*?)<div class="course-grid">\s*(?:<a class="course-card"[\s\S]*?<\/a>\s*)+<\/div>/;
 
   return mainHtml.replace(legacyCourseGridPattern, `$1${courseGridHtml}`);
+}
+
+function replaceLegacyVendorGrids(mainHtml) {
+  return mainHtml
+    .replace(
+      '<div class="vendor-grid vendor-grid-featured" data-vendor-grid="core" aria-live="polite"></div>',
+      createVendorGridHtml(portalContent.vendors, "core", { featured: true })
+    )
+    .replace(
+      '<div class="vendor-grid" data-vendor-grid="services" aria-live="polite"></div>',
+      createVendorGridHtml(portalContent.vendors, "services")
+    );
 }
 
 export function LegacyPortalPage({ pageKey, source }) {
