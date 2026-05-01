@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { createAssetGridHtml, createMarketingToolGridHtml, createSourceFileGridHtml } from "@/components/AssetCards";
 import { createCourseGridHtml } from "@/components/CourseCards";
 import { createAlcPosterGridHtml, createLeadershipGridHtml } from "@/components/LeadershipCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
@@ -72,11 +73,15 @@ function getLegacyPortalFragments(source) {
 }
 
 function hydrateLegacyMainHtml(source, mainHtml) {
-  if (source !== "index.html") {
-    return mainHtml;
+  if (source === "index.html") {
+    return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(mainHtml)));
   }
 
-  return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(mainHtml)));
+  if (source === "brand-assets.html") {
+    return replaceLegacyBrandAssetGrids(mainHtml);
+  }
+
+  return mainHtml;
 }
 
 function replaceLegacyCourseGrid(mainHtml) {
@@ -107,6 +112,22 @@ function replaceLegacyLeadershipGrids(mainHtml) {
     .replace(
       '<div class="alc-poster-grid" data-alc-grid aria-label="2026 ALC poster set" aria-live="polite"></div>',
       createAlcPosterGridHtml(portalContent.leadership)
+    );
+}
+
+function replaceLegacyBrandAssetGrids(mainHtml) {
+  return mainHtml
+    .replace(
+      /<div class="marketing-tool-grid">\s*(?:<article class="asset-source-card marketing-tool-card">[\s\S]*?<\/article>\s*)+<\/div>/,
+      createMarketingToolGridHtml(portalContent.brandAssets.marketingTools)
+    )
+    .replace(
+      /<div class="asset-grid">\s*(?:<article class="asset-card">[\s\S]*?<\/article>\s*)+<\/div>/,
+      createAssetGridHtml(portalContent.brandAssets.digitalLogos)
+    )
+    .replace(
+      /<div class="asset-source-grid">\s*(?:<article class="asset-source-card">[\s\S]*?<\/article>\s*)+<\/div>/,
+      createSourceFileGridHtml(portalContent.brandAssets.sourceFiles)
     );
 }
 
