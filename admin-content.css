@@ -1,0 +1,268 @@
+:root {
+  --admin-bg: #f4f4f2;
+  --admin-panel: #ffffff;
+  --admin-ink: #171717;
+  --admin-muted: #62615d;
+  --admin-line: #d9d7d2;
+  --admin-accent: #b40101;
+  --admin-accent-dark: #8f0101;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+.admin-body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--admin-ink);
+  background: var(--admin-bg);
+}
+
+.admin-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.admin-header h1,
+.admin-panel h2,
+.admin-reader h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.admin-header h1 {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.admin-panel h2,
+.admin-reader h2 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.admin-kicker {
+  margin: 0 0 6px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-panel {
+  background: var(--admin-panel);
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+}
+
+.admin-login {
+  display: grid;
+  gap: 22px;
+  max-width: 520px;
+  padding: 24px;
+}
+
+.admin-login-form {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-login-form label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-login-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--admin-ink);
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.admin-button {
+  min-height: 42px;
+  padding: 0 16px;
+  color: #ffffff;
+  background: var(--admin-accent);
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-button:hover {
+  background: var(--admin-accent-dark);
+}
+
+.admin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-button--secondary {
+  color: var(--admin-ink);
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+}
+
+.admin-button--secondary:hover {
+  background: #efeeeb;
+}
+
+.admin-error {
+  margin: 0;
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+.admin-workspace {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-sidebar {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-source {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  background: var(--admin-panel);
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+}
+
+.admin-source span {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-source strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.admin-section-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-section-nav button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--admin-ink);
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-section-nav button:hover,
+.admin-section-nav button.is-active {
+  border-color: var(--admin-accent);
+}
+
+.admin-section-nav button.is-active {
+  box-shadow: inset 3px 0 0 var(--admin-accent);
+}
+
+.admin-section-nav span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-section-nav strong {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-reader {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-reader-header span {
+  padding: 4px 8px;
+  color: var(--admin-muted);
+  background: #f2f1ee;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-json {
+  max-height: 68vh;
+  margin: 0;
+  padding: 20px;
+  overflow: auto;
+  background: #111111;
+  color: #f6f6f6;
+  font: 13px/1.55 Consolas, "Courier New", monospace;
+  white-space: pre;
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    width: min(100% - 20px, 1180px);
+    padding: 20px 0;
+  }
+
+  .admin-header,
+  .admin-reader-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-json {
+    max-height: 62vh;
+  }
+}
