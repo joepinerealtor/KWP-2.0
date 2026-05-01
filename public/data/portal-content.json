@@ -230,6 +230,98 @@
       }
     ]
   },
+  "office": {
+    "referenceHub": {
+      "tag": "Resources",
+      "title": "Office reference hub",
+      "summary": "Keep the handbook, preferred vendors, and office files in one reliable place.",
+      "chips": [
+        {
+          "label": "Sales Associate Handbook",
+          "href": "downloads/kwle-agent-handbook-march-2026.pdf",
+          "handbookModal": true
+        },
+        { "label": "Preferred Vendors" },
+        {
+          "label": "Open Office Info",
+          "href": "https://agent.kwleadingedge.com/important_info/",
+          "external": true
+        }
+      ],
+      "action": {
+        "label": "Tech Help with Joe",
+        "href": "https://calendly.com/joepinerealtor/tech-meeting-with-joe",
+        "external": true
+      }
+    },
+    "operations": {
+      "tag": "Office Hours + Holidays",
+      "title": "When the office is open",
+      "hoursLabel": "Office Hours",
+      "hours": [
+        { "days": "Monday - Thursday", "time": "9:00 am - 5:00 pm" },
+        { "days": "Friday", "time": "9:00 am - 4:00 pm" }
+      ],
+      "holidaysLabel": "2026 Office Holidays",
+      "holidays": [
+        "Memorial Day",
+        "Labor Day",
+        "Day after Thanksgiving",
+        "Christmas Day"
+      ]
+    },
+    "marketingFiles": {
+      "tag": "Marketing + Files",
+      "tagHref": "brand-assets.html",
+      "title": "Grab-and-go marketing assets",
+      "summary": "Canva, logos, brand standards, internal references, and vendor access should all be easy to open from one workspace.",
+      "chips": [
+        { "label": "Marketing + Brand Assets", "href": "brand-assets.html" },
+        { "label": "Full Logo Pack", "href": "downloads/leading-edge-logos.zip", "download": true },
+        {
+          "label": "Brand Standards",
+          "href": "https://images.kw.com/shared/mykw/logos/KellerWilliams_QuickReferenceGuide.pdf",
+          "external": true
+        },
+        { "label": "Canva for KW", "href": "https://canva.kw.com/", "external": true },
+        {
+          "label": "Order Business Cards",
+          "href": "https://agentstore.com/product-category/kw/keller-williams-business-cards/",
+          "external": true
+        },
+        { "label": "Vendor Row", "href": "#vendor-row" }
+      ]
+    },
+    "rooms": {
+      "summary": "Reserve the main conference room, lower level conference room, or training room without leaving the portal.",
+      "actions": [
+        {
+          "label": "Main Conference Room",
+          "url": "https://calendly.com/kw715/reserve-conference-room?embed_type=Inline&back=1"
+        },
+        {
+          "label": "Lower Level Conference Room",
+          "url": "https://calendly.com/downstairsconferenceroom715/30min?embed_type=Inline&back=1"
+        },
+        {
+          "label": "Training Room",
+          "url": "https://calendly.com/kw715trainingroom/60?embed_type=Inline&back=1"
+        }
+      ],
+      "calendars": [
+        {
+          "label": "Current Conference Room Reservations",
+          "title": "Current conference room reservations",
+          "src": "https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=America%2FNew_York&mode=AGENDA&showNav=0&showTitle=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0&src=a3c3MTVjb25mZXJlbmNlcm9vbUBnbWFpbC5jb20&color=%23039BE5"
+        },
+        {
+          "label": "Current Training Room Reservations",
+          "title": "Current training room reservations",
+          "src": "https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=America%2FNew_York&mode=AGENDA&showNav=0&showTitle=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0&src=a3c3MTV0cmFpbmluZ3Jvb21AZ21haWwuY29t&color=%23039BE5"
+        }
+      ]
+    }
+  },
   "leadership": [
     {
       "id": "lou-barrows",

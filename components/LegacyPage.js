@@ -3,6 +3,7 @@ import path from "node:path";
 import { createAssetGridHtml, createMarketingToolGridHtml, createSourceFileGridHtml } from "@/components/AssetCards";
 import { createCourseGridHtml } from "@/components/CourseCards";
 import { createAlcPosterGridHtml, createLeadershipGridHtml } from "@/components/LeadershipCards";
+import { createOfficeGridHtml, createRoomBookingCardHtml } from "@/components/OfficeCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
 import { createVendorGridHtml } from "@/components/VendorCards";
@@ -74,7 +75,7 @@ function getLegacyPortalFragments(source) {
 
 function hydrateLegacyMainHtml(source, mainHtml) {
   if (source === "index.html") {
-    return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(mainHtml)));
+    return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml))));
   }
 
   if (source === "brand-assets.html") {
@@ -128,6 +129,18 @@ function replaceLegacyBrandAssetGrids(mainHtml) {
     .replace(
       /<div class="asset-source-grid">\s*(?:<article class="asset-source-card">[\s\S]*?<\/article>\s*)+<\/div>/,
       createSourceFileGridHtml(portalContent.brandAssets.sourceFiles)
+    );
+}
+
+function replaceLegacyOfficeCards(mainHtml) {
+  return mainHtml
+    .replace(
+      /<div class="office-grid">\s*(?:<article class="office-card(?: [^"]+)?">[\s\S]*?<\/article>\s*)+<\/div>/,
+      createOfficeGridHtml(portalContent.office)
+    )
+    .replace(
+      /<article class="office-card office-booking-card">[\s\S]*?<\/article>/,
+      createRoomBookingCardHtml(portalContent.office.rooms)
     );
 }
 
