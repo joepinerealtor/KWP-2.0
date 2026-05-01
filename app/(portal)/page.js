@@ -1,4 +1,4 @@
-import { LegacyPage } from "@/components/LegacyPage";
+import { LegacyPortalPage } from "@/components/LegacyPage";
 import { PortalScripts } from "@/components/PortalScripts";
 import { createPortalMetadata } from "@/lib/metadata";
 
@@ -13,7 +13,7 @@ export const metadata = createPortalMetadata({
 export default function HomePage() {
   return (
     <>
-      <LegacyPage source="index.html" />
+      <LegacyPortalPage source="index.html" pageKey="home" />
       <PortalScripts includeTockify />
     </>
   );

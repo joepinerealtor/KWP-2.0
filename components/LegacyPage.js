@@ -1,9 +1,25 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { PortalBodyState } from "@/components/PortalBodyState";
+import { PortalShell } from "@/components/PortalShell";
+import { portalPages } from "@/lib/portal-config";
 
 function readLegacyHtml(source) {
-  const sourcePath = path.join(process.cwd(), source);
+  const sourcePath = resolveLegacySourcePath(source);
   return readFileSync(sourcePath, "utf8");
+}
+
+function resolveLegacySourcePath(source) {
+  switch (source) {
+    case "index.html":
+      return path.join(process.cwd(), "index.html");
+    case "brand-assets.html":
+      return path.join(process.cwd(), "brand-assets.html");
+    case "tech/index.html":
+      return path.join(process.cwd(), "tech", "index.html");
+    default:
+      throw new Error(`Unsupported legacy page source: ${source}`);
+  }
 }
 
 function extractBodyHtml(html) {
@@ -13,8 +29,52 @@ function extractBodyHtml(html) {
   return bodyHtml.replace(/<script\b[\s\S]*?<\/script>\s*/gi, "").trim();
 }
 
-export function LegacyPage({ source }) {
+function getLegacyPortalFragments(source) {
   const html = extractBodyHtml(readLegacyHtml(source));
+  const frameOpen = html.indexOf('<div class="portal-frame">');
 
-  return <div data-legacy-page dangerouslySetInnerHTML={{ __html: html }} />;
+  if (frameOpen < 0) {
+    return {
+      mainHtml: html,
+      overlaysHtml: ""
+    };
+  }
+
+  const frameOpenEnd = html.indexOf(">", frameOpen) + 1;
+  const contentOpen = html.indexOf('<div class="portal-content">', frameOpenEnd);
+  const mainOpen = html.indexOf('<main class="page-content">', contentOpen);
+  const mainClose = html.indexOf("</main>", mainOpen);
+  const footerClose = html.indexOf("</footer>", contentOpen);
+  const contentClose = html.indexOf("</div>", footerClose);
+  const contentCloseEnd = contentClose + "</div>".length;
+  const frameClose = html.indexOf("</div>", contentCloseEnd);
+  const frameCloseEnd = frameClose + "</div>".length;
+  const shellClose = html.indexOf("</div>", frameCloseEnd);
+  const shellCloseEnd = shellClose + "</div>".length;
+
+  if ([frameOpenEnd, contentOpen, mainOpen, mainClose, footerClose, contentClose, frameClose, shellClose].some((index) => index < 0)) {
+    return {
+      mainHtml: html,
+      overlaysHtml: ""
+    };
+  }
+
+  const mainOpenEnd = html.indexOf(">", mainOpen) + 1;
+
+  return {
+    mainHtml: html.slice(mainOpenEnd, mainClose).trim(),
+    overlaysHtml: html.slice(shellCloseEnd).trim()
+  };
+}
+
+export function LegacyPortalPage({ pageKey, source }) {
+  const page = portalPages[pageKey];
+  const { mainHtml, overlaysHtml } = getLegacyPortalFragments(source);
+
+  return (
+    <>
+      <PortalBodyState lockLabel={page.lockLabel} />
+      <PortalShell mainHtml={mainHtml} overlaysHtml={overlaysHtml} page={page} />
+    </>
+  );
 }

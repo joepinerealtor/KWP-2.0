@@ -1,4 +1,4 @@
-import { LegacyPage } from "@/components/LegacyPage";
+import { LegacyPortalPage } from "@/components/LegacyPage";
 import { PortalScripts } from "@/components/PortalScripts";
 import { createPortalMetadata } from "@/lib/metadata";
 
@@ -13,7 +13,7 @@ export const metadata = createPortalMetadata({
 export default function BrandAssetsPage() {
   return (
     <>
-      <LegacyPage source="brand-assets.html" />
+      <LegacyPortalPage source="brand-assets.html" pageKey="brandAssets" />
       <PortalScripts />
     </>
   );
