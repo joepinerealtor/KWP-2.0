@@ -359,11 +359,11 @@ function createVendorCard(vendor) {
 }
 
 function renderPortalContent() {
-  if (leadershipGrid) {
+  if (leadershipGrid && leadershipGrid.dataset.reactRendered !== "true") {
     leadershipGrid.innerHTML = getActiveLeadership("office").map(createLeaderCard).join("");
   }
 
-  if (alcGrid) {
+  if (alcGrid && alcGrid.dataset.reactRendered !== "true") {
     alcGrid.innerHTML = getActiveLeadership("alc").map(createAlcCard).join("");
   }
 

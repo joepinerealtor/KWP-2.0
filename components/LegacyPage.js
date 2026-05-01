@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createCourseGridHtml } from "@/components/CourseCards";
+import { createAlcPosterGridHtml, createLeadershipGridHtml } from "@/components/LeadershipCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
 import { createVendorGridHtml } from "@/components/VendorCards";
@@ -75,7 +76,7 @@ function hydrateLegacyMainHtml(source, mainHtml) {
     return mainHtml;
   }
 
-  return replaceLegacyCourseGrid(replaceLegacyVendorGrids(mainHtml));
+  return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(mainHtml)));
 }
 
 function replaceLegacyCourseGrid(mainHtml) {
@@ -94,6 +95,18 @@ function replaceLegacyVendorGrids(mainHtml) {
     .replace(
       '<div class="vendor-grid" data-vendor-grid="services" aria-live="polite"></div>',
       createVendorGridHtml(portalContent.vendors, "services")
+    );
+}
+
+function replaceLegacyLeadershipGrids(mainHtml) {
+  return mainHtml
+    .replace(
+      '<div class="leadership-grid" data-leadership-grid aria-live="polite"></div>',
+      createLeadershipGridHtml(portalContent.leadership)
+    )
+    .replace(
+      '<div class="alc-poster-grid" data-alc-grid aria-label="2026 ALC poster set" aria-live="polite"></div>',
+      createAlcPosterGridHtml(portalContent.leadership)
     );
 }
 
