@@ -150,11 +150,74 @@ export function ContentAdminClient() {
               </div>
               <span>{activeSection?.type}</span>
             </div>
-            <pre className="admin-json">{JSON.stringify(activeSection?.value, null, 2)}</pre>
+            <SectionReader section={activeSection} />
           </div>
         </section>
       )}
     </main>
+  );
+}
+
+function SectionReader({ section }) {
+  if (section?.id === "courses") {
+    return <CourseReadOnly items={section.value || []} />;
+  }
+
+  return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
+}
+
+function CourseReadOnly({ items }) {
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <strong>{items.length}</strong>
+        <span>course cards</span>
+      </div>
+      <div className="admin-course-list">
+        {items.map((course, index) => (
+          <article className="admin-course-item" key={course.id || index}>
+            <div className="admin-course-item__header">
+              <span>Course {index + 1}</span>
+              <label className="admin-check">
+                <input type="checkbox" checked={Boolean(course.active)} disabled readOnly />
+                Active
+              </label>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField label="ID" value={course.id} />
+              <AdminTextField label="Tag" value={course.tag} />
+              <AdminTextField label="Title" value={course.title} />
+              <AdminTextField label="URL" value={course.href} />
+            </div>
+            <AdminTextArea label="Summary" value={course.summary} />
+            <div className="admin-flag-row">
+              <label className="admin-check">
+                <input type="checkbox" checked={Boolean(course.external)} disabled readOnly />
+                External link
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminTextField({ label, value = "" }) {
+  return (
+    <label className="admin-field">
+      <span>{label}</span>
+      <input type="text" value={value} disabled readOnly />
+    </label>
+  );
+}
+
+function AdminTextArea({ label, value = "" }) {
+  return (
+    <label className="admin-field admin-field--full">
+      <span>{label}</span>
+      <textarea value={value} disabled readOnly rows={3} />
+    </label>
   );
 }
 

@@ -246,6 +246,113 @@ html {
   white-space: pre;
 }
 
+.admin-form-preview {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.admin-form-preview__summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+.admin-form-preview__summary strong {
+  color: var(--admin-ink);
+  font-size: 22px;
+}
+
+.admin-course-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-course-item {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: #fbfbfa;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+}
+
+.admin-course-item__header,
+.admin-flag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-course-item__header > span {
+  color: var(--admin-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-field--full {
+  grid-column: 1 / -1;
+}
+
+.admin-field span,
+.admin-check {
+  color: var(--admin-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-field input,
+.admin-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--admin-ink);
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.admin-field textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.admin-field input:disabled,
+.admin-field textarea:disabled {
+  color: var(--admin-ink);
+  opacity: 1;
+}
+
+.admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.admin-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--admin-accent);
+}
+
 @media (max-width: 760px) {
   .admin-shell {
     width: min(100% - 20px, 1180px);
@@ -264,5 +371,15 @@ html {
 
   .admin-json {
     max-height: 62vh;
+  }
+
+  .admin-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-course-item__header,
+  .admin-flag-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
