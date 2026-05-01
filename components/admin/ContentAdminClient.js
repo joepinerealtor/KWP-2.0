@@ -189,12 +189,29 @@ function SectionReader({ onUpdateCourse, section }) {
 }
 
 function CourseFields({ items, onUpdateCourse }) {
+  const validationErrors = validateCourseDrafts(items);
+
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
-        <strong>{items.length}</strong>
-        <span>course cards</span>
+        <div>
+          <strong>{items.length}</strong>
+          <span>course cards</span>
+        </div>
+        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+        </span>
       </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Course validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((course, index) => (
           <article className="admin-course-item" key={course.id || index}>
@@ -249,6 +266,10 @@ function CourseFields({ items, onUpdateCourse }) {
           </article>
         ))}
       </div>
+      <details className="admin-draft-json">
+        <summary>Draft JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(items, null, 2)}</pre>
+      </details>
     </div>
   );
 }
@@ -273,4 +294,31 @@ function AdminTextArea({ label, onChange, value = "" }) {
 
 function getPathValue(value, path) {
   return path.reduce((current, key) => current?.[key], value);
+}
+
+function validateCourseDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((course, index) => {
+    const label = `Course ${index + 1}`;
+
+    ["id", "tag", "title", "summary", "href"].forEach((field) => {
+      if (!String(course[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(course.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Course ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+  });
+
+  return errors;
 }

@@ -255,14 +255,59 @@ html {
 .admin-form-preview__summary {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 8px;
   color: var(--admin-muted);
   font-size: 14px;
 }
 
+.admin-form-preview__summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .admin-form-preview__summary strong {
   color: var(--admin-ink);
   font-size: 22px;
+}
+
+.admin-status {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-status--ok {
+  color: #17633a;
+  background: #e7f4eb;
+}
+
+.admin-status--error {
+  color: #8f0101;
+  background: #f7e5e5;
+}
+
+.admin-validation {
+  padding: 14px 16px;
+  color: #5f1616;
+  background: #fff1f1;
+  border: 1px solid #efc5c5;
+  border-radius: 8px;
+}
+
+.admin-validation h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.admin-validation ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .admin-course-list {
@@ -353,6 +398,24 @@ html {
   accent-color: var(--admin-accent);
 }
 
+.admin-draft-json {
+  overflow: hidden;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+}
+
+.admin-draft-json summary {
+  padding: 14px 16px;
+  color: var(--admin-ink);
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-draft-json .admin-json {
+  max-height: 420px;
+}
+
 @media (max-width: 760px) {
   .admin-shell {
     width: min(100% - 20px, 1180px);
@@ -375,6 +438,11 @@ html {
 
   .admin-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-form-preview__summary {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-course-item__header,
