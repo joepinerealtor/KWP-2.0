@@ -85,6 +85,28 @@ export function ContentAdminClient() {
     setPasscode("");
   }
 
+  function updateCourse(index, field, value) {
+    setContent((currentContent) => {
+      if (!currentContent?.courses?.[index]) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        courses: currentContent.courses.map((course, courseIndex) => {
+          if (courseIndex !== index) {
+            return course;
+          }
+
+          return {
+            ...course,
+            [field]: value
+          };
+        })
+      };
+    });
+  }
+
   return (
     <main className="admin-shell">
       <header className="admin-header">
@@ -121,7 +143,7 @@ export function ContentAdminClient() {
           {error ? <p className="admin-error">{error}</p> : null}
         </section>
       ) : (
-        <section className="admin-workspace" aria-label="Read-only content workspace">
+        <section className="admin-workspace" aria-label="Content workspace">
           <aside className="admin-sidebar">
             <div className="admin-source">
               <span>Source</span>
@@ -145,12 +167,12 @@ export function ContentAdminClient() {
           <div className="admin-panel admin-reader">
             <div className="admin-reader-header">
               <div>
-                <p className="admin-kicker">Read only</p>
+                <p className="admin-kicker">{activeSection?.id === "courses" ? "Draft fields" : "Read only"}</p>
                 <h2>{activeSection?.label}</h2>
               </div>
               <span>{activeSection?.type}</span>
             </div>
-            <SectionReader section={activeSection} />
+            <SectionReader section={activeSection} onUpdateCourse={updateCourse} />
           </div>
         </section>
       )}
@@ -158,15 +180,15 @@ export function ContentAdminClient() {
   );
 }
 
-function SectionReader({ section }) {
+function SectionReader({ onUpdateCourse, section }) {
   if (section?.id === "courses") {
-    return <CourseReadOnly items={section.value || []} />;
+    return <CourseFields items={section.value || []} onUpdateCourse={onUpdateCourse} />;
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
 }
 
-function CourseReadOnly({ items }) {
+function CourseFields({ items, onUpdateCourse }) {
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -179,20 +201,48 @@ function CourseReadOnly({ items }) {
             <div className="admin-course-item__header">
               <span>Course {index + 1}</span>
               <label className="admin-check">
-                <input type="checkbox" checked={Boolean(course.active)} disabled readOnly />
+                <input
+                  type="checkbox"
+                  checked={Boolean(course.active)}
+                  onChange={(event) => onUpdateCourse(index, "active", event.target.checked)}
+                />
                 Active
               </label>
             </div>
             <div className="admin-field-grid">
-              <AdminTextField label="ID" value={course.id} />
-              <AdminTextField label="Tag" value={course.tag} />
-              <AdminTextField label="Title" value={course.title} />
-              <AdminTextField label="URL" value={course.href} />
+              <AdminTextField
+                label="ID"
+                value={course.id}
+                onChange={(value) => onUpdateCourse(index, "id", value)}
+              />
+              <AdminTextField
+                label="Tag"
+                value={course.tag}
+                onChange={(value) => onUpdateCourse(index, "tag", value)}
+              />
+              <AdminTextField
+                label="Title"
+                value={course.title}
+                onChange={(value) => onUpdateCourse(index, "title", value)}
+              />
+              <AdminTextField
+                label="URL"
+                value={course.href}
+                onChange={(value) => onUpdateCourse(index, "href", value)}
+              />
             </div>
-            <AdminTextArea label="Summary" value={course.summary} />
+            <AdminTextArea
+              label="Summary"
+              value={course.summary}
+              onChange={(value) => onUpdateCourse(index, "summary", value)}
+            />
             <div className="admin-flag-row">
               <label className="admin-check">
-                <input type="checkbox" checked={Boolean(course.external)} disabled readOnly />
+                <input
+                  type="checkbox"
+                  checked={Boolean(course.external)}
+                  onChange={(event) => onUpdateCourse(index, "external", event.target.checked)}
+                />
                 External link
               </label>
             </div>
@@ -203,20 +253,20 @@ function CourseReadOnly({ items }) {
   );
 }
 
-function AdminTextField({ label, value = "" }) {
+function AdminTextField({ label, onChange, value = "" }) {
   return (
     <label className="admin-field">
       <span>{label}</span>
-      <input type="text" value={value} disabled readOnly />
+      <input type="text" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
 
-function AdminTextArea({ label, value = "" }) {
+function AdminTextArea({ label, onChange, value = "" }) {
   return (
     <label className="admin-field admin-field--full">
       <span>{label}</span>
-      <textarea value={value} disabled readOnly rows={3} />
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} />
     </label>
   );
 }
