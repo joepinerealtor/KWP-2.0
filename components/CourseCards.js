@@ -1,3 +1,5 @@
+import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
+
 function courseLinkProps(course) {
   const props = {
     href: course.href
@@ -40,17 +42,4 @@ function createCourseCardHtml(course) {
   const externalAttrs = course.external === false ? "" : ' target="_blank" rel="noreferrer"';
 
   return `<a class="course-card" href="${escapeHtmlAttribute(course.href)}"${externalAttrs}><span class="card-tag">${escapeHtml(course.tag)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.summary)}</p></a>`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function escapeHtmlAttribute(value = "") {
-  return escapeHtml(value);
 }

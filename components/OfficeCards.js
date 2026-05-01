@@ -1,24 +1,12 @@
-function linkAttributes(link) {
-  const attrs = [`href="${escapeHtmlAttribute(link.href)}"`];
-
-  if (link.external) {
-    attrs.push('target="_blank"', 'rel="noreferrer"');
-  }
-
-  if (link.download) {
-    attrs.push("download");
-  }
-
-  if (link.handbookModal) {
-    attrs.push("data-handbook-modal-trigger", 'aria-haspopup="dialog"', 'aria-controls="agentHandbookModal"');
-  }
-
-  return attrs.join(" ");
-}
+import { createLinkAttributes, escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 
 function createChipHtml(chip) {
   if (chip.href) {
-    return `<a class="chip chip-link" ${linkAttributes(chip)}>${escapeHtml(chip.label)}</a>`;
+    const extraAttributes = chip.handbookModal
+      ? ["data-handbook-modal-trigger", 'aria-haspopup="dialog"', 'aria-controls="agentHandbookModal"']
+      : [];
+
+    return `<a class="chip chip-link" ${createLinkAttributes(chip, extraAttributes)}>${escapeHtml(chip.label)}</a>`;
   }
 
   return `<span class="chip">${escapeHtml(chip.label)}</span>`;
@@ -40,7 +28,7 @@ export function createOfficeGridHtml(office = {}) {
 
 function createReferenceCardHtml(card = {}) {
   const action = card.action
-    ? `<a class="button secondary compact" ${linkAttributes(card.action)}>${escapeHtml(card.action.label)}</a>`
+    ? `<a class="button secondary compact" ${createLinkAttributes(card.action)}>${escapeHtml(card.action.label)}</a>`
     : "";
 
   return `<article class="office-card"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}${action}</article>`;
@@ -70,17 +58,4 @@ export function createRoomBookingCardHtml(rooms = {}) {
     .join("");
 
   return `<article class="office-card office-booking-card"><p>${escapeHtml(rooms.summary)}</p><div class="office-booking-actions">${buttons}</div><div class="office-calendar-grid">${calendars}</div></article>`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeHtmlAttribute(value = "") {
-  return escapeHtml(value);
 }

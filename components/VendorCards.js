@@ -1,8 +1,4 @@
-function toPhoneHref(value) {
-  const digits = String(value || "").replace(/\D/g, "");
-
-  return digits ? `tel:+1${digits.length === 10 ? digits : digits.replace(/^1/, "")}` : "";
-}
+import { escapeHtml, escapeHtmlAttribute, toPhoneHref } from "@/lib/portal-html";
 
 function getActiveVendors(vendors, section) {
   return vendors.filter((vendor) => vendor.active !== false && vendor.section === section);
@@ -69,17 +65,4 @@ function createVendorCardHtml(vendor) {
   const featuredClass = vendor.section === "core" ? " vendor-card-featured" : "";
 
   return `<article class="vendor-card${featuredClass}"><div class="vendor-brand"><img class="vendor-logo" src="${escapeHtmlAttribute(vendor.logo)}" alt="${escapeHtmlAttribute(vendor.business || vendor.name)} logo"></div><dl class="vendor-details"><div><dt>Business</dt><dd>${escapeHtml(vendor.business || "")}</dd></div><div><dt>Name</dt><dd>${escapeHtml(vendor.name || "")}</dd></div><div><dt>Phone</dt><dd>${phone}</dd></div><div><dt>E-mail</dt><dd>${email}</dd></div><div><dt>Notes</dt><dd>${escapeHtml(vendor.notes || "")}</dd></div></dl></article>`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeHtmlAttribute(value = "") {
-  return escapeHtml(value);
 }

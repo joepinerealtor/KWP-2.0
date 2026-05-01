@@ -1,20 +1,8 @@
-function linkAttributes(link) {
-  const attrs = [`href="${escapeHtmlAttribute(link.href)}"`];
-
-  if (link.external) {
-    attrs.push('target="_blank"', 'rel="noreferrer"');
-  }
-
-  if (link.download) {
-    attrs.push("download");
-  }
-
-  return attrs.join(" ");
-}
+import { createLinkAttributes, escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 
 function createChipLinksHtml(links = []) {
   return links
-    .map((link) => `<a class="chip chip-link" ${linkAttributes(link)}>${escapeHtml(link.label)}</a>`)
+    .map((link) => `<a class="chip chip-link" ${createLinkAttributes(link)}>${escapeHtml(link.label)}</a>`)
     .join("");
 }
 
@@ -133,17 +121,4 @@ export function createSourceFileGridHtml(files = []) {
     .join("");
 
   return `<div class="asset-source-grid">${cards}</div>`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeHtmlAttribute(value = "") {
-  return escapeHtml(value);
 }

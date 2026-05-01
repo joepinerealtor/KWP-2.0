@@ -1,8 +1,4 @@
-function toPhoneHref(value) {
-  const digits = String(value || "").replace(/\D/g, "");
-
-  return digits ? `tel:+1${digits.length === 10 ? digits : digits.replace(/^1/, "")}` : "";
-}
+import { escapeHtml, escapeHtmlAttribute, toPhoneHref } from "@/lib/portal-html";
 
 function getActiveLeadership(leaders, group) {
   return leaders.filter((person) => person.active !== false && person.group === group);
@@ -96,17 +92,4 @@ function createLeaderCardHtml(person) {
 
 function createAlcPosterCardHtml(person) {
   return `<a class="alc-poster-card" href="${escapeHtmlAttribute(person.photo)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} ALC poster"><img src="${escapeHtmlAttribute(person.photo)}" alt="${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} poster" loading="lazy" decoding="async"><span class="alc-poster-copy"><strong>${escapeHtml(person.name)}</strong><span>${escapeHtml(person.role || person.notes)}</span></span></a>`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeHtmlAttribute(value = "") {
-  return escapeHtml(value);
 }
