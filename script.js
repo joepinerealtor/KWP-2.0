@@ -161,12 +161,12 @@ const PORTAL_COOKIE_NAMES = [
   PORTAL_ACCESS_COOKIE_NAME,
   "portal-access"
 ];
-const PORTAL_CONTENT_URL = "data/portal-content.json";
+const PORTAL_CONTENT_URL = "/data/portal-content.json";
 const PORTAL_PASSCODE_HASH = "4030C42B313A82B953D14F04A85FF9DD9739E49A97D90631B7FB3029CCA1D6E1";
 const IS_PORTAL_PUBLIC_PAGE = document.body?.dataset.portalPublic === "true";
 const PUBLIC_WEBSITE_URL = "https://www.kwleadingedge.com/";
 const TRAINING_CALENDAR_URL = "https://agent.kwleadingedge.com/training-calendar/";
-const AGENT_HANDBOOK_URL = "downloads/kwle-agent-handbook-march-2026.pdf";
+const AGENT_HANDBOOK_URL = "/downloads/kwle-agent-handbook-march-2026.pdf";
 const JOE_TECH_BOOKING_URL = "https://calendly.com/joepinerealtor/tech-meeting-with-joe";
 const PORTAL_ACCESS_SUPPORT_EMAIL = "mbrown715@kw.com";
 const PORTAL_ACCESS_SUPPORT_SUBJECT = "Agent Portal Access Request";
@@ -742,7 +742,7 @@ function createPortalGateMarkup() {
     <div class="portal-lock-panel" role="dialog" aria-modal="true" aria-labelledby="portalLockTitle">
       <div class="portal-lock-top">
         <section class="portal-lock-hero" aria-label="Portal introduction">
-          <img src="brand/kw-leading-edge-logo-white.png" alt="Keller Williams Realty Leading Edge" class="portal-lock-logo">
+          <img src="/brand/kw-leading-edge-logo-white.png" alt="Keller Williams Realty Leading Edge" class="portal-lock-logo">
           <div class="portal-lock-copy">
             <p class="eyebrow small">Agent Portal</p>
             <h1 id="portalLockTitle">WHERE ENTREPRENEURS THRIVE!</h1>
@@ -1377,7 +1377,7 @@ function getCalendlyEmbedUrl(url) {
 
   try {
     const calendlyUrl = new URL(url, window.location.href);
-    calendlyUrl.searchParams.set("embed_domain", "agent.kwleadingedge.com");
+    calendlyUrl.searchParams.set("embed_domain", window.location.host || "localhost");
     calendlyUrl.searchParams.set("embed_type", "Inline");
     calendlyUrl.searchParams.set("back", "1");
     return calendlyUrl.toString();

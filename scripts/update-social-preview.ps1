@@ -101,7 +101,8 @@ try {
   }
 
   $imageSize = Get-ImageSize -Path $previewImagePath
-  $publicImageUrl = "https://portal.kwleadingedge.com/images/social-preview-login.png?v=$version"
+  $publicBaseUrl = if ($env:PORTAL_PUBLIC_URL) { $env:PORTAL_PUBLIC_URL.TrimEnd("/") } else { "http://localhost:3000" }
+  $publicImageUrl = "$publicBaseUrl/images/social-preview-login.png?v=$version"
 
   foreach ($page in $previewPages) {
     $content = Get-Content -LiteralPath $page -Raw

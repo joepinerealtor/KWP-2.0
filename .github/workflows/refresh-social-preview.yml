@@ -1,18 +1,6 @@
 name: Refresh Social Preview
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - index.html
-      - styles.css
-      - script.js
-      - brand/**
-      - team/**
-      - images/portal-morning-ascent.jpg
-      - scripts/update-social-preview.ps1
-      - .github/workflows/refresh-social-preview.yml
   workflow_dispatch:
 
 permissions:
