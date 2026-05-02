@@ -414,6 +414,75 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateDigitalLogo(index, field, value) {
+    updateDigitalLogos((logos) => logos.map((logo, logoIndex) => {
+      if (logoIndex !== index) {
+        return logo;
+      }
+
+      return {
+        ...logo,
+        [field]: value
+      };
+    }));
+  }
+
+  function updateDigitalLogoImage(index, field, value) {
+    updateDigitalLogos((logos) => logos.map((logo, logoIndex) => {
+      if (logoIndex !== index) {
+        return logo;
+      }
+
+      return {
+        ...logo,
+        image: {
+          ...(logo.image || {}),
+          [field]: value
+        }
+      };
+    }));
+  }
+
+  function updateDigitalLogoLink(logoIndex, linkIndex, field, value) {
+    updateDigitalLogos((logos) => logos.map((logo, currentLogoIndex) => {
+      if (currentLogoIndex !== logoIndex) {
+        return logo;
+      }
+
+      return {
+        ...logo,
+        links: (logo.links || []).map((link, currentLinkIndex) => {
+          if (currentLinkIndex !== linkIndex) {
+            return link;
+          }
+
+          return {
+            ...link,
+            [field]: value
+          };
+        })
+      };
+    }));
+  }
+
+  function updateDigitalLogos(getNextLogos) {
+    setContent((currentContent) => {
+      if (!currentContent?.brandAssets?.digitalLogos) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        brandAssets: {
+          ...currentContent.brandAssets,
+          digitalLogos: getNextLogos(currentContent.brandAssets.digitalLogos)
+        }
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
   async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
@@ -553,6 +622,9 @@ export function ContentAdminClient() {
               onSaveMarketingToolDrafts={saveMarketingToolDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
+              onUpdateDigitalLogo={updateDigitalLogo}
+              onUpdateDigitalLogoImage={updateDigitalLogoImage}
+              onUpdateDigitalLogoLink={updateDigitalLogoLink}
               onUpdateLeadership={updateLeadership}
               onUpdateMarketingTool={updateMarketingTool}
               onUpdateMarketingToolLink={updateMarketingToolLink}
@@ -589,6 +661,9 @@ function SectionReader({
   onSaveMarketingToolDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
+  onUpdateDigitalLogo,
+  onUpdateDigitalLogoImage,
+  onUpdateDigitalLogoLink,
   onUpdateLeadership,
   onUpdateMarketingTool,
   onUpdateMarketingToolLink,
@@ -665,7 +740,14 @@ function SectionReader({
   }
 
   if (section?.id === "digitalLogos") {
-    return <DigitalLogoFields items={section.value || []} />;
+    return (
+      <DigitalLogoFields
+        items={section.value || []}
+        onUpdateDigitalLogo={onUpdateDigitalLogo}
+        onUpdateDigitalLogoImage={onUpdateDigitalLogoImage}
+        onUpdateDigitalLogoLink={onUpdateDigitalLogoLink}
+      />
+    );
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -1184,7 +1266,12 @@ function MarketingToolFields({
   );
 }
 
-function DigitalLogoFields({ items }) {
+function DigitalLogoFields({
+  items,
+  onUpdateDigitalLogo,
+  onUpdateDigitalLogoImage,
+  onUpdateDigitalLogoLink
+}) {
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -1192,7 +1279,7 @@ function DigitalLogoFields({ items }) {
           <strong>{items.length}</strong>
           <span>digital logo cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Read only</span>
+        <span className="admin-status admin-status--ok">Draft only</span>
       </div>
       <div className="admin-course-list">
         {items.map((logo, index) => (
@@ -1200,30 +1287,78 @@ function DigitalLogoFields({ items }) {
             <div className="admin-course-item__header">
               <span>Digital Logo {index + 1}</span>
               <label className="admin-check">
-                <input type="checkbox" checked={Boolean(logo.active)} disabled readOnly />
+                <input
+                  type="checkbox"
+                  checked={Boolean(logo.active)}
+                  onChange={(event) => onUpdateDigitalLogo(index, "active", event.target.checked)}
+                />
                 Active
               </label>
             </div>
             <div className="admin-field-grid">
-              <AdminTextField disabled label="ID" value={logo.id} />
-              <AdminTextField disabled label="Kicker" value={logo.kicker} />
-              <AdminTextField disabled label="Title" value={logo.title} />
-              <AdminTextField disabled label="Preview Class" value={logo.previewClass} />
-              <AdminTextField disabled label="Image Source" value={logo.image?.src} />
-              <AdminTextField disabled label="Image Alt" value={logo.image?.alt} />
+              <AdminTextField
+                label="ID"
+                value={logo.id}
+                onChange={(value) => onUpdateDigitalLogo(index, "id", value)}
+              />
+              <AdminTextField
+                label="Kicker"
+                value={logo.kicker}
+                onChange={(value) => onUpdateDigitalLogo(index, "kicker", value)}
+              />
+              <AdminTextField
+                label="Title"
+                value={logo.title}
+                onChange={(value) => onUpdateDigitalLogo(index, "title", value)}
+              />
+              <AdminTextField
+                label="Preview Class"
+                value={logo.previewClass}
+                onChange={(value) => onUpdateDigitalLogo(index, "previewClass", value)}
+              />
+              <AdminTextField
+                label="Image Source"
+                value={logo.image?.src}
+                onChange={(value) => onUpdateDigitalLogoImage(index, "src", value)}
+              />
+              <AdminTextField
+                label="Image Alt"
+                value={logo.image?.alt}
+                onChange={(value) => onUpdateDigitalLogoImage(index, "alt", value)}
+              />
             </div>
-            <AdminTextArea disabled label="Summary" value={logo.summary} />
+            <AdminTextArea
+              label="Summary"
+              value={logo.summary}
+              onChange={(value) => onUpdateDigitalLogo(index, "summary", value)}
+            />
             {(logo.links || []).map((link, linkIndex) => (
               <div className="admin-field-grid" key={`${logo.id || index}-link-${linkIndex}`}>
-                <AdminTextField disabled label={`Link ${linkIndex + 1} Label`} value={link.label} />
-                <AdminTextField disabled label={`Link ${linkIndex + 1} URL`} value={link.href} />
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} Label`}
+                  value={link.label}
+                  onChange={(value) => onUpdateDigitalLogoLink(index, linkIndex, "label", value)}
+                />
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} URL`}
+                  value={link.href}
+                  onChange={(value) => onUpdateDigitalLogoLink(index, linkIndex, "href", value)}
+                />
                 <div className="admin-flag-row">
                   <label className="admin-check">
-                    <input type="checkbox" checked={Boolean(link.external)} disabled readOnly />
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.external)}
+                      onChange={(event) => onUpdateDigitalLogoLink(index, linkIndex, "external", event.target.checked)}
+                    />
                     External
                   </label>
                   <label className="admin-check">
-                    <input type="checkbox" checked={Boolean(link.download)} disabled readOnly />
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.download)}
+                      onChange={(event) => onUpdateDigitalLogoLink(index, linkIndex, "download", event.target.checked)}
+                    />
                     Download
                   </label>
                 </div>
@@ -1414,7 +1549,7 @@ function getPathValue(value, path) {
 }
 
 function isDraftFieldSection(sectionId) {
-  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools";
+  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools" || sectionId === "digitalLogos";
 }
 
 function validateCourseDrafts(items) {
