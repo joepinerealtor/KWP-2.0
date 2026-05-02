@@ -158,6 +158,30 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateVendor(index, field, value) {
+    setContent((currentContent) => {
+      if (!currentContent?.vendors?.[index]) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        vendors: currentContent.vendors.map((vendor, vendorIndex) => {
+          if (vendorIndex !== index) {
+            return vendor;
+          }
+
+          return {
+            ...vendor,
+            [field]: value
+          };
+        })
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
   async function saveCourseDrafts() {
     if (!content) {
       return;
@@ -251,7 +275,7 @@ export function ContentAdminClient() {
           <div className="admin-panel admin-reader">
             <div className="admin-reader-header">
               <div>
-                <p className="admin-kicker">{activeSection?.id === "courses" ? "Draft fields" : "Read only"}</p>
+                <p className="admin-kicker">{isDraftFieldSection(activeSection?.id) ? "Draft fields" : "Read only"}</p>
                 <h2>{activeSection?.label}</h2>
               </div>
               <span>{activeSection?.type}</span>
@@ -263,6 +287,7 @@ export function ContentAdminClient() {
               onRemoveCourse={removeCourse}
               onSaveCourseDrafts={saveCourseDrafts}
               onUpdateCourse={updateCourse}
+              onUpdateVendor={updateVendor}
               saveError={saveError}
               saveResult={saveResult}
               section={activeSection}
@@ -281,6 +306,7 @@ function SectionReader({
   onRemoveCourse,
   onSaveCourseDrafts,
   onUpdateCourse,
+  onUpdateVendor,
   saveError,
   saveResult,
   section
@@ -302,7 +328,7 @@ function SectionReader({
   }
 
   if (section?.id === "vendors") {
-    return <VendorReadOnly items={section.value || []} />;
+    return <VendorFields items={section.value || []} onUpdateVendor={onUpdateVendor} />;
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -466,7 +492,7 @@ function AdminTextField({ label, onChange, value = "" }) {
   );
 }
 
-function VendorReadOnly({ items }) {
+function VendorFields({ items, onUpdateVendor }) {
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -474,7 +500,7 @@ function VendorReadOnly({ items }) {
           <strong>{items.length}</strong>
           <span>vendor cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Read only</span>
+        <span className="admin-status admin-status--ok">Draft only</span>
       </div>
       <div className="admin-course-list">
         {items.map((vendor, index) => (
@@ -482,19 +508,55 @@ function VendorReadOnly({ items }) {
             <div className="admin-course-item__header">
               <span>Vendor {index + 1}</span>
               <label className="admin-check">
-                <input type="checkbox" checked={Boolean(vendor.active)} disabled readOnly />
+                <input
+                  type="checkbox"
+                  checked={Boolean(vendor.active)}
+                  onChange={(event) => onUpdateVendor(index, "active", event.target.checked)}
+                />
                 Active
               </label>
             </div>
             <div className="admin-field-grid">
-              <AdminReadOnlyField label="ID" value={vendor.id} />
-              <AdminReadOnlyField label="Section" value={vendor.section} />
-              <AdminReadOnlyField label="Business" value={vendor.business} />
-              <AdminReadOnlyField label="Contact Name" value={vendor.name} />
-              <AdminReadOnlyField label="Phone" value={vendor.phone} />
-              <AdminReadOnlyField label="Email" value={vendor.email} />
-              <AdminReadOnlyField label="Logo" value={vendor.logo} />
-              <AdminReadOnlyField label="Notes" value={vendor.notes} />
+              <AdminTextField
+                label="ID"
+                value={vendor.id}
+                onChange={(value) => onUpdateVendor(index, "id", value)}
+              />
+              <AdminTextField
+                label="Section"
+                value={vendor.section}
+                onChange={(value) => onUpdateVendor(index, "section", value)}
+              />
+              <AdminTextField
+                label="Business"
+                value={vendor.business}
+                onChange={(value) => onUpdateVendor(index, "business", value)}
+              />
+              <AdminTextField
+                label="Contact Name"
+                value={vendor.name}
+                onChange={(value) => onUpdateVendor(index, "name", value)}
+              />
+              <AdminTextField
+                label="Phone"
+                value={vendor.phone}
+                onChange={(value) => onUpdateVendor(index, "phone", value)}
+              />
+              <AdminTextField
+                label="Email"
+                value={vendor.email}
+                onChange={(value) => onUpdateVendor(index, "email", value)}
+              />
+              <AdminTextField
+                label="Logo"
+                value={vendor.logo}
+                onChange={(value) => onUpdateVendor(index, "logo", value)}
+              />
+              <AdminTextField
+                label="Notes"
+                value={vendor.notes}
+                onChange={(value) => onUpdateVendor(index, "notes", value)}
+              />
             </div>
           </article>
         ))}
@@ -504,15 +566,6 @@ function VendorReadOnly({ items }) {
         <pre className="admin-json">{JSON.stringify(items, null, 2)}</pre>
       </details>
     </div>
-  );
-}
-
-function AdminReadOnlyField({ label, value = "" }) {
-  return (
-    <label className="admin-field">
-      <span>{label}</span>
-      <input type="text" value={value} disabled readOnly />
-    </label>
   );
 }
 
@@ -527,6 +580,10 @@ function AdminTextArea({ label, onChange, value = "" }) {
 
 function getPathValue(value, path) {
   return path.reduce((current, key) => current?.[key], value);
+}
+
+function isDraftFieldSection(sectionId) {
+  return sectionId === "courses" || sectionId === "vendors";
 }
 
 function validateCourseDrafts(items) {
