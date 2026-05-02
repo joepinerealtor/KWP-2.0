@@ -900,6 +900,8 @@ function MarketingToolFields({
   onUpdateMarketingTool,
   onUpdateMarketingToolLink
 }) {
+  const validationErrors = validateMarketingToolDrafts(items);
+
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -907,8 +909,20 @@ function MarketingToolFields({
           <strong>{items.length}</strong>
           <span>marketing tool cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Draft only</span>
+        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+        </span>
       </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Marketing Tools validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((tool, index) => (
           <article className="admin-course-item" key={tool.id || index}>
@@ -1241,6 +1255,48 @@ function validateLeadershipDrafts(items) {
         seenIds.set(id, index);
       }
     }
+  });
+
+  return errors;
+}
+
+function validateMarketingToolDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((tool, index) => {
+    const label = `Marketing Tool ${index + 1}`;
+
+    ["id", "kicker", "title", "summary"].forEach((field) => {
+      if (!String(tool[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(tool.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Marketing Tool ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+
+    if (!Array.isArray(tool.links)) {
+      errors.push(`${label}: links must be a list.`);
+      return;
+    }
+
+    tool.links.forEach((link, linkIndex) => {
+      const linkLabel = `${label} Link ${linkIndex + 1}`;
+
+      ["label", "href"].forEach((field) => {
+        if (!String(link[field] || "").trim()) {
+          errors.push(`${linkLabel}: ${field} is required.`);
+        }
+      });
+    });
   });
 
   return errors;
