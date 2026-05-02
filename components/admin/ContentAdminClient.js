@@ -159,23 +159,63 @@ export function ContentAdminClient() {
   }
 
   function updateVendor(index, field, value) {
+    updateVendors((vendors) => vendors.map((vendor, vendorIndex) => {
+      if (vendorIndex !== index) {
+        return vendor;
+      }
+
+      return {
+        ...vendor,
+        [field]: value
+      };
+    }));
+  }
+
+  function addVendor() {
+    updateVendors((vendors) => [
+      ...vendors,
+      {
+        id: createVendorId(vendors),
+        section: "",
+        business: "",
+        logo: "",
+        name: "",
+        phone: "",
+        email: "",
+        notes: "",
+        active: true
+      }
+    ]);
+  }
+
+  function removeVendor(index) {
+    updateVendors((vendors) => vendors.filter((_, vendorIndex) => vendorIndex !== index));
+  }
+
+  function moveVendor(index, direction) {
+    updateVendors((vendors) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= vendors.length) {
+        return vendors;
+      }
+
+      const nextVendors = [...vendors];
+      [nextVendors[index], nextVendors[nextIndex]] = [nextVendors[nextIndex], nextVendors[index]];
+
+      return nextVendors;
+    });
+  }
+
+  function updateVendors(getNextVendors) {
     setContent((currentContent) => {
-      if (!currentContent?.vendors?.[index]) {
+      if (!currentContent?.vendors) {
         return currentContent;
       }
 
       return {
         ...currentContent,
-        vendors: currentContent.vendors.map((vendor, vendorIndex) => {
-          if (vendorIndex !== index) {
-            return vendor;
-          }
-
-          return {
-            ...vendor,
-            [field]: value
-          };
-        })
+        vendors: getNextVendors(currentContent.vendors)
       };
     });
     setSaveError("");
@@ -295,8 +335,11 @@ export function ContentAdminClient() {
             <SectionReader
               isSaving={isSaving}
               onAddCourse={addCourse}
+              onAddVendor={addVendor}
               onMoveCourse={moveCourse}
+              onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
+              onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
@@ -315,8 +358,11 @@ export function ContentAdminClient() {
 function SectionReader({
   isSaving,
   onAddCourse,
+  onAddVendor,
   onMoveCourse,
+  onMoveVendor,
   onRemoveCourse,
+  onRemoveVendor,
   onSaveCourseDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
@@ -346,6 +392,9 @@ function SectionReader({
       <VendorFields
         isSaving={isSaving}
         items={section.value || []}
+        onAddVendor={onAddVendor}
+        onMoveVendor={onMoveVendor}
+        onRemoveVendor={onRemoveVendor}
         onSaveVendorDrafts={onSaveVendorDrafts}
         onUpdateVendor={onUpdateVendor}
         saveError={saveError}
@@ -519,6 +568,9 @@ function AdminTextField({ label, onChange, value = "" }) {
 function VendorFields({
   isSaving,
   items,
+  onAddVendor,
+  onMoveVendor,
+  onRemoveVendor,
   onSaveVendorDrafts,
   onUpdateVendor,
   saveError,
@@ -534,9 +586,14 @@ function VendorFields({
           <strong>{items.length}</strong>
           <span>vendor cards</span>
         </div>
-        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
-          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
-        </span>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddVendor}>
+            Add Vendor
+          </button>
+        </div>
       </div>
       {validationErrors.length ? (
         <div className="admin-validation" role="status">
@@ -573,14 +630,42 @@ function VendorFields({
           <article className="admin-course-item" key={vendor.id || index}>
             <div className="admin-course-item__header">
               <span>Vendor {index + 1}</span>
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={Boolean(vendor.active)}
-                  onChange={(event) => onUpdateVendor(index, "active", event.target.checked)}
-                />
-                Active
-              </label>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveVendor(index, -1)}
+                  aria-label={`Move Vendor ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveVendor(index, 1)}
+                  aria-label={`Move Vendor ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveVendor(index)}
+                  aria-label={`Remove Vendor ${index + 1}`}
+                >
+                  Remove
+                </button>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(vendor.active)}
+                    onChange={(event) => onUpdateVendor(index, "active", event.target.checked)}
+                  />
+                  Active
+                </label>
+              </div>
             </div>
             <div className="admin-field-grid">
               <AdminTextField
@@ -714,6 +799,19 @@ function createCourseId(courses) {
   while (ids.has(id)) {
     index += 1;
     id = `new-course-${index}`;
+  }
+
+  return id;
+}
+
+function createVendorId(vendors) {
+  const ids = new Set(vendors.map((vendor) => vendor.id));
+  let index = vendors.length + 1;
+  let id = `new-vendor-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-vendor-${index}`;
   }
 
   return id;
