@@ -287,6 +287,59 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateMarketingTool(index, field, value) {
+    updateMarketingTools((tools) => tools.map((tool, toolIndex) => {
+      if (toolIndex !== index) {
+        return tool;
+      }
+
+      return {
+        ...tool,
+        [field]: value
+      };
+    }));
+  }
+
+  function updateMarketingToolLink(toolIndex, linkIndex, field, value) {
+    updateMarketingTools((tools) => tools.map((tool, currentToolIndex) => {
+      if (currentToolIndex !== toolIndex) {
+        return tool;
+      }
+
+      return {
+        ...tool,
+        links: (tool.links || []).map((link, currentLinkIndex) => {
+          if (currentLinkIndex !== linkIndex) {
+            return link;
+          }
+
+          return {
+            ...link,
+            [field]: value
+          };
+        })
+      };
+    }));
+  }
+
+  function updateMarketingTools(getNextTools) {
+    setContent((currentContent) => {
+      if (!currentContent?.brandAssets?.marketingTools) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        brandAssets: {
+          ...currentContent.brandAssets,
+          marketingTools: getNextTools(currentContent.brandAssets.marketingTools)
+        }
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
   async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
@@ -417,6 +470,8 @@ export function ContentAdminClient() {
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
               onUpdateLeadership={updateLeadership}
+              onUpdateMarketingTool={updateMarketingTool}
+              onUpdateMarketingToolLink={updateMarketingToolLink}
               onUpdateVendor={updateVendor}
               saveError={saveError}
               saveResult={saveResult}
@@ -445,6 +500,8 @@ function SectionReader({
   onSaveVendorDrafts,
   onUpdateCourse,
   onUpdateLeadership,
+  onUpdateMarketingTool,
+  onUpdateMarketingToolLink,
   onUpdateVendor,
   saveError,
   saveResult,
@@ -499,7 +556,13 @@ function SectionReader({
   }
 
   if (section?.id === "marketingTools") {
-    return <MarketingToolFields items={section.value || []} />;
+    return (
+      <MarketingToolFields
+        items={section.value || []}
+        onUpdateMarketingTool={onUpdateMarketingTool}
+        onUpdateMarketingToolLink={onUpdateMarketingToolLink}
+      />
+    );
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -832,7 +895,11 @@ function LeadershipFields({
   );
 }
 
-function MarketingToolFields({ items }) {
+function MarketingToolFields({
+  items,
+  onUpdateMarketingTool,
+  onUpdateMarketingToolLink
+}) {
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -840,7 +907,7 @@ function MarketingToolFields({ items }) {
           <strong>{items.length}</strong>
           <span>marketing tool cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Read only</span>
+        <span className="admin-status admin-status--ok">Draft only</span>
       </div>
       <div className="admin-course-list">
         {items.map((tool, index) => (
@@ -848,27 +915,63 @@ function MarketingToolFields({ items }) {
             <div className="admin-course-item__header">
               <span>Marketing Tool {index + 1}</span>
               <label className="admin-check">
-                <input type="checkbox" checked={Boolean(tool.active)} disabled readOnly />
+                <input
+                  type="checkbox"
+                  checked={Boolean(tool.active)}
+                  onChange={(event) => onUpdateMarketingTool(index, "active", event.target.checked)}
+                />
                 Active
               </label>
             </div>
             <div className="admin-field-grid">
-              <AdminTextField disabled label="ID" value={tool.id} />
-              <AdminTextField disabled label="Kicker" value={tool.kicker} />
-              <AdminTextField disabled label="Title" value={tool.title} />
+              <AdminTextField
+                label="ID"
+                value={tool.id}
+                onChange={(value) => onUpdateMarketingTool(index, "id", value)}
+              />
+              <AdminTextField
+                label="Kicker"
+                value={tool.kicker}
+                onChange={(value) => onUpdateMarketingTool(index, "kicker", value)}
+              />
+              <AdminTextField
+                label="Title"
+                value={tool.title}
+                onChange={(value) => onUpdateMarketingTool(index, "title", value)}
+              />
             </div>
-            <AdminTextArea disabled label="Summary" value={tool.summary} />
+            <AdminTextArea
+              label="Summary"
+              value={tool.summary}
+              onChange={(value) => onUpdateMarketingTool(index, "summary", value)}
+            />
             {(tool.links || []).map((link, linkIndex) => (
               <div className="admin-field-grid" key={`${tool.id || index}-link-${linkIndex}`}>
-                <AdminTextField disabled label={`Link ${linkIndex + 1} Label`} value={link.label} />
-                <AdminTextField disabled label={`Link ${linkIndex + 1} URL`} value={link.href} />
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} Label`}
+                  value={link.label}
+                  onChange={(value) => onUpdateMarketingToolLink(index, linkIndex, "label", value)}
+                />
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} URL`}
+                  value={link.href}
+                  onChange={(value) => onUpdateMarketingToolLink(index, linkIndex, "href", value)}
+                />
                 <div className="admin-flag-row">
                   <label className="admin-check">
-                    <input type="checkbox" checked={Boolean(link.external)} disabled readOnly />
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.external)}
+                      onChange={(event) => onUpdateMarketingToolLink(index, linkIndex, "external", event.target.checked)}
+                    />
                     External
                   </label>
                   <label className="admin-check">
-                    <input type="checkbox" checked={Boolean(link.download)} disabled readOnly />
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.download)}
+                      onChange={(event) => onUpdateMarketingToolLink(index, linkIndex, "download", event.target.checked)}
+                    />
                     Download
                   </label>
                 </div>
@@ -1059,7 +1162,7 @@ function getPathValue(value, path) {
 }
 
 function isDraftFieldSection(sectionId) {
-  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership";
+  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools";
 }
 
 function validateCourseDrafts(items) {
