@@ -291,6 +291,10 @@ export function ContentAdminClient() {
     await saveDrafts("vendors", "Vendor");
   }
 
+  async function saveLeadershipDrafts() {
+    await saveDrafts("leadership", "Leadership");
+  }
+
   return (
     <main className="admin-shell">
       <header className="admin-header">
@@ -365,6 +369,7 @@ export function ContentAdminClient() {
               onRemoveCourse={removeCourse}
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
+              onSaveLeadershipDrafts={saveLeadershipDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
               onUpdateLeadership={updateLeadership}
@@ -389,6 +394,7 @@ function SectionReader({
   onRemoveCourse,
   onRemoveVendor,
   onSaveCourseDrafts,
+  onSaveLeadershipDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
   onUpdateLeadership,
@@ -430,7 +436,16 @@ function SectionReader({
   }
 
   if (section?.id === "leadership") {
-    return <LeadershipFields items={section.value || []} onUpdateLeadership={onUpdateLeadership} />;
+    return (
+      <LeadershipFields
+        isSaving={isSaving}
+        items={section.value || []}
+        onSaveLeadershipDrafts={onSaveLeadershipDrafts}
+        onUpdateLeadership={onUpdateLeadership}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -600,8 +615,16 @@ function AdminTextField({ disabled = false, label, onChange, value = "" }) {
   );
 }
 
-function LeadershipFields({ items, onUpdateLeadership }) {
+function LeadershipFields({
+  isSaving,
+  items,
+  onSaveLeadershipDrafts,
+  onUpdateLeadership,
+  saveError,
+  saveResult
+}) {
   const validationErrors = validateLeadershipDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "leadership" ? saveResult : null;
 
   return (
     <div className="admin-form-preview">
@@ -622,6 +645,26 @@ function LeadershipFields({ items, onUpdateLeadership }) {
               <li key={validationError}>{validationError}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveLeadershipDrafts}
+        >
+          {isSaving ? "Saving" : "Save Leadership Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Leadership drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
         </div>
       ) : null}
       <div className="admin-course-list">
