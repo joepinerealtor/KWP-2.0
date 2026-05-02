@@ -465,6 +465,85 @@ export function ContentAdminClient() {
     }));
   }
 
+  function addDigitalLogo() {
+    updateDigitalLogos((logos) => [
+      ...logos,
+      {
+        id: createDigitalLogoId(logos),
+        kicker: "",
+        title: "",
+        summary: "",
+        previewClass: "",
+        image: {
+          src: "",
+          alt: ""
+        },
+        links: [
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: false
+          }
+        ],
+        active: true
+      }
+    ]);
+  }
+
+  function removeDigitalLogo(index) {
+    updateDigitalLogos((logos) => logos.filter((_, logoIndex) => logoIndex !== index));
+  }
+
+  function moveDigitalLogo(index, direction) {
+    updateDigitalLogos((logos) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= logos.length) {
+        return logos;
+      }
+
+      const nextLogos = [...logos];
+      [nextLogos[index], nextLogos[nextIndex]] = [nextLogos[nextIndex], nextLogos[index]];
+
+      return nextLogos;
+    });
+  }
+
+  function addDigitalLogoLink(logoIndex) {
+    updateDigitalLogos((logos) => logos.map((logo, currentLogoIndex) => {
+      if (currentLogoIndex !== logoIndex) {
+        return logo;
+      }
+
+      return {
+        ...logo,
+        links: [
+          ...(logo.links || []),
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: false
+          }
+        ]
+      };
+    }));
+  }
+
+  function removeDigitalLogoLink(logoIndex, linkIndex) {
+    updateDigitalLogos((logos) => logos.map((logo, currentLogoIndex) => {
+      if (currentLogoIndex !== logoIndex) {
+        return logo;
+      }
+
+      return {
+        ...logo,
+        links: (logo.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex)
+      };
+    }));
+  }
+
   function updateDigitalLogos(getNextLogos) {
     setContent((currentContent) => {
       if (!currentContent?.brandAssets?.digitalLogos) {
@@ -536,6 +615,10 @@ export function ContentAdminClient() {
     await saveDrafts("marketingTools", "Marketing Tools");
   }
 
+  async function saveDigitalLogoDrafts() {
+    await saveDrafts("digitalLogos", "Digital Logos");
+  }
+
   return (
     <main className="admin-shell">
       <header className="admin-header">
@@ -604,20 +687,26 @@ export function ContentAdminClient() {
             <SectionReader
               isSaving={isSaving}
               onAddCourse={addCourse}
+              onAddDigitalLogo={addDigitalLogo}
+              onAddDigitalLogoLink={addDigitalLogoLink}
               onAddLeadership={addLeadership}
               onAddMarketingTool={addMarketingTool}
               onAddMarketingToolLink={addMarketingToolLink}
               onAddVendor={addVendor}
+              onMoveDigitalLogo={moveDigitalLogo}
               onMoveLeadership={moveLeadership}
               onMoveCourse={moveCourse}
               onMoveMarketingTool={moveMarketingTool}
               onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
+              onRemoveDigitalLogo={removeDigitalLogo}
+              onRemoveDigitalLogoLink={removeDigitalLogoLink}
               onRemoveLeadership={removeLeadership}
               onRemoveMarketingTool={removeMarketingTool}
               onRemoveMarketingToolLink={removeMarketingToolLink}
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
+              onSaveDigitalLogoDrafts={saveDigitalLogoDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
               onSaveMarketingToolDrafts={saveMarketingToolDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
@@ -643,20 +732,26 @@ export function ContentAdminClient() {
 function SectionReader({
   isSaving,
   onAddCourse,
+  onAddDigitalLogo,
+  onAddDigitalLogoLink,
   onAddLeadership,
   onAddMarketingTool,
   onAddMarketingToolLink,
   onAddVendor,
+  onMoveDigitalLogo,
   onMoveLeadership,
   onMoveCourse,
   onMoveMarketingTool,
   onMoveVendor,
   onRemoveCourse,
+  onRemoveDigitalLogo,
+  onRemoveDigitalLogoLink,
   onRemoveLeadership,
   onRemoveMarketingTool,
   onRemoveMarketingToolLink,
   onRemoveVendor,
   onSaveCourseDrafts,
+  onSaveDigitalLogoDrafts,
   onSaveLeadershipDrafts,
   onSaveMarketingToolDrafts,
   onSaveVendorDrafts,
@@ -742,10 +837,19 @@ function SectionReader({
   if (section?.id === "digitalLogos") {
     return (
       <DigitalLogoFields
+        isSaving={isSaving}
         items={section.value || []}
+        onAddDigitalLogo={onAddDigitalLogo}
+        onAddDigitalLogoLink={onAddDigitalLogoLink}
+        onMoveDigitalLogo={onMoveDigitalLogo}
+        onRemoveDigitalLogo={onRemoveDigitalLogo}
+        onRemoveDigitalLogoLink={onRemoveDigitalLogoLink}
+        onSaveDigitalLogoDrafts={onSaveDigitalLogoDrafts}
         onUpdateDigitalLogo={onUpdateDigitalLogo}
         onUpdateDigitalLogoImage={onUpdateDigitalLogoImage}
         onUpdateDigitalLogoLink={onUpdateDigitalLogoLink}
+        saveError={saveError}
+        saveResult={saveResult}
       />
     );
   }
@@ -1267,12 +1371,22 @@ function MarketingToolFields({
 }
 
 function DigitalLogoFields({
+  isSaving,
   items,
+  onAddDigitalLogo,
+  onAddDigitalLogoLink,
+  onMoveDigitalLogo,
+  onRemoveDigitalLogo,
+  onRemoveDigitalLogoLink,
+  onSaveDigitalLogoDrafts,
   onUpdateDigitalLogo,
   onUpdateDigitalLogoImage,
-  onUpdateDigitalLogoLink
+  onUpdateDigitalLogoLink,
+  saveError,
+  saveResult
 }) {
   const validationErrors = validateDigitalLogoDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "digitalLogos" ? saveResult : null;
 
   return (
     <div className="admin-form-preview">
@@ -1281,9 +1395,14 @@ function DigitalLogoFields({
           <strong>{items.length}</strong>
           <span>digital logo cards</span>
         </div>
-        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
-          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
-        </span>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddDigitalLogo}>
+            Add Logo
+          </button>
+        </div>
       </div>
       {validationErrors.length ? (
         <div className="admin-validation" role="status">
@@ -1295,19 +1414,75 @@ function DigitalLogoFields({
           </ul>
         </div>
       ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveDigitalLogoDrafts}
+        >
+          {isSaving ? "Saving" : "Save Digital Logos Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Digital Logos drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((logo, index) => (
           <article className="admin-course-item" key={logo.id || index}>
             <div className="admin-course-item__header">
               <span>Digital Logo {index + 1}</span>
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={Boolean(logo.active)}
-                  onChange={(event) => onUpdateDigitalLogo(index, "active", event.target.checked)}
-                />
-                Active
-              </label>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveDigitalLogo(index, -1)}
+                  aria-label={`Move Digital Logo ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveDigitalLogo(index, 1)}
+                  aria-label={`Move Digital Logo ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveDigitalLogo(index)}
+                  aria-label={`Remove Digital Logo ${index + 1}`}
+                >
+                  Remove
+                </button>
+                <button
+                  className="admin-icon-button"
+                  type="button"
+                  onClick={() => onAddDigitalLogoLink(index)}
+                  aria-label={`Add link to Digital Logo ${index + 1}`}
+                >
+                  Add Link
+                </button>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(logo.active)}
+                    onChange={(event) => onUpdateDigitalLogo(index, "active", event.target.checked)}
+                  />
+                  Active
+                </label>
+              </div>
             </div>
             <div className="admin-field-grid">
               <AdminTextField
@@ -1375,6 +1550,14 @@ function DigitalLogoFields({
                     />
                     Download
                   </label>
+                  <button
+                    className="admin-icon-button admin-icon-button--danger"
+                    type="button"
+                    onClick={() => onRemoveDigitalLogoLink(index, linkIndex)}
+                    aria-label={`Remove Link ${linkIndex + 1} from Digital Logo ${index + 1}`}
+                  >
+                    Remove Link
+                  </button>
                 </div>
               </div>
             ))}
@@ -1788,6 +1971,19 @@ function createMarketingToolId(tools) {
   while (ids.has(id)) {
     index += 1;
     id = `new-marketing-tool-${index}`;
+  }
+
+  return id;
+}
+
+function createDigitalLogoId(logos) {
+  const ids = new Set(logos.map((logo) => logo.id));
+  let index = logos.length + 1;
+  let id = `new-digital-logo-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-digital-logo-${index}`;
   }
 
   return id;
