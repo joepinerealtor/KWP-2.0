@@ -601,6 +601,8 @@ function AdminTextField({ disabled = false, label, onChange, value = "" }) {
 }
 
 function LeadershipFields({ items, onUpdateLeadership }) {
+  const validationErrors = validateLeadershipDrafts(items);
+
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -608,8 +610,20 @@ function LeadershipFields({ items, onUpdateLeadership }) {
           <strong>{items.length}</strong>
           <span>leadership profiles</span>
         </div>
-        <span className="admin-status admin-status--ok">Draft only</span>
+        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+        </span>
       </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Leadership validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((person, index) => (
           <article className="admin-course-item" key={person.id || index}>
@@ -904,6 +918,33 @@ function validateVendorDrafts(items) {
     if (id) {
       if (seenIds.has(id)) {
         errors.push(`${label}: id duplicates Vendor ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+  });
+
+  return errors;
+}
+
+function validateLeadershipDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((person, index) => {
+    const label = `Leader ${index + 1}`;
+
+    ["id", "group", "role", "name", "photo"].forEach((field) => {
+      if (!String(person[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(person.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Leader ${seenIds.get(id) + 1}.`);
       } else {
         seenIds.set(id, index);
       }
