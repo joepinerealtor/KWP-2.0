@@ -97,25 +97,65 @@ export function ContentAdminClient() {
   }
 
   function updateCourse(index, field, value) {
+    updateCourses((courses) => courses.map((course, courseIndex) => {
+      if (courseIndex !== index) {
+        return course;
+      }
+
+      return {
+        ...course,
+        [field]: value
+      };
+    }));
+  }
+
+  function addCourse() {
+    updateCourses((courses) => [
+      ...courses,
+      {
+        id: createCourseId(courses),
+        tag: "",
+        title: "",
+        summary: "",
+        href: "",
+        external: true,
+        active: true
+      }
+    ]);
+  }
+
+  function removeCourse(index) {
+    updateCourses((courses) => courses.filter((_, courseIndex) => courseIndex !== index));
+  }
+
+  function moveCourse(index, direction) {
+    updateCourses((courses) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= courses.length) {
+        return courses;
+      }
+
+      const nextCourses = [...courses];
+      [nextCourses[index], nextCourses[nextIndex]] = [nextCourses[nextIndex], nextCourses[index]];
+
+      return nextCourses;
+    });
+  }
+
+  function updateCourses(getNextCourses) {
     setContent((currentContent) => {
-      if (!currentContent?.courses?.[index]) {
+      if (!currentContent?.courses) {
         return currentContent;
       }
 
       return {
         ...currentContent,
-        courses: currentContent.courses.map((course, courseIndex) => {
-          if (courseIndex !== index) {
-            return course;
-          }
-
-          return {
-            ...course,
-            [field]: value
-          };
-        })
+        courses: getNextCourses(currentContent.courses)
       };
     });
+    setSaveError("");
+    setSaveResult(null);
   }
 
   async function saveCourseDrafts() {
@@ -218,6 +258,9 @@ export function ContentAdminClient() {
             </div>
             <SectionReader
               isSaving={isSaving}
+              onAddCourse={addCourse}
+              onMoveCourse={moveCourse}
+              onRemoveCourse={removeCourse}
               onSaveCourseDrafts={saveCourseDrafts}
               onUpdateCourse={updateCourse}
               saveError={saveError}
@@ -231,12 +274,25 @@ export function ContentAdminClient() {
   );
 }
 
-function SectionReader({ isSaving, onSaveCourseDrafts, onUpdateCourse, saveError, saveResult, section }) {
+function SectionReader({
+  isSaving,
+  onAddCourse,
+  onMoveCourse,
+  onRemoveCourse,
+  onSaveCourseDrafts,
+  onUpdateCourse,
+  saveError,
+  saveResult,
+  section
+}) {
   if (section?.id === "courses") {
     return (
       <CourseFields
         isSaving={isSaving}
         items={section.value || []}
+        onAddCourse={onAddCourse}
+        onMoveCourse={onMoveCourse}
+        onRemoveCourse={onRemoveCourse}
         onSaveCourseDrafts={onSaveCourseDrafts}
         onUpdateCourse={onUpdateCourse}
         saveError={saveError}
@@ -248,7 +304,17 @@ function SectionReader({ isSaving, onSaveCourseDrafts, onUpdateCourse, saveError
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
 }
 
-function CourseFields({ isSaving, items, onSaveCourseDrafts, onUpdateCourse, saveError, saveResult }) {
+function CourseFields({
+  isSaving,
+  items,
+  onAddCourse,
+  onMoveCourse,
+  onRemoveCourse,
+  onSaveCourseDrafts,
+  onUpdateCourse,
+  saveError,
+  saveResult
+}) {
   const validationErrors = validateCourseDrafts(items);
 
   return (
@@ -258,9 +324,14 @@ function CourseFields({ isSaving, items, onSaveCourseDrafts, onUpdateCourse, sav
           <strong>{items.length}</strong>
           <span>course cards</span>
         </div>
-        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
-          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
-        </span>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddCourse}>
+            Add Course
+          </button>
+        </div>
       </div>
       {validationErrors.length ? (
         <div className="admin-validation" role="status">
@@ -297,14 +368,42 @@ function CourseFields({ isSaving, items, onSaveCourseDrafts, onUpdateCourse, sav
           <article className="admin-course-item" key={course.id || index}>
             <div className="admin-course-item__header">
               <span>Course {index + 1}</span>
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={Boolean(course.active)}
-                  onChange={(event) => onUpdateCourse(index, "active", event.target.checked)}
-                />
-                Active
-              </label>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveCourse(index, -1)}
+                  aria-label={`Move Course ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveCourse(index, 1)}
+                  aria-label={`Move Course ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveCourse(index)}
+                  aria-label={`Remove Course ${index + 1}`}
+                >
+                  Remove
+                </button>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(course.active)}
+                    onChange={(event) => onUpdateCourse(index, "active", event.target.checked)}
+                  />
+                  Active
+                </label>
+              </div>
             </div>
             <div className="admin-field-grid">
               <AdminTextField
@@ -401,4 +500,17 @@ function validateCourseDrafts(items) {
   });
 
   return errors;
+}
+
+function createCourseId(courses) {
+  const ids = new Set(courses.map((course) => course.id));
+  let index = courses.length + 1;
+  let id = `new-course-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-course-${index}`;
+  }
+
+  return id;
 }

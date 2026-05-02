@@ -267,6 +267,12 @@ html {
   gap: 8px;
 }
 
+.admin-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .admin-form-preview__summary strong {
   color: var(--admin-ink);
   font-size: 22px;
@@ -379,6 +385,40 @@ html {
   text-transform: uppercase;
 }
 
+.admin-course-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-icon-button {
+  min-height: 30px;
+  padding: 0 9px;
+  color: var(--admin-ink);
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-icon-button:hover {
+  border-color: var(--admin-accent);
+}
+
+.admin-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-icon-button--danger {
+  color: #8f0101;
+}
+
 .admin-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -483,6 +523,12 @@ html {
   .admin-form-preview__summary {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .admin-summary-actions,
+  .admin-course-controls {
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .admin-save-row {
