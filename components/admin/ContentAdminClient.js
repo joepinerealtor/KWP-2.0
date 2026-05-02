@@ -182,7 +182,7 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
-  async function saveCourseDrafts() {
+  async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
     }
@@ -204,15 +204,27 @@ export function ContentAdminClient() {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload.validationErrors?.join(" ") || payload.error || "Unable to save course drafts.");
+        throw new Error(payload.validationErrors?.join(" ") || payload.error || `Unable to save ${sectionLabel.toLowerCase()} drafts.`);
       }
 
-      setSaveResult(payload);
+      setSaveResult({
+        ...payload,
+        sectionId,
+        sectionLabel
+      });
     } catch (saveRequestError) {
       setSaveError(saveRequestError.message);
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function saveCourseDrafts() {
+    await saveDrafts("courses", "Course");
+  }
+
+  async function saveVendorDrafts() {
+    await saveDrafts("vendors", "Vendor");
   }
 
   return (
@@ -286,6 +298,7 @@ export function ContentAdminClient() {
               onMoveCourse={moveCourse}
               onRemoveCourse={removeCourse}
               onSaveCourseDrafts={saveCourseDrafts}
+              onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
               onUpdateVendor={updateVendor}
               saveError={saveError}
@@ -305,6 +318,7 @@ function SectionReader({
   onMoveCourse,
   onRemoveCourse,
   onSaveCourseDrafts,
+  onSaveVendorDrafts,
   onUpdateCourse,
   onUpdateVendor,
   saveError,
@@ -328,7 +342,16 @@ function SectionReader({
   }
 
   if (section?.id === "vendors") {
-    return <VendorFields items={section.value || []} onUpdateVendor={onUpdateVendor} />;
+    return (
+      <VendorFields
+        isSaving={isSaving}
+        items={section.value || []}
+        onSaveVendorDrafts={onSaveVendorDrafts}
+        onUpdateVendor={onUpdateVendor}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -346,6 +369,7 @@ function CourseFields({
   saveResult
 }) {
   const validationErrors = validateCourseDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "courses" ? saveResult : null;
 
   return (
     <div className="admin-form-preview">
@@ -385,12 +409,12 @@ function CourseFields({
         <span>Writes only after validation, backup, and API passcode check.</span>
       </div>
       {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
-      {saveResult ? (
+      {activeSaveResult ? (
         <div className="admin-save-message admin-save-message--success" role="status">
-          <strong>{saveResult.changed ? "Course drafts saved." : "No content changes detected."}</strong>
-          <span>Backup: {saveResult.backup}</span>
-          <span>Source: {saveResult.source}</span>
-          <span>Mirror: {saveResult.publicMirror}</span>
+          <strong>{activeSaveResult.changed ? "Course drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
         </div>
       ) : null}
       <div className="admin-course-list">
@@ -492,8 +516,16 @@ function AdminTextField({ label, onChange, value = "" }) {
   );
 }
 
-function VendorFields({ items, onUpdateVendor }) {
+function VendorFields({
+  isSaving,
+  items,
+  onSaveVendorDrafts,
+  onUpdateVendor,
+  saveError,
+  saveResult
+}) {
   const validationErrors = validateVendorDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "vendors" ? saveResult : null;
 
   return (
     <div className="admin-form-preview">
@@ -514,6 +546,26 @@ function VendorFields({ items, onUpdateVendor }) {
               <li key={validationError}>{validationError}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveVendorDrafts}
+        >
+          {isSaving ? "Saving" : "Save Vendor Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Vendor drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
         </div>
       ) : null}
       <div className="admin-course-list">
