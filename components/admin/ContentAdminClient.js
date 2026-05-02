@@ -493,6 +493,8 @@ function AdminTextField({ label, onChange, value = "" }) {
 }
 
 function VendorFields({ items, onUpdateVendor }) {
+  const validationErrors = validateVendorDrafts(items);
+
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -500,8 +502,20 @@ function VendorFields({ items, onUpdateVendor }) {
           <strong>{items.length}</strong>
           <span>vendor cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Draft only</span>
+        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+        </span>
       </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Vendor validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((vendor, index) => (
           <article className="admin-course-item" key={vendor.id || index}>
@@ -604,6 +618,33 @@ function validateCourseDrafts(items) {
     if (id) {
       if (seenIds.has(id)) {
         errors.push(`${label}: id duplicates Course ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+  });
+
+  return errors;
+}
+
+function validateVendorDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((vendor, index) => {
+    const label = `Vendor ${index + 1}`;
+
+    ["id", "section", "business", "logo", "name", "notes"].forEach((field) => {
+      if (!String(vendor[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(vendor.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Vendor ${seenIds.get(id) + 1}.`);
       } else {
         seenIds.set(id, index);
       }
