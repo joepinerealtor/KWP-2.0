@@ -389,6 +389,10 @@ export function ContentAdminClient() {
     await saveDrafts("leadership", "Leadership");
   }
 
+  async function saveMarketingToolDrafts() {
+    await saveDrafts("marketingTools", "Marketing Tools");
+  }
+
   return (
     <main className="admin-shell">
       <header className="admin-header">
@@ -467,6 +471,7 @@ export function ContentAdminClient() {
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
+              onSaveMarketingToolDrafts={saveMarketingToolDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
               onUpdateLeadership={updateLeadership}
@@ -497,6 +502,7 @@ function SectionReader({
   onRemoveVendor,
   onSaveCourseDrafts,
   onSaveLeadershipDrafts,
+  onSaveMarketingToolDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
   onUpdateLeadership,
@@ -558,9 +564,13 @@ function SectionReader({
   if (section?.id === "marketingTools") {
     return (
       <MarketingToolFields
+        isSaving={isSaving}
         items={section.value || []}
+        onSaveMarketingToolDrafts={onSaveMarketingToolDrafts}
         onUpdateMarketingTool={onUpdateMarketingTool}
         onUpdateMarketingToolLink={onUpdateMarketingToolLink}
+        saveError={saveError}
+        saveResult={saveResult}
       />
     );
   }
@@ -896,11 +906,16 @@ function LeadershipFields({
 }
 
 function MarketingToolFields({
+  isSaving,
   items,
+  onSaveMarketingToolDrafts,
   onUpdateMarketingTool,
-  onUpdateMarketingToolLink
+  onUpdateMarketingToolLink,
+  saveError,
+  saveResult
 }) {
   const validationErrors = validateMarketingToolDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "marketingTools" ? saveResult : null;
 
   return (
     <div className="admin-form-preview">
@@ -921,6 +936,26 @@ function MarketingToolFields({
               <li key={validationError}>{validationError}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveMarketingToolDrafts}
+        >
+          {isSaving ? "Saving" : "Save Marketing Tools Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Marketing Tools drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
         </div>
       ) : null}
       <div className="admin-course-list">
