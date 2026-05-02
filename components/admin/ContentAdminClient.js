@@ -403,6 +403,10 @@ function SectionReader({
     );
   }
 
+  if (section?.id === "leadership") {
+    return <LeadershipFields items={section.value || []} />;
+  }
+
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
 }
 
@@ -556,12 +560,64 @@ function CourseFields({
   );
 }
 
-function AdminTextField({ label, onChange, value = "" }) {
+function AdminTextField({ disabled = false, label, onChange, value = "" }) {
   return (
     <label className="admin-field">
       <span>{label}</span>
-      <input type="text" value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        disabled={disabled}
+        type="text"
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
     </label>
+  );
+}
+
+function LeadershipFields({ items }) {
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{items.length}</strong>
+          <span>leadership profiles</span>
+        </div>
+        <span className="admin-status admin-status--ok">Read only</span>
+      </div>
+      <div className="admin-course-list">
+        {items.map((person, index) => (
+          <article className="admin-course-item" key={person.id || index}>
+            <div className="admin-course-item__header">
+              <span>Leader {index + 1}</span>
+              <div className="admin-course-controls">
+                <label className="admin-check">
+                  <input type="checkbox" checked={Boolean(person.featured)} disabled readOnly />
+                  Featured
+                </label>
+                <label className="admin-check">
+                  <input type="checkbox" checked={Boolean(person.active)} disabled readOnly />
+                  Active
+                </label>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField disabled label="ID" value={person.id} />
+              <AdminTextField disabled label="Group" value={person.group} />
+              <AdminTextField disabled label="Role" value={person.role} />
+              <AdminTextField disabled label="Name" value={person.name} />
+              <AdminTextField disabled label="Photo" value={person.photo} />
+              <AdminTextField disabled label="Email" value={person.email} />
+              <AdminTextField disabled label="Phone" value={person.phone} />
+              <AdminTextField disabled label="Notes" value={person.notes} />
+            </div>
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>Leadership JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(items, null, 2)}</pre>
+      </details>
+    </div>
   );
 }
 
