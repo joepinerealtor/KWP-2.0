@@ -223,23 +223,64 @@ export function ContentAdminClient() {
   }
 
   function updateLeadership(index, field, value) {
+    updateLeaderships((leaders) => leaders.map((person, personIndex) => {
+      if (personIndex !== index) {
+        return person;
+      }
+
+      return {
+        ...person,
+        [field]: value
+      };
+    }));
+  }
+
+  function addLeadership() {
+    updateLeaderships((leaders) => [
+      ...leaders,
+      {
+        id: createLeadershipId(leaders),
+        group: "",
+        role: "",
+        name: "",
+        photo: "",
+        email: "",
+        phone: "",
+        notes: "",
+        featured: false,
+        active: true
+      }
+    ]);
+  }
+
+  function removeLeadership(index) {
+    updateLeaderships((leaders) => leaders.filter((_, leaderIndex) => leaderIndex !== index));
+  }
+
+  function moveLeadership(index, direction) {
+    updateLeaderships((leaders) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= leaders.length) {
+        return leaders;
+      }
+
+      const nextLeaders = [...leaders];
+      [nextLeaders[index], nextLeaders[nextIndex]] = [nextLeaders[nextIndex], nextLeaders[index]];
+
+      return nextLeaders;
+    });
+  }
+
+  function updateLeaderships(getNextLeaders) {
     setContent((currentContent) => {
-      if (!currentContent?.leadership?.[index]) {
+      if (!currentContent?.leadership) {
         return currentContent;
       }
 
       return {
         ...currentContent,
-        leadership: currentContent.leadership.map((person, personIndex) => {
-          if (personIndex !== index) {
-            return person;
-          }
-
-          return {
-            ...person,
-            [field]: value
-          };
-        })
+        leadership: getNextLeaders(currentContent.leadership)
       };
     });
     setSaveError("");
@@ -363,10 +404,13 @@ export function ContentAdminClient() {
             <SectionReader
               isSaving={isSaving}
               onAddCourse={addCourse}
+              onAddLeadership={addLeadership}
               onAddVendor={addVendor}
+              onMoveLeadership={moveLeadership}
               onMoveCourse={moveCourse}
               onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
+              onRemoveLeadership={removeLeadership}
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
@@ -388,10 +432,13 @@ export function ContentAdminClient() {
 function SectionReader({
   isSaving,
   onAddCourse,
+  onAddLeadership,
   onAddVendor,
+  onMoveLeadership,
   onMoveCourse,
   onMoveVendor,
   onRemoveCourse,
+  onRemoveLeadership,
   onRemoveVendor,
   onSaveCourseDrafts,
   onSaveLeadershipDrafts,
@@ -440,6 +487,9 @@ function SectionReader({
       <LeadershipFields
         isSaving={isSaving}
         items={section.value || []}
+        onAddLeadership={onAddLeadership}
+        onMoveLeadership={onMoveLeadership}
+        onRemoveLeadership={onRemoveLeadership}
         onSaveLeadershipDrafts={onSaveLeadershipDrafts}
         onUpdateLeadership={onUpdateLeadership}
         saveError={saveError}
@@ -618,6 +668,9 @@ function AdminTextField({ disabled = false, label, onChange, value = "" }) {
 function LeadershipFields({
   isSaving,
   items,
+  onAddLeadership,
+  onMoveLeadership,
+  onRemoveLeadership,
   onSaveLeadershipDrafts,
   onUpdateLeadership,
   saveError,
@@ -633,9 +686,14 @@ function LeadershipFields({
           <strong>{items.length}</strong>
           <span>leadership profiles</span>
         </div>
-        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
-          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
-        </span>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddLeadership}>
+            Add Leader
+          </button>
+        </div>
       </div>
       {validationErrors.length ? (
         <div className="admin-validation" role="status">
@@ -673,6 +731,32 @@ function LeadershipFields({
             <div className="admin-course-item__header">
               <span>Leader {index + 1}</span>
               <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveLeadership(index, -1)}
+                  aria-label={`Move Leader ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveLeadership(index, 1)}
+                  aria-label={`Move Leader ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveLeadership(index)}
+                  aria-label={`Remove Leader ${index + 1}`}
+                >
+                  Remove
+                </button>
                 <label className="admin-check">
                   <input
                     type="checkbox"
@@ -1018,6 +1102,19 @@ function createVendorId(vendors) {
   while (ids.has(id)) {
     index += 1;
     id = `new-vendor-${index}`;
+  }
+
+  return id;
+}
+
+function createLeadershipId(leaders) {
+  const ids = new Set(leaders.map((person) => person.id));
+  let index = leaders.length + 1;
+  let id = `new-leader-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-leader-${index}`;
   }
 
   return id;
