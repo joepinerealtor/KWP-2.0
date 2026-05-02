@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import portalContent from "../../../../lib/portal-content";
@@ -95,7 +96,22 @@ function isAuthorized(request) {
   const authorization = request.headers.get("authorization") || "";
   const bearerPasscode = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
 
-  return headerPasscode === configuredPasscode || bearerPasscode === configuredPasscode;
+  return passcodeMatches(headerPasscode, configuredPasscode) || passcodeMatches(bearerPasscode, configuredPasscode);
+}
+
+function passcodeMatches(candidatePasscode, configuredPasscode) {
+  if (!candidatePasscode || !configuredPasscode) {
+    return false;
+  }
+
+  const candidateBuffer = Buffer.from(candidatePasscode);
+  const configuredBuffer = Buffer.from(configuredPasscode);
+
+  if (candidateBuffer.length !== configuredBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(candidateBuffer, configuredBuffer);
 }
 
 function extractContentPayload(body) {

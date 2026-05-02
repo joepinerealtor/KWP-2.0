@@ -2,25 +2,22 @@
 
 ## Purpose
 
-Plan the next migration phase for the safe KWP 2.0 staging repo. The goal is to make portal content easier to maintain without changing the live portal domain, redesigning the experience, or replacing the existing visual surface before it is ready.
+Track the staging-only content editor architecture for KWP 2.0. The migration goal is easier portal maintenance without connecting the staging repo to `portal.kwleadingedge.com`, redesigning the experience, or changing the public portal surface before it is ready.
 
 ## Current State
 
 - The portal renders through Next.js App Router.
-- The page chrome is componentized.
-- Repeated content blocks are now backed by structured data in `data/portal-content.json`.
-- The public browser script still reads `public/data/portal-content.json` for legacy client-side behavior.
-- The visible portal experience must remain unchanged during this phase.
-
-## Architecture Recommendation
-
-Use a Git/JSON-backed editor first. Do not introduce a database yet.
-
-This keeps the staging site static-friendly, easy to diff, easy to roll back, and aligned with the current deployment model. A database can come later once the edit workflows are proven.
+- Page chrome is componentized.
+- Repeated portal content is backed by structured data in `data/portal-content.json`.
+- The public runtime mirror is `public/data/portal-content.json`.
+- The staging-only content admin route exists at `/admin/content/`.
+- The admin route and API return 404 unless `KWP_ADMIN_ENABLED=true`.
+- Admin saves are guarded by `KWP_ADMIN_PASSCODE`.
+- Public portal parity remains the phase 1 constraint.
 
 ## Content Source Model
 
-Primary editable source:
+Canonical editable source:
 
 - `data/portal-content.json`
 
@@ -28,15 +25,16 @@ Public runtime mirror:
 
 - `public/data/portal-content.json`
 
-Near-term rule:
+Rules:
 
 - Treat `data/portal-content.json` as canonical.
-- Generate or sync `public/data/portal-content.json` from the canonical file.
-- Avoid hand-editing both files independently.
+- Sync `public/data/portal-content.json` from the canonical file.
+- Do not hand-edit both files independently.
+- Keep JSON changes reviewable in Git before any publishing decision.
 
 ## Editable Content Groups
 
-Initial editor sections should map directly to the existing structured data groups:
+The first editor pass now covers these structured groups:
 
 - `courses`
 - `vendors`
@@ -57,20 +55,23 @@ Later editor sections can include:
 - Tech/help status content
 - Calendar and handbook modal settings
 
-## Admin UI Scope
+## Admin Scope
 
-First editor should be a staging-only internal tool, not a polished public CMS.
+This is a staging-only internal editor, not a public CMS.
 
-Minimum capabilities:
+Current capabilities:
 
-- View current structured content by section
-- Add, edit, reorder, activate, and deactivate repeated items
+- Load current structured content by section
+- Edit fields for all first-pass content groups
+- Add, remove, and reorder repeated items
+- Toggle active states where the portal data supports them
 - Validate required fields before saving
-- Preview JSON changes before writing
-- Save changes to the canonical content file
-- Keep the public mirror synchronized
+- Preview JSON for each section
+- Save the full canonical content file through a guarded API
+- Back up the canonical JSON before save
+- Sync the public JSON mirror after changed saves
 
-Do not include in the first pass:
+Out of scope for this pass:
 
 - User roles
 - Database migrations
@@ -78,101 +79,62 @@ Do not include in the first pass:
 - Full visual page builder
 - Live production publishing
 
-## Validation Rules
-
-Each editable section should have explicit validation before save.
-
-Examples:
-
-- Required `id` values must be unique within their group.
-- Required display text cannot be blank.
-- Links must include `href`.
-- External links should carry `external: true`.
-- Download links should carry `download: true`.
-- Active flags should default to `true`.
-- Image-backed cards must include both image `src` and `alt`.
-
-## Proposed File Structure
-
-Suggested first implementation:
-
-- `lib/portal-content.js`
-  - Load canonical content
-  - Validate content
-  - Write canonical content
-  - Sync public mirror
-- `lib/portal-content-schema.js`
-  - Section-level validation helpers
-  - Shared defaults
-- `app/(admin)/admin/content/page.js`
-  - Staging-only content editor shell
-- `app/(admin)/admin/content/actions.js`
-  - Server actions for saving JSON
-- `components/admin/`
-  - Small form components for repeated content groups
-
 ## Access Control
-
-Do not expose the editor publicly without protection.
-
-First safe option:
-
-- Gate the admin route behind an environment variable passcode.
-- Keep the route staging-only.
-- Do not deploy it to the live domain until a stronger auth plan exists.
 
 Environment variables:
 
 - `KWP_ADMIN_ENABLED`
 - `KWP_ADMIN_PASSCODE`
 
-The editor should return `notFound()` or a locked screen when disabled.
+Safety behavior:
+
+- `/admin/content/` returns 404 when disabled.
+- `/api/admin/content/` returns 404 when disabled.
+- The API accepts the passcode through `x-kwp-admin-passcode` or `Authorization: Bearer`.
+- Passcode checks use a timing-safe comparison.
+- Do not deploy or enable this route on the live domain until a stronger auth and publishing plan exists.
 
 ## Save Workflow
 
-First safe save flow:
-
 1. Load canonical JSON from `data/portal-content.json`.
-2. User edits one section.
-3. Validate the edited section and full content object.
-4. Write pretty-printed JSON to `data/portal-content.json`.
-5. Copy the same content to `public/data/portal-content.json`.
-6. Show a success message with changed section name.
-7. User runs build and visually verifies before committing.
+2. Edit one or more sections in the staging admin.
+3. Validate the full content object.
+4. Back up the current canonical file in `data/.backups/`.
+5. Write pretty-printed JSON to `data/portal-content.json`.
+6. Copy the same content to `public/data/portal-content.json`.
+7. Show save status with changed flag, backup path, source path, and mirror path.
+8. Run `npm.cmd run content:validate` and `npm.cmd run build`.
+9. Commit and push after checks pass.
 
 ## Deployment Safety
 
 Rules for this phase:
 
-- Keep working only in the staging repo.
+- Work only in the staging repo.
 - Do not connect to `portal.kwleadingedge.com`.
 - Do not enable automatic production publishing.
 - Keep GitHub workflows manual.
-- Require build success and visual parity before each commit.
+- Require build success and visual parity before deployment decisions.
+- Keep the admin disabled by default.
 
 ## Database Decision Point
 
-Only revisit a database after the JSON editor proves the workflows.
+Do not introduce a database yet. The Git-backed JSON editor is the lower-risk architecture while workflows are still being proven.
 
-A database may make sense if:
+A database may make sense later if:
 
 - Multiple people need simultaneous editing.
-- Content needs approval workflows.
+- Approval workflows are required.
 - Image/file uploads need to be managed inside the editor.
-- Audit history needs to exist outside Git.
+- Audit history must exist outside Git.
 - Production publishing needs one-click promotion.
 
-Until then, Git-backed JSON is the lower-risk architecture.
+## Next Safe Architecture Slices
 
-## Next Implementation Slice
+Recommended order:
 
-Build the content infrastructure without a UI first:
-
-1. Add `lib/portal-content.js`.
-2. Add validation helpers.
-3. Add a sync script for `data/portal-content.json` to `public/data/portal-content.json`.
-4. Add npm scripts for validation and sync.
-5. Run build.
-6. Commit.
-
-After that, build the staging-only admin UI one section at a time.
+1. Split the large admin client into smaller section components.
+2. Extract shared admin form controls and validation helpers.
+3. Add focused editor tests or smoke checks for guarded admin behavior.
+4. Add a preview workflow for reviewing content changes before save.
+5. Revisit database storage only after the JSON editor workflow is approved.
