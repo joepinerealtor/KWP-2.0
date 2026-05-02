@@ -1272,6 +1272,8 @@ function DigitalLogoFields({
   onUpdateDigitalLogoImage,
   onUpdateDigitalLogoLink
 }) {
+  const validationErrors = validateDigitalLogoDrafts(items);
+
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -1279,8 +1281,20 @@ function DigitalLogoFields({
           <strong>{items.length}</strong>
           <span>digital logo cards</span>
         </div>
-        <span className="admin-status admin-status--ok">Draft only</span>
+        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+        </span>
       </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Digital Logos validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="admin-course-list">
         {items.map((logo, index) => (
           <article className="admin-course-item" key={logo.id || index}>
@@ -1662,6 +1676,58 @@ function validateMarketingToolDrafts(items) {
     }
 
     tool.links.forEach((link, linkIndex) => {
+      const linkLabel = `${label} Link ${linkIndex + 1}`;
+
+      ["label", "href"].forEach((field) => {
+        if (!String(link[field] || "").trim()) {
+          errors.push(`${linkLabel}: ${field} is required.`);
+        }
+      });
+    });
+  });
+
+  return errors;
+}
+
+function validateDigitalLogoDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((logo, index) => {
+    const label = `Digital Logo ${index + 1}`;
+
+    ["id", "kicker", "title", "summary", "previewClass"].forEach((field) => {
+      if (!String(logo[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(logo.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Digital Logo ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+
+    if (!logo.image || typeof logo.image !== "object" || Array.isArray(logo.image)) {
+      errors.push(`${label}: image must be set.`);
+    } else {
+      ["src", "alt"].forEach((field) => {
+        if (!String(logo.image[field] || "").trim()) {
+          errors.push(`${label}: image ${field} is required.`);
+        }
+      });
+    }
+
+    if (!Array.isArray(logo.links)) {
+      errors.push(`${label}: links must be a list.`);
+      return;
+    }
+
+    logo.links.forEach((link, linkIndex) => {
       const linkLabel = `${label} Link ${linkIndex + 1}`;
 
       ["label", "href"].forEach((field) => {
