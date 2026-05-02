@@ -460,6 +460,11 @@ html {
   outline: 2px solid rgba(180, 1, 1, 0.16);
 }
 
+.admin-field input:disabled {
+  color: var(--admin-ink);
+  opacity: 1;
+}
+
 .admin-field textarea {
   min-height: 86px;
   resize: vertical;
