@@ -310,6 +310,46 @@ html {
   padding-left: 18px;
 }
 
+.admin-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+}
+
+.admin-save-row span {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-save-message {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.admin-save-message--error {
+  color: #5f1616;
+  background: #fff1f1;
+  border: 1px solid #efc5c5;
+}
+
+.admin-save-message--success {
+  color: #173f28;
+  background: #eff8f1;
+  border: 1px solid #bfe2c8;
+}
+
+.admin-save-message span {
+  overflow-wrap: anywhere;
+}
+
 .admin-course-list {
   display: grid;
   gap: 14px;
@@ -441,6 +481,11 @@ html {
   }
 
   .admin-form-preview__summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-save-row {
     align-items: flex-start;
     flex-direction: column;
   }

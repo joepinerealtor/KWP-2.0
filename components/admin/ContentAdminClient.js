@@ -17,12 +17,16 @@ const SECTION_DEFINITIONS = [
 
 export function ContentAdminClient() {
   const [passcode, setPasscode] = useState("");
+  const [adminPasscode, setAdminPasscode] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [content, setContent] = useState(null);
   const [source, setSource] = useState("");
   const [activeSectionId, setActiveSectionId] = useState(SECTION_DEFINITIONS[0].id);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saveResult, setSaveResult] = useState(null);
 
   const sections = useMemo(() => {
     if (!content) {
@@ -63,13 +67,17 @@ export function ContentAdminClient() {
       }
 
       setIsUnlocked(true);
+      setAdminPasscode(passcode);
       setPasscode("");
       setContent(payload.content);
       setSource(payload.source || "");
       setActiveSectionId(SECTION_DEFINITIONS[0].id);
+      setSaveError("");
+      setSaveResult(null);
     } catch (loadError) {
       setContent(null);
       setSource("");
+      setAdminPasscode("");
       setIsUnlocked(false);
       setError(loadError.message);
     } finally {
@@ -79,9 +87,12 @@ export function ContentAdminClient() {
 
   function lock() {
     setIsUnlocked(false);
+    setAdminPasscode("");
     setContent(null);
     setSource("");
     setError("");
+    setSaveError("");
+    setSaveResult(null);
     setPasscode("");
   }
 
@@ -105,6 +116,39 @@ export function ContentAdminClient() {
         })
       };
     });
+  }
+
+  async function saveCourseDrafts() {
+    if (!content) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError("");
+    setSaveResult(null);
+
+    try {
+      const response = await fetch("/api/admin/content/", {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: JSON.stringify({ content })
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.validationErrors?.join(" ") || payload.error || "Unable to save course drafts.");
+      }
+
+      setSaveResult(payload);
+    } catch (saveRequestError) {
+      setSaveError(saveRequestError.message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -172,7 +216,14 @@ export function ContentAdminClient() {
               </div>
               <span>{activeSection?.type}</span>
             </div>
-            <SectionReader section={activeSection} onUpdateCourse={updateCourse} />
+            <SectionReader
+              isSaving={isSaving}
+              onSaveCourseDrafts={saveCourseDrafts}
+              onUpdateCourse={updateCourse}
+              saveError={saveError}
+              saveResult={saveResult}
+              section={activeSection}
+            />
           </div>
         </section>
       )}
@@ -180,15 +231,24 @@ export function ContentAdminClient() {
   );
 }
 
-function SectionReader({ onUpdateCourse, section }) {
+function SectionReader({ isSaving, onSaveCourseDrafts, onUpdateCourse, saveError, saveResult, section }) {
   if (section?.id === "courses") {
-    return <CourseFields items={section.value || []} onUpdateCourse={onUpdateCourse} />;
+    return (
+      <CourseFields
+        isSaving={isSaving}
+        items={section.value || []}
+        onSaveCourseDrafts={onSaveCourseDrafts}
+        onUpdateCourse={onUpdateCourse}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
 }
 
-function CourseFields({ items, onUpdateCourse }) {
+function CourseFields({ isSaving, items, onSaveCourseDrafts, onUpdateCourse, saveError, saveResult }) {
   const validationErrors = validateCourseDrafts(items);
 
   return (
@@ -210,6 +270,26 @@ function CourseFields({ items, onUpdateCourse }) {
               <li key={validationError}>{validationError}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveCourseDrafts}
+        >
+          {isSaving ? "Saving" : "Save Course Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {saveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{saveResult.changed ? "Course drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {saveResult.backup}</span>
+          <span>Source: {saveResult.source}</span>
+          <span>Mirror: {saveResult.publicMirror}</span>
         </div>
       ) : null}
       <div className="admin-course-list">

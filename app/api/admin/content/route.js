@@ -59,6 +59,7 @@ export async function PUT(request) {
     return noStoreJson({
       ok: true,
       backup: toRepoPath(result.backupPath),
+      changed: result.changed,
       source: toRepoPath(result.canonicalPath),
       publicMirror: toRepoPath(result.publicPath)
     });
