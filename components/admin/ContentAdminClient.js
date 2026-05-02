@@ -562,6 +562,133 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateSourceFile(index, field, value) {
+    updateSourceFiles((files) => files.map((file, fileIndex) => {
+      if (fileIndex !== index) {
+        return file;
+      }
+
+      return {
+        ...file,
+        [field]: value
+      };
+    }));
+  }
+
+  function updateSourceFileLink(fileIndex, linkIndex, field, value) {
+    updateSourceFiles((files) => files.map((file, currentFileIndex) => {
+      if (currentFileIndex !== fileIndex) {
+        return file;
+      }
+
+      return {
+        ...file,
+        links: (file.links || []).map((link, currentLinkIndex) => {
+          if (currentLinkIndex !== linkIndex) {
+            return link;
+          }
+
+          return {
+            ...link,
+            [field]: value
+          };
+        })
+      };
+    }));
+  }
+
+  function addSourceFile() {
+    updateSourceFiles((files) => [
+      ...files,
+      {
+        id: createSourceFileId(files),
+        kicker: "",
+        title: "",
+        summary: "",
+        links: [
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: true
+          }
+        ],
+        active: true
+      }
+    ]);
+  }
+
+  function removeSourceFile(index) {
+    updateSourceFiles((files) => files.filter((_, fileIndex) => fileIndex !== index));
+  }
+
+  function moveSourceFile(index, direction) {
+    updateSourceFiles((files) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= files.length) {
+        return files;
+      }
+
+      const nextFiles = [...files];
+      [nextFiles[index], nextFiles[nextIndex]] = [nextFiles[nextIndex], nextFiles[index]];
+
+      return nextFiles;
+    });
+  }
+
+  function addSourceFileLink(fileIndex) {
+    updateSourceFiles((files) => files.map((file, currentFileIndex) => {
+      if (currentFileIndex !== fileIndex) {
+        return file;
+      }
+
+      return {
+        ...file,
+        links: [
+          ...(file.links || []),
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: true
+          }
+        ]
+      };
+    }));
+  }
+
+  function removeSourceFileLink(fileIndex, linkIndex) {
+    updateSourceFiles((files) => files.map((file, currentFileIndex) => {
+      if (currentFileIndex !== fileIndex) {
+        return file;
+      }
+
+      return {
+        ...file,
+        links: (file.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex)
+      };
+    }));
+  }
+
+  function updateSourceFiles(getNextFiles) {
+    setContent((currentContent) => {
+      if (!currentContent?.brandAssets?.sourceFiles) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        brandAssets: {
+          ...currentContent.brandAssets,
+          sourceFiles: getNextFiles(currentContent.brandAssets.sourceFiles)
+        }
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
   async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
@@ -617,6 +744,10 @@ export function ContentAdminClient() {
 
   async function saveDigitalLogoDrafts() {
     await saveDrafts("digitalLogos", "Digital Logos");
+  }
+
+  async function saveSourceFileDrafts() {
+    await saveDrafts("sourceFiles", "Source Files");
   }
 
   return (
@@ -692,11 +823,14 @@ export function ContentAdminClient() {
               onAddLeadership={addLeadership}
               onAddMarketingTool={addMarketingTool}
               onAddMarketingToolLink={addMarketingToolLink}
+              onAddSourceFile={addSourceFile}
+              onAddSourceFileLink={addSourceFileLink}
               onAddVendor={addVendor}
               onMoveDigitalLogo={moveDigitalLogo}
               onMoveLeadership={moveLeadership}
               onMoveCourse={moveCourse}
               onMoveMarketingTool={moveMarketingTool}
+              onMoveSourceFile={moveSourceFile}
               onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
               onRemoveDigitalLogo={removeDigitalLogo}
@@ -704,11 +838,14 @@ export function ContentAdminClient() {
               onRemoveLeadership={removeLeadership}
               onRemoveMarketingTool={removeMarketingTool}
               onRemoveMarketingToolLink={removeMarketingToolLink}
+              onRemoveSourceFile={removeSourceFile}
+              onRemoveSourceFileLink={removeSourceFileLink}
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveDigitalLogoDrafts={saveDigitalLogoDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
               onSaveMarketingToolDrafts={saveMarketingToolDrafts}
+              onSaveSourceFileDrafts={saveSourceFileDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
               onUpdateDigitalLogo={updateDigitalLogo}
@@ -717,6 +854,8 @@ export function ContentAdminClient() {
               onUpdateLeadership={updateLeadership}
               onUpdateMarketingTool={updateMarketingTool}
               onUpdateMarketingToolLink={updateMarketingToolLink}
+              onUpdateSourceFile={updateSourceFile}
+              onUpdateSourceFileLink={updateSourceFileLink}
               onUpdateVendor={updateVendor}
               saveError={saveError}
               saveResult={saveResult}
@@ -737,11 +876,14 @@ function SectionReader({
   onAddLeadership,
   onAddMarketingTool,
   onAddMarketingToolLink,
+  onAddSourceFile,
+  onAddSourceFileLink,
   onAddVendor,
   onMoveDigitalLogo,
   onMoveLeadership,
   onMoveCourse,
   onMoveMarketingTool,
+  onMoveSourceFile,
   onMoveVendor,
   onRemoveCourse,
   onRemoveDigitalLogo,
@@ -749,11 +891,14 @@ function SectionReader({
   onRemoveLeadership,
   onRemoveMarketingTool,
   onRemoveMarketingToolLink,
+  onRemoveSourceFile,
+  onRemoveSourceFileLink,
   onRemoveVendor,
   onSaveCourseDrafts,
   onSaveDigitalLogoDrafts,
   onSaveLeadershipDrafts,
   onSaveMarketingToolDrafts,
+  onSaveSourceFileDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
   onUpdateDigitalLogo,
@@ -762,6 +907,8 @@ function SectionReader({
   onUpdateLeadership,
   onUpdateMarketingTool,
   onUpdateMarketingToolLink,
+  onUpdateSourceFile,
+  onUpdateSourceFileLink,
   onUpdateVendor,
   saveError,
   saveResult,
@@ -848,6 +995,25 @@ function SectionReader({
         onUpdateDigitalLogo={onUpdateDigitalLogo}
         onUpdateDigitalLogoImage={onUpdateDigitalLogoImage}
         onUpdateDigitalLogoLink={onUpdateDigitalLogoLink}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
+  }
+
+  if (section?.id === "sourceFiles") {
+    return (
+      <SourceFileFields
+        isSaving={isSaving}
+        items={section.value || []}
+        onAddSourceFile={onAddSourceFile}
+        onAddSourceFileLink={onAddSourceFileLink}
+        onMoveSourceFile={onMoveSourceFile}
+        onRemoveSourceFile={onRemoveSourceFile}
+        onRemoveSourceFileLink={onRemoveSourceFileLink}
+        onSaveSourceFileDrafts={onSaveSourceFileDrafts}
+        onUpdateSourceFile={onUpdateSourceFile}
+        onUpdateSourceFileLink={onUpdateSourceFileLink}
         saveError={saveError}
         saveResult={saveResult}
       />
@@ -1572,6 +1738,192 @@ function DigitalLogoFields({
   );
 }
 
+function SourceFileFields({
+  isSaving,
+  items,
+  onAddSourceFile,
+  onAddSourceFileLink,
+  onMoveSourceFile,
+  onRemoveSourceFile,
+  onRemoveSourceFileLink,
+  onSaveSourceFileDrafts,
+  onUpdateSourceFile,
+  onUpdateSourceFileLink,
+  saveError,
+  saveResult
+}) {
+  const validationErrors = validateSourceFileDrafts(items);
+  const activeSaveResult = saveResult?.sectionId === "sourceFiles" ? saveResult : null;
+
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{items.length}</strong>
+          <span>source file cards</span>
+        </div>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddSourceFile}>
+            Add File
+          </button>
+        </div>
+      </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Source Files validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveSourceFileDrafts}
+        >
+          {isSaving ? "Saving" : "Save Source Files Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Source Files drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
+        </div>
+      ) : null}
+      <div className="admin-course-list">
+        {items.map((file, index) => (
+          <article className="admin-course-item" key={file.id || index}>
+            <div className="admin-course-item__header">
+              <span>Source File {index + 1}</span>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveSourceFile(index, -1)}
+                  aria-label={`Move Source File ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveSourceFile(index, 1)}
+                  aria-label={`Move Source File ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveSourceFile(index)}
+                  aria-label={`Remove Source File ${index + 1}`}
+                >
+                  Remove
+                </button>
+                <button
+                  className="admin-icon-button"
+                  type="button"
+                  onClick={() => onAddSourceFileLink(index)}
+                  aria-label={`Add link to Source File ${index + 1}`}
+                >
+                  Add Link
+                </button>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(file.active)}
+                    onChange={(event) => onUpdateSourceFile(index, "active", event.target.checked)}
+                  />
+                  Active
+                </label>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="ID"
+                value={file.id}
+                onChange={(value) => onUpdateSourceFile(index, "id", value)}
+              />
+              <AdminTextField
+                label="Kicker"
+                value={file.kicker}
+                onChange={(value) => onUpdateSourceFile(index, "kicker", value)}
+              />
+              <AdminTextField
+                label="Title"
+                value={file.title}
+                onChange={(value) => onUpdateSourceFile(index, "title", value)}
+              />
+            </div>
+            <AdminTextArea
+              label="Summary"
+              value={file.summary}
+              onChange={(value) => onUpdateSourceFile(index, "summary", value)}
+            />
+            {(file.links || []).map((link, linkIndex) => (
+              <div className="admin-field-grid" key={`${file.id || index}-link-${linkIndex}`}>
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} Label`}
+                  value={link.label}
+                  onChange={(value) => onUpdateSourceFileLink(index, linkIndex, "label", value)}
+                />
+                <AdminTextField
+                  label={`Link ${linkIndex + 1} URL`}
+                  value={link.href}
+                  onChange={(value) => onUpdateSourceFileLink(index, linkIndex, "href", value)}
+                />
+                <div className="admin-flag-row">
+                  <label className="admin-check">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.external)}
+                      onChange={(event) => onUpdateSourceFileLink(index, linkIndex, "external", event.target.checked)}
+                    />
+                    External
+                  </label>
+                  <label className="admin-check">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(link.download)}
+                      onChange={(event) => onUpdateSourceFileLink(index, linkIndex, "download", event.target.checked)}
+                    />
+                    Download
+                  </label>
+                  <button
+                    className="admin-icon-button admin-icon-button--danger"
+                    type="button"
+                    onClick={() => onRemoveSourceFileLink(index, linkIndex)}
+                    aria-label={`Remove Link ${linkIndex + 1} from Source File ${index + 1}`}
+                  >
+                    Remove Link
+                  </button>
+                </div>
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>Source Files JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(items, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
 function VendorFields({
   isSaving,
   items,
@@ -1746,7 +2098,7 @@ function getPathValue(value, path) {
 }
 
 function isDraftFieldSection(sectionId) {
-  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools" || sectionId === "digitalLogos";
+  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools" || sectionId === "digitalLogos" || sectionId === "sourceFiles";
 }
 
 function validateCourseDrafts(items) {
@@ -1924,6 +2276,48 @@ function validateDigitalLogoDrafts(items) {
   return errors;
 }
 
+function validateSourceFileDrafts(items) {
+  const errors = [];
+  const seenIds = new Map();
+
+  items.forEach((file, index) => {
+    const label = `Source File ${index + 1}`;
+
+    ["id", "kicker", "title"].forEach((field) => {
+      if (!String(file[field] || "").trim()) {
+        errors.push(`${label}: ${field} is required.`);
+      }
+    });
+
+    const id = String(file.id || "").trim();
+
+    if (id) {
+      if (seenIds.has(id)) {
+        errors.push(`${label}: id duplicates Source File ${seenIds.get(id) + 1}.`);
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+
+    if (!Array.isArray(file.links)) {
+      errors.push(`${label}: links must be a list.`);
+      return;
+    }
+
+    file.links.forEach((link, linkIndex) => {
+      const linkLabel = `${label} Link ${linkIndex + 1}`;
+
+      ["label", "href"].forEach((field) => {
+        if (!String(link[field] || "").trim()) {
+          errors.push(`${linkLabel}: ${field} is required.`);
+        }
+      });
+    });
+  });
+
+  return errors;
+}
+
 function createCourseId(courses) {
   const ids = new Set(courses.map((course) => course.id));
   let index = courses.length + 1;
@@ -1984,6 +2378,19 @@ function createDigitalLogoId(logos) {
   while (ids.has(id)) {
     index += 1;
     id = `new-digital-logo-${index}`;
+  }
+
+  return id;
+}
+
+function createSourceFileId(files) {
+  const ids = new Set(files.map((file) => file.id));
+  let index = files.length + 1;
+  let id = `new-source-file-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-source-file-${index}`;
   }
 
   return id;
