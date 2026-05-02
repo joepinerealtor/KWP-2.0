@@ -222,6 +222,30 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateLeadership(index, field, value) {
+    setContent((currentContent) => {
+      if (!currentContent?.leadership?.[index]) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        leadership: currentContent.leadership.map((person, personIndex) => {
+          if (personIndex !== index) {
+            return person;
+          }
+
+          return {
+            ...person,
+            [field]: value
+          };
+        })
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
   async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
@@ -343,6 +367,7 @@ export function ContentAdminClient() {
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
+              onUpdateLeadership={updateLeadership}
               onUpdateVendor={updateVendor}
               saveError={saveError}
               saveResult={saveResult}
@@ -366,6 +391,7 @@ function SectionReader({
   onSaveCourseDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
+  onUpdateLeadership,
   onUpdateVendor,
   saveError,
   saveResult,
@@ -404,7 +430,7 @@ function SectionReader({
   }
 
   if (section?.id === "leadership") {
-    return <LeadershipFields items={section.value || []} />;
+    return <LeadershipFields items={section.value || []} onUpdateLeadership={onUpdateLeadership} />;
   }
 
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
@@ -574,7 +600,7 @@ function AdminTextField({ disabled = false, label, onChange, value = "" }) {
   );
 }
 
-function LeadershipFields({ items }) {
+function LeadershipFields({ items, onUpdateLeadership }) {
   return (
     <div className="admin-form-preview">
       <div className="admin-form-preview__summary">
@@ -582,7 +608,7 @@ function LeadershipFields({ items }) {
           <strong>{items.length}</strong>
           <span>leadership profiles</span>
         </div>
-        <span className="admin-status admin-status--ok">Read only</span>
+        <span className="admin-status admin-status--ok">Draft only</span>
       </div>
       <div className="admin-course-list">
         {items.map((person, index) => (
@@ -591,24 +617,64 @@ function LeadershipFields({ items }) {
               <span>Leader {index + 1}</span>
               <div className="admin-course-controls">
                 <label className="admin-check">
-                  <input type="checkbox" checked={Boolean(person.featured)} disabled readOnly />
+                  <input
+                    type="checkbox"
+                    checked={Boolean(person.featured)}
+                    onChange={(event) => onUpdateLeadership(index, "featured", event.target.checked)}
+                  />
                   Featured
                 </label>
                 <label className="admin-check">
-                  <input type="checkbox" checked={Boolean(person.active)} disabled readOnly />
+                  <input
+                    type="checkbox"
+                    checked={Boolean(person.active)}
+                    onChange={(event) => onUpdateLeadership(index, "active", event.target.checked)}
+                  />
                   Active
                 </label>
               </div>
             </div>
             <div className="admin-field-grid">
-              <AdminTextField disabled label="ID" value={person.id} />
-              <AdminTextField disabled label="Group" value={person.group} />
-              <AdminTextField disabled label="Role" value={person.role} />
-              <AdminTextField disabled label="Name" value={person.name} />
-              <AdminTextField disabled label="Photo" value={person.photo} />
-              <AdminTextField disabled label="Email" value={person.email} />
-              <AdminTextField disabled label="Phone" value={person.phone} />
-              <AdminTextField disabled label="Notes" value={person.notes} />
+              <AdminTextField
+                label="ID"
+                value={person.id}
+                onChange={(value) => onUpdateLeadership(index, "id", value)}
+              />
+              <AdminTextField
+                label="Group"
+                value={person.group}
+                onChange={(value) => onUpdateLeadership(index, "group", value)}
+              />
+              <AdminTextField
+                label="Role"
+                value={person.role}
+                onChange={(value) => onUpdateLeadership(index, "role", value)}
+              />
+              <AdminTextField
+                label="Name"
+                value={person.name}
+                onChange={(value) => onUpdateLeadership(index, "name", value)}
+              />
+              <AdminTextField
+                label="Photo"
+                value={person.photo}
+                onChange={(value) => onUpdateLeadership(index, "photo", value)}
+              />
+              <AdminTextField
+                label="Email"
+                value={person.email}
+                onChange={(value) => onUpdateLeadership(index, "email", value)}
+              />
+              <AdminTextField
+                label="Phone"
+                value={person.phone}
+                onChange={(value) => onUpdateLeadership(index, "phone", value)}
+              />
+              <AdminTextField
+                label="Notes"
+                value={person.notes}
+                onChange={(value) => onUpdateLeadership(index, "notes", value)}
+              />
             </div>
           </article>
         ))}
@@ -790,7 +856,7 @@ function getPathValue(value, path) {
 }
 
 function isDraftFieldSection(sectionId) {
-  return sectionId === "courses" || sectionId === "vendors";
+  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership";
 }
 
 function validateCourseDrafts(items) {
