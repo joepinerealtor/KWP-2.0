@@ -498,6 +498,10 @@ function SectionReader({
     );
   }
 
+  if (section?.id === "marketingTools") {
+    return <MarketingToolFields items={section.value || []} />;
+  }
+
   return <pre className="admin-json">{JSON.stringify(section?.value, null, 2)}</pre>;
 }
 
@@ -828,6 +832,59 @@ function LeadershipFields({
   );
 }
 
+function MarketingToolFields({ items }) {
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{items.length}</strong>
+          <span>marketing tool cards</span>
+        </div>
+        <span className="admin-status admin-status--ok">Read only</span>
+      </div>
+      <div className="admin-course-list">
+        {items.map((tool, index) => (
+          <article className="admin-course-item" key={tool.id || index}>
+            <div className="admin-course-item__header">
+              <span>Marketing Tool {index + 1}</span>
+              <label className="admin-check">
+                <input type="checkbox" checked={Boolean(tool.active)} disabled readOnly />
+                Active
+              </label>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField disabled label="ID" value={tool.id} />
+              <AdminTextField disabled label="Kicker" value={tool.kicker} />
+              <AdminTextField disabled label="Title" value={tool.title} />
+            </div>
+            <AdminTextArea disabled label="Summary" value={tool.summary} />
+            {(tool.links || []).map((link, linkIndex) => (
+              <div className="admin-field-grid" key={`${tool.id || index}-link-${linkIndex}`}>
+                <AdminTextField disabled label={`Link ${linkIndex + 1} Label`} value={link.label} />
+                <AdminTextField disabled label={`Link ${linkIndex + 1} URL`} value={link.href} />
+                <div className="admin-flag-row">
+                  <label className="admin-check">
+                    <input type="checkbox" checked={Boolean(link.external)} disabled readOnly />
+                    External
+                  </label>
+                  <label className="admin-check">
+                    <input type="checkbox" checked={Boolean(link.download)} disabled readOnly />
+                    Download
+                  </label>
+                </div>
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>Marketing Tools JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(items, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
 function VendorFields({
   isSaving,
   items,
@@ -983,11 +1040,16 @@ function VendorFields({
   );
 }
 
-function AdminTextArea({ label, onChange, value = "" }) {
+function AdminTextArea({ disabled = false, label, onChange, value = "" }) {
   return (
     <label className="admin-field admin-field--full">
       <span>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} />
+      <textarea
+        disabled={disabled}
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+        rows={3}
+      />
     </label>
   );
 }

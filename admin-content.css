@@ -460,7 +460,8 @@ html {
   outline: 2px solid rgba(180, 1, 1, 0.16);
 }
 
-.admin-field input:disabled {
+.admin-field input:disabled,
+.admin-field textarea:disabled {
   color: var(--admin-ink);
   opacity: 1;
 }
