@@ -689,6 +689,310 @@ export function ContentAdminClient() {
     setSaveResult(null);
   }
 
+  function updateOfficeSection(sectionId, getNextSection) {
+    setContent((currentContent) => {
+      if (!currentContent?.office?.[sectionId]) {
+        return currentContent;
+      }
+
+      return {
+        ...currentContent,
+        office: {
+          ...currentContent.office,
+          [sectionId]: getNextSection(currentContent.office[sectionId])
+        }
+      };
+    });
+    setSaveError("");
+    setSaveResult(null);
+  }
+
+  function updateOfficeField(sectionId, field, value) {
+    updateOfficeSection(sectionId, (section) => ({
+      ...section,
+      [field]: value
+    }));
+  }
+
+  function updateOfficeAction(sectionId, field, value) {
+    updateOfficeSection(sectionId, (section) => ({
+      ...section,
+      action: {
+        ...(section.action || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  function updateOfficeChip(sectionId, chipIndex, field, value) {
+    updateOfficeSection(sectionId, (section) => ({
+      ...section,
+      chips: (section.chips || []).map((chip, currentChipIndex) => {
+        if (currentChipIndex !== chipIndex) {
+          return chip;
+        }
+
+        return {
+          ...chip,
+          [field]: value
+        };
+      })
+    }));
+  }
+
+  function addOfficeChip(sectionId) {
+    updateOfficeSection(sectionId, (section) => ({
+      ...section,
+      chips: [
+        ...(section.chips || []),
+        {
+          label: "",
+          href: "",
+          external: false,
+          download: false,
+          handbookModal: false
+        }
+      ]
+    }));
+  }
+
+  function removeOfficeChip(sectionId, chipIndex) {
+    updateOfficeSection(sectionId, (section) => ({
+      ...section,
+      chips: (section.chips || []).filter((_, currentChipIndex) => currentChipIndex !== chipIndex)
+    }));
+  }
+
+  function moveOfficeChip(sectionId, chipIndex, direction) {
+    updateOfficeSection(sectionId, (section) => {
+      const chips = section.chips || [];
+      const nextIndex = chipIndex + direction;
+
+      if (nextIndex < 0 || nextIndex >= chips.length) {
+        return section;
+      }
+
+      const nextChips = [...chips];
+      [nextChips[chipIndex], nextChips[nextIndex]] = [nextChips[nextIndex], nextChips[chipIndex]];
+
+      return {
+        ...section,
+        chips: nextChips
+      };
+    });
+  }
+
+  function updateOfficeHour(index, field, value) {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      hours: (operations.hours || []).map((hour, hourIndex) => {
+        if (hourIndex !== index) {
+          return hour;
+        }
+
+        return {
+          ...hour,
+          [field]: value
+        };
+      })
+    }));
+  }
+
+  function addOfficeHour() {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      hours: [
+        ...(operations.hours || []),
+        {
+          days: "",
+          time: ""
+        }
+      ]
+    }));
+  }
+
+  function removeOfficeHour(index) {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      hours: (operations.hours || []).filter((_, hourIndex) => hourIndex !== index)
+    }));
+  }
+
+  function moveOfficeHour(index, direction) {
+    updateOfficeSection("operations", (operations) => {
+      const hours = operations.hours || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= hours.length) {
+        return operations;
+      }
+
+      const nextHours = [...hours];
+      [nextHours[index], nextHours[nextIndex]] = [nextHours[nextIndex], nextHours[index]];
+
+      return {
+        ...operations,
+        hours: nextHours
+      };
+    });
+  }
+
+  function updateOfficeHoliday(index, value) {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      holidays: (operations.holidays || []).map((holiday, holidayIndex) => (
+        holidayIndex === index ? value : holiday
+      ))
+    }));
+  }
+
+  function addOfficeHoliday() {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      holidays: [
+        ...(operations.holidays || []),
+        ""
+      ]
+    }));
+  }
+
+  function removeOfficeHoliday(index) {
+    updateOfficeSection("operations", (operations) => ({
+      ...operations,
+      holidays: (operations.holidays || []).filter((_, holidayIndex) => holidayIndex !== index)
+    }));
+  }
+
+  function moveOfficeHoliday(index, direction) {
+    updateOfficeSection("operations", (operations) => {
+      const holidays = operations.holidays || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= holidays.length) {
+        return operations;
+      }
+
+      const nextHolidays = [...holidays];
+      [nextHolidays[index], nextHolidays[nextIndex]] = [nextHolidays[nextIndex], nextHolidays[index]];
+
+      return {
+        ...operations,
+        holidays: nextHolidays
+      };
+    });
+  }
+
+  function updateRoomAction(index, field, value) {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      actions: (rooms.actions || []).map((action, actionIndex) => {
+        if (actionIndex !== index) {
+          return action;
+        }
+
+        return {
+          ...action,
+          [field]: value
+        };
+      })
+    }));
+  }
+
+  function addRoomAction() {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      actions: [
+        ...(rooms.actions || []),
+        {
+          label: "",
+          url: ""
+        }
+      ]
+    }));
+  }
+
+  function removeRoomAction(index) {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      actions: (rooms.actions || []).filter((_, actionIndex) => actionIndex !== index)
+    }));
+  }
+
+  function moveRoomAction(index, direction) {
+    updateOfficeSection("rooms", (rooms) => {
+      const actions = rooms.actions || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= actions.length) {
+        return rooms;
+      }
+
+      const nextActions = [...actions];
+      [nextActions[index], nextActions[nextIndex]] = [nextActions[nextIndex], nextActions[index]];
+
+      return {
+        ...rooms,
+        actions: nextActions
+      };
+    });
+  }
+
+  function updateRoomCalendar(index, field, value) {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      calendars: (rooms.calendars || []).map((calendar, calendarIndex) => {
+        if (calendarIndex !== index) {
+          return calendar;
+        }
+
+        return {
+          ...calendar,
+          [field]: value
+        };
+      })
+    }));
+  }
+
+  function addRoomCalendar() {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      calendars: [
+        ...(rooms.calendars || []),
+        {
+          label: "",
+          title: "",
+          src: ""
+        }
+      ]
+    }));
+  }
+
+  function removeRoomCalendar(index) {
+    updateOfficeSection("rooms", (rooms) => ({
+      ...rooms,
+      calendars: (rooms.calendars || []).filter((_, calendarIndex) => calendarIndex !== index)
+    }));
+  }
+
+  function moveRoomCalendar(index, direction) {
+    updateOfficeSection("rooms", (rooms) => {
+      const calendars = rooms.calendars || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= calendars.length) {
+        return rooms;
+      }
+
+      const nextCalendars = [...calendars];
+      [nextCalendars[index], nextCalendars[nextIndex]] = [nextCalendars[nextIndex], nextCalendars[index]];
+
+      return {
+        ...rooms,
+        calendars: nextCalendars
+      };
+    });
+  }
+
   async function saveDrafts(sectionId, sectionLabel) {
     if (!content) {
       return;
@@ -748,6 +1052,22 @@ export function ContentAdminClient() {
 
   async function saveSourceFileDrafts() {
     await saveDrafts("sourceFiles", "Source Files");
+  }
+
+  async function saveReferenceHubDrafts() {
+    await saveDrafts("referenceHub", "Reference Hub");
+  }
+
+  async function saveOperationsDrafts() {
+    await saveDrafts("operations", "Office Operations");
+  }
+
+  async function saveMarketingFilesDrafts() {
+    await saveDrafts("marketingFiles", "Marketing Files");
+  }
+
+  async function saveRoomsDrafts() {
+    await saveDrafts("rooms", "Rooms");
   }
 
   return (
@@ -823,6 +1143,11 @@ export function ContentAdminClient() {
               onAddLeadership={addLeadership}
               onAddMarketingTool={addMarketingTool}
               onAddMarketingToolLink={addMarketingToolLink}
+              onAddOfficeChip={addOfficeChip}
+              onAddOfficeHoliday={addOfficeHoliday}
+              onAddOfficeHour={addOfficeHour}
+              onAddRoomAction={addRoomAction}
+              onAddRoomCalendar={addRoomCalendar}
               onAddSourceFile={addSourceFile}
               onAddSourceFileLink={addSourceFileLink}
               onAddVendor={addVendor}
@@ -830,6 +1155,11 @@ export function ContentAdminClient() {
               onMoveLeadership={moveLeadership}
               onMoveCourse={moveCourse}
               onMoveMarketingTool={moveMarketingTool}
+              onMoveOfficeChip={moveOfficeChip}
+              onMoveOfficeHoliday={moveOfficeHoliday}
+              onMoveOfficeHour={moveOfficeHour}
+              onMoveRoomAction={moveRoomAction}
+              onMoveRoomCalendar={moveRoomCalendar}
               onMoveSourceFile={moveSourceFile}
               onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
@@ -838,6 +1168,11 @@ export function ContentAdminClient() {
               onRemoveLeadership={removeLeadership}
               onRemoveMarketingTool={removeMarketingTool}
               onRemoveMarketingToolLink={removeMarketingToolLink}
+              onRemoveOfficeChip={removeOfficeChip}
+              onRemoveOfficeHoliday={removeOfficeHoliday}
+              onRemoveOfficeHour={removeOfficeHour}
+              onRemoveRoomAction={removeRoomAction}
+              onRemoveRoomCalendar={removeRoomCalendar}
               onRemoveSourceFile={removeSourceFile}
               onRemoveSourceFileLink={removeSourceFileLink}
               onRemoveVendor={removeVendor}
@@ -845,6 +1180,10 @@ export function ContentAdminClient() {
               onSaveDigitalLogoDrafts={saveDigitalLogoDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
               onSaveMarketingToolDrafts={saveMarketingToolDrafts}
+              onSaveMarketingFilesDrafts={saveMarketingFilesDrafts}
+              onSaveOperationsDrafts={saveOperationsDrafts}
+              onSaveReferenceHubDrafts={saveReferenceHubDrafts}
+              onSaveRoomsDrafts={saveRoomsDrafts}
               onSaveSourceFileDrafts={saveSourceFileDrafts}
               onSaveVendorDrafts={saveVendorDrafts}
               onUpdateCourse={updateCourse}
@@ -854,6 +1193,13 @@ export function ContentAdminClient() {
               onUpdateLeadership={updateLeadership}
               onUpdateMarketingTool={updateMarketingTool}
               onUpdateMarketingToolLink={updateMarketingToolLink}
+              onUpdateOfficeAction={updateOfficeAction}
+              onUpdateOfficeChip={updateOfficeChip}
+              onUpdateOfficeField={updateOfficeField}
+              onUpdateOfficeHoliday={updateOfficeHoliday}
+              onUpdateOfficeHour={updateOfficeHour}
+              onUpdateRoomAction={updateRoomAction}
+              onUpdateRoomCalendar={updateRoomCalendar}
               onUpdateSourceFile={updateSourceFile}
               onUpdateSourceFileLink={updateSourceFileLink}
               onUpdateVendor={updateVendor}
@@ -876,6 +1222,11 @@ function SectionReader({
   onAddLeadership,
   onAddMarketingTool,
   onAddMarketingToolLink,
+  onAddOfficeChip,
+  onAddOfficeHoliday,
+  onAddOfficeHour,
+  onAddRoomAction,
+  onAddRoomCalendar,
   onAddSourceFile,
   onAddSourceFileLink,
   onAddVendor,
@@ -883,6 +1234,11 @@ function SectionReader({
   onMoveLeadership,
   onMoveCourse,
   onMoveMarketingTool,
+  onMoveOfficeChip,
+  onMoveOfficeHoliday,
+  onMoveOfficeHour,
+  onMoveRoomAction,
+  onMoveRoomCalendar,
   onMoveSourceFile,
   onMoveVendor,
   onRemoveCourse,
@@ -891,6 +1247,11 @@ function SectionReader({
   onRemoveLeadership,
   onRemoveMarketingTool,
   onRemoveMarketingToolLink,
+  onRemoveOfficeChip,
+  onRemoveOfficeHoliday,
+  onRemoveOfficeHour,
+  onRemoveRoomAction,
+  onRemoveRoomCalendar,
   onRemoveSourceFile,
   onRemoveSourceFileLink,
   onRemoveVendor,
@@ -898,6 +1259,10 @@ function SectionReader({
   onSaveDigitalLogoDrafts,
   onSaveLeadershipDrafts,
   onSaveMarketingToolDrafts,
+  onSaveMarketingFilesDrafts,
+  onSaveOperationsDrafts,
+  onSaveReferenceHubDrafts,
+  onSaveRoomsDrafts,
   onSaveSourceFileDrafts,
   onSaveVendorDrafts,
   onUpdateCourse,
@@ -907,6 +1272,13 @@ function SectionReader({
   onUpdateLeadership,
   onUpdateMarketingTool,
   onUpdateMarketingToolLink,
+  onUpdateOfficeAction,
+  onUpdateOfficeChip,
+  onUpdateOfficeField,
+  onUpdateOfficeHoliday,
+  onUpdateOfficeHour,
+  onUpdateRoomAction,
+  onUpdateRoomCalendar,
   onUpdateSourceFile,
   onUpdateSourceFileLink,
   onUpdateVendor,
@@ -1014,6 +1386,90 @@ function SectionReader({
         onSaveSourceFileDrafts={onSaveSourceFileDrafts}
         onUpdateSourceFile={onUpdateSourceFile}
         onUpdateSourceFileLink={onUpdateSourceFileLink}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
+  }
+
+  if (section?.id === "referenceHub") {
+    return (
+      <OfficeCardFields
+        card={section.value || {}}
+        includeAction
+        isSaving={isSaving}
+        label="Reference Hub"
+        onAddOfficeChip={onAddOfficeChip}
+        onMoveOfficeChip={onMoveOfficeChip}
+        onRemoveOfficeChip={onRemoveOfficeChip}
+        onSaveOfficeCardDrafts={onSaveReferenceHubDrafts}
+        onUpdateOfficeAction={onUpdateOfficeAction}
+        onUpdateOfficeChip={onUpdateOfficeChip}
+        onUpdateOfficeField={onUpdateOfficeField}
+        saveError={saveError}
+        saveResult={saveResult}
+        sectionId="referenceHub"
+      />
+    );
+  }
+
+  if (section?.id === "operations") {
+    return (
+      <OfficeOperationsFields
+        isSaving={isSaving}
+        onAddOfficeHoliday={onAddOfficeHoliday}
+        onAddOfficeHour={onAddOfficeHour}
+        onMoveOfficeHoliday={onMoveOfficeHoliday}
+        onMoveOfficeHour={onMoveOfficeHour}
+        onRemoveOfficeHoliday={onRemoveOfficeHoliday}
+        onRemoveOfficeHour={onRemoveOfficeHour}
+        onSaveOperationsDrafts={onSaveOperationsDrafts}
+        onUpdateOfficeField={onUpdateOfficeField}
+        onUpdateOfficeHoliday={onUpdateOfficeHoliday}
+        onUpdateOfficeHour={onUpdateOfficeHour}
+        operations={section.value || {}}
+        saveError={saveError}
+        saveResult={saveResult}
+      />
+    );
+  }
+
+  if (section?.id === "marketingFiles") {
+    return (
+      <OfficeCardFields
+        card={section.value || {}}
+        includeTagHref
+        isSaving={isSaving}
+        label="Marketing Files"
+        onAddOfficeChip={onAddOfficeChip}
+        onMoveOfficeChip={onMoveOfficeChip}
+        onRemoveOfficeChip={onRemoveOfficeChip}
+        onSaveOfficeCardDrafts={onSaveMarketingFilesDrafts}
+        onUpdateOfficeAction={onUpdateOfficeAction}
+        onUpdateOfficeChip={onUpdateOfficeChip}
+        onUpdateOfficeField={onUpdateOfficeField}
+        saveError={saveError}
+        saveResult={saveResult}
+        sectionId="marketingFiles"
+      />
+    );
+  }
+
+  if (section?.id === "rooms") {
+    return (
+      <RoomFields
+        isSaving={isSaving}
+        onAddRoomAction={onAddRoomAction}
+        onAddRoomCalendar={onAddRoomCalendar}
+        onMoveRoomAction={onMoveRoomAction}
+        onMoveRoomCalendar={onMoveRoomCalendar}
+        onRemoveRoomAction={onRemoveRoomAction}
+        onRemoveRoomCalendar={onRemoveRoomCalendar}
+        onSaveRoomsDrafts={onSaveRoomsDrafts}
+        onUpdateOfficeField={onUpdateOfficeField}
+        onUpdateRoomAction={onUpdateRoomAction}
+        onUpdateRoomCalendar={onUpdateRoomCalendar}
+        rooms={section.value || {}}
         saveError={saveError}
         saveResult={saveResult}
       />
@@ -1924,6 +2380,530 @@ function SourceFileFields({
   );
 }
 
+function OfficeCardFields({
+  card,
+  includeAction = false,
+  includeTagHref = false,
+  isSaving,
+  label,
+  onAddOfficeChip,
+  onMoveOfficeChip,
+  onRemoveOfficeChip,
+  onSaveOfficeCardDrafts,
+  onUpdateOfficeAction,
+  onUpdateOfficeChip,
+  onUpdateOfficeField,
+  saveError,
+  saveResult,
+  sectionId
+}) {
+  const chips = card.chips || [];
+  const shouldShowAction = includeAction || Boolean(card.action);
+  const validationErrors = validateOfficeCardDraft(card, label);
+  const activeSaveResult = saveResult?.sectionId === sectionId ? saveResult : null;
+
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{chips.length}</strong>
+          <span>{label.toLowerCase()} chips</span>
+        </div>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={() => onAddOfficeChip(sectionId)}>
+            Add Chip
+          </button>
+        </div>
+      </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>{label} validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveOfficeCardDrafts}
+        >
+          {isSaving ? "Saving" : `Save ${label} Drafts`}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? `${label} drafts saved.` : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
+        </div>
+      ) : null}
+      <div className="admin-course-list">
+        <article className="admin-course-item">
+          <div className="admin-course-item__header">
+            <span>{label} Details</span>
+          </div>
+          <div className="admin-field-grid">
+            <AdminTextField
+              label="Tag"
+              value={card.tag}
+              onChange={(value) => onUpdateOfficeField(sectionId, "tag", value)}
+            />
+            {includeTagHref ? (
+              <AdminTextField
+                label="Tag URL"
+                value={card.tagHref}
+                onChange={(value) => onUpdateOfficeField(sectionId, "tagHref", value)}
+              />
+            ) : null}
+            <AdminTextField
+              label="Title"
+              value={card.title}
+              onChange={(value) => onUpdateOfficeField(sectionId, "title", value)}
+            />
+          </div>
+          <AdminTextArea
+            label="Summary"
+            value={card.summary}
+            onChange={(value) => onUpdateOfficeField(sectionId, "summary", value)}
+          />
+        </article>
+        {shouldShowAction ? (
+          <article className="admin-course-item">
+            <div className="admin-course-item__header">
+              <span>{label} Action</span>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="Action Label"
+                value={card.action?.label}
+                onChange={(value) => onUpdateOfficeAction(sectionId, "label", value)}
+              />
+              <AdminTextField
+                label="Action URL"
+                value={card.action?.href}
+                onChange={(value) => onUpdateOfficeAction(sectionId, "href", value)}
+              />
+              <div className="admin-flag-row">
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(card.action?.external)}
+                    onChange={(event) => onUpdateOfficeAction(sectionId, "external", event.target.checked)}
+                  />
+                  External
+                </label>
+              </div>
+            </div>
+          </article>
+        ) : null}
+        {chips.map((chip, index) => (
+          <article className="admin-course-item" key={`${sectionId}-chip-${index}`}>
+            <div className="admin-course-item__header">
+              <span>Chip {index + 1}</span>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveOfficeChip(sectionId, index, -1)}
+                  aria-label={`Move ${label} Chip ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === chips.length - 1}
+                  type="button"
+                  onClick={() => onMoveOfficeChip(sectionId, index, 1)}
+                  aria-label={`Move ${label} Chip ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveOfficeChip(sectionId, index)}
+                  aria-label={`Remove ${label} Chip ${index + 1}`}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="Label"
+                value={chip.label}
+                onChange={(value) => onUpdateOfficeChip(sectionId, index, "label", value)}
+              />
+              <AdminTextField
+                label="URL"
+                value={chip.href}
+                onChange={(value) => onUpdateOfficeChip(sectionId, index, "href", value)}
+              />
+              <div className="admin-flag-row">
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(chip.external)}
+                    onChange={(event) => onUpdateOfficeChip(sectionId, index, "external", event.target.checked)}
+                  />
+                  External
+                </label>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(chip.download)}
+                    onChange={(event) => onUpdateOfficeChip(sectionId, index, "download", event.target.checked)}
+                  />
+                  Download
+                </label>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(chip.handbookModal)}
+                    onChange={(event) => onUpdateOfficeChip(sectionId, index, "handbookModal", event.target.checked)}
+                  />
+                  Handbook Modal
+                </label>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>{label} JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(card, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
+function OfficeOperationsFields({
+  isSaving,
+  onAddOfficeHoliday,
+  onAddOfficeHour,
+  onMoveOfficeHoliday,
+  onMoveOfficeHour,
+  onRemoveOfficeHoliday,
+  onRemoveOfficeHour,
+  onSaveOperationsDrafts,
+  onUpdateOfficeField,
+  onUpdateOfficeHoliday,
+  onUpdateOfficeHour,
+  operations,
+  saveError,
+  saveResult
+}) {
+  const hours = operations.hours || [];
+  const holidays = operations.holidays || [];
+  const validationErrors = validateOfficeOperationsDraft(operations);
+  const activeSaveResult = saveResult?.sectionId === "operations" ? saveResult : null;
+
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{hours.length + holidays.length}</strong>
+          <span>office schedule items</span>
+        </div>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddOfficeHour}>
+            Add Hours
+          </button>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddOfficeHoliday}>
+            Add Holiday
+          </button>
+        </div>
+      </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Office Operations validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveOperationsDrafts}
+        >
+          {isSaving ? "Saving" : "Save Office Operations Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Office Operations drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
+        </div>
+      ) : null}
+      <div className="admin-course-list">
+        <article className="admin-course-item">
+          <div className="admin-course-item__header">
+            <span>Office Operations Details</span>
+          </div>
+          <div className="admin-field-grid">
+            <AdminTextField
+              label="Tag"
+              value={operations.tag}
+              onChange={(value) => onUpdateOfficeField("operations", "tag", value)}
+            />
+            <AdminTextField
+              label="Title"
+              value={operations.title}
+              onChange={(value) => onUpdateOfficeField("operations", "title", value)}
+            />
+            <AdminTextField
+              label="Hours Label"
+              value={operations.hoursLabel}
+              onChange={(value) => onUpdateOfficeField("operations", "hoursLabel", value)}
+            />
+            <AdminTextField
+              label="Holidays Label"
+              value={operations.holidaysLabel}
+              onChange={(value) => onUpdateOfficeField("operations", "holidaysLabel", value)}
+            />
+          </div>
+        </article>
+        {hours.map((hour, index) => (
+          <article className="admin-course-item" key={`office-hour-${index}`}>
+            <div className="admin-course-item__header">
+              <span>Hours {index + 1}</span>
+              <div className="admin-course-controls">
+                <button className="admin-icon-button" disabled={index === 0} type="button" onClick={() => onMoveOfficeHour(index, -1)}>
+                  Up
+                </button>
+                <button className="admin-icon-button" disabled={index === hours.length - 1} type="button" onClick={() => onMoveOfficeHour(index, 1)}>
+                  Down
+                </button>
+                <button className="admin-icon-button admin-icon-button--danger" type="button" onClick={() => onRemoveOfficeHour(index)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="Days"
+                value={hour.days}
+                onChange={(value) => onUpdateOfficeHour(index, "days", value)}
+              />
+              <AdminTextField
+                label="Time"
+                value={hour.time}
+                onChange={(value) => onUpdateOfficeHour(index, "time", value)}
+              />
+            </div>
+          </article>
+        ))}
+        {holidays.map((holiday, index) => (
+          <article className="admin-course-item" key={`office-holiday-${index}`}>
+            <div className="admin-course-item__header">
+              <span>Holiday {index + 1}</span>
+              <div className="admin-course-controls">
+                <button className="admin-icon-button" disabled={index === 0} type="button" onClick={() => onMoveOfficeHoliday(index, -1)}>
+                  Up
+                </button>
+                <button className="admin-icon-button" disabled={index === holidays.length - 1} type="button" onClick={() => onMoveOfficeHoliday(index, 1)}>
+                  Down
+                </button>
+                <button className="admin-icon-button admin-icon-button--danger" type="button" onClick={() => onRemoveOfficeHoliday(index)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <AdminTextField
+              label="Holiday"
+              value={holiday}
+              onChange={(value) => onUpdateOfficeHoliday(index, value)}
+            />
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>Office Operations JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(operations, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
+function RoomFields({
+  isSaving,
+  onAddRoomAction,
+  onAddRoomCalendar,
+  onMoveRoomAction,
+  onMoveRoomCalendar,
+  onRemoveRoomAction,
+  onRemoveRoomCalendar,
+  onSaveRoomsDrafts,
+  onUpdateOfficeField,
+  onUpdateRoomAction,
+  onUpdateRoomCalendar,
+  rooms,
+  saveError,
+  saveResult
+}) {
+  const actions = rooms.actions || [];
+  const calendars = rooms.calendars || [];
+  const validationErrors = validateRoomsDraft(rooms);
+  const activeSaveResult = saveResult?.sectionId === "rooms" ? saveResult : null;
+
+  return (
+    <div className="admin-form-preview">
+      <div className="admin-form-preview__summary">
+        <div>
+          <strong>{actions.length + calendars.length}</strong>
+          <span>room links and calendars</span>
+        </div>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddRoomAction}>
+            Add Action
+          </button>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddRoomCalendar}>
+            Add Calendar
+          </button>
+        </div>
+      </div>
+      {validationErrors.length ? (
+        <div className="admin-validation" role="status">
+          <h3>Rooms validation</h3>
+          <ul>
+            {validationErrors.map((validationError) => (
+              <li key={validationError}>{validationError}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="admin-save-row">
+        <button
+          className="admin-button"
+          disabled={Boolean(validationErrors.length) || isSaving}
+          type="button"
+          onClick={onSaveRoomsDrafts}
+        >
+          {isSaving ? "Saving" : "Save Rooms Drafts"}
+        </button>
+        <span>Writes only after validation, backup, and API passcode check.</span>
+      </div>
+      {saveError ? <p className="admin-save-message admin-save-message--error">{saveError}</p> : null}
+      {activeSaveResult ? (
+        <div className="admin-save-message admin-save-message--success" role="status">
+          <strong>{activeSaveResult.changed ? "Rooms drafts saved." : "No content changes detected."}</strong>
+          <span>Backup: {activeSaveResult.backup}</span>
+          <span>Source: {activeSaveResult.source}</span>
+          <span>Mirror: {activeSaveResult.publicMirror}</span>
+        </div>
+      ) : null}
+      <div className="admin-course-list">
+        <article className="admin-course-item">
+          <div className="admin-course-item__header">
+            <span>Rooms Details</span>
+          </div>
+          <AdminTextArea
+            label="Summary"
+            value={rooms.summary}
+            onChange={(value) => onUpdateOfficeField("rooms", "summary", value)}
+          />
+        </article>
+        {actions.map((action, index) => (
+          <article className="admin-course-item" key={`room-action-${index}`}>
+            <div className="admin-course-item__header">
+              <span>Action {index + 1}</span>
+              <div className="admin-course-controls">
+                <button className="admin-icon-button" disabled={index === 0} type="button" onClick={() => onMoveRoomAction(index, -1)}>
+                  Up
+                </button>
+                <button className="admin-icon-button" disabled={index === actions.length - 1} type="button" onClick={() => onMoveRoomAction(index, 1)}>
+                  Down
+                </button>
+                <button className="admin-icon-button admin-icon-button--danger" type="button" onClick={() => onRemoveRoomAction(index)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="Label"
+                value={action.label}
+                onChange={(value) => onUpdateRoomAction(index, "label", value)}
+              />
+              <AdminTextField
+                label="URL"
+                value={action.url}
+                onChange={(value) => onUpdateRoomAction(index, "url", value)}
+              />
+            </div>
+          </article>
+        ))}
+        {calendars.map((calendar, index) => (
+          <article className="admin-course-item" key={`room-calendar-${index}`}>
+            <div className="admin-course-item__header">
+              <span>Calendar {index + 1}</span>
+              <div className="admin-course-controls">
+                <button className="admin-icon-button" disabled={index === 0} type="button" onClick={() => onMoveRoomCalendar(index, -1)}>
+                  Up
+                </button>
+                <button className="admin-icon-button" disabled={index === calendars.length - 1} type="button" onClick={() => onMoveRoomCalendar(index, 1)}>
+                  Down
+                </button>
+                <button className="admin-icon-button admin-icon-button--danger" type="button" onClick={() => onRemoveRoomCalendar(index)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div className="admin-field-grid">
+              <AdminTextField
+                label="Label"
+                value={calendar.label}
+                onChange={(value) => onUpdateRoomCalendar(index, "label", value)}
+              />
+              <AdminTextField
+                label="Title"
+                value={calendar.title}
+                onChange={(value) => onUpdateRoomCalendar(index, "title", value)}
+              />
+            </div>
+            <AdminTextArea
+              label="Embed URL"
+              value={calendar.src}
+              onChange={(value) => onUpdateRoomCalendar(index, "src", value)}
+            />
+          </article>
+        ))}
+      </div>
+      <details className="admin-draft-json">
+        <summary>Rooms JSON preview</summary>
+        <pre className="admin-json">{JSON.stringify(rooms, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
 function VendorFields({
   isSaving,
   items,
@@ -2098,7 +3078,18 @@ function getPathValue(value, path) {
 }
 
 function isDraftFieldSection(sectionId) {
-  return sectionId === "courses" || sectionId === "vendors" || sectionId === "leadership" || sectionId === "marketingTools" || sectionId === "digitalLogos" || sectionId === "sourceFiles";
+  return [
+    "courses",
+    "vendors",
+    "leadership",
+    "marketingTools",
+    "digitalLogos",
+    "sourceFiles",
+    "referenceHub",
+    "operations",
+    "marketingFiles",
+    "rooms"
+  ].includes(sectionId);
 }
 
 function validateCourseDrafts(items) {
@@ -2314,6 +3305,107 @@ function validateSourceFileDrafts(items) {
       });
     });
   });
+
+  return errors;
+}
+
+function validateOfficeCardDraft(card, label) {
+  const errors = [];
+
+  ["tag", "title", "summary"].forEach((field) => {
+    if (!String(card[field] || "").trim()) {
+      errors.push(`${label}: ${field} is required.`);
+    }
+  });
+
+  if (!Array.isArray(card.chips)) {
+    errors.push(`${label}: chips must be a list.`);
+    return errors;
+  }
+
+  card.chips.forEach((chip, index) => {
+    if (!String(chip.label || "").trim()) {
+      errors.push(`${label} Chip ${index + 1}: label is required.`);
+    }
+  });
+
+  if (card.action) {
+    if (!String(card.action.label || "").trim()) {
+      errors.push(`${label}: action label is required.`);
+    }
+
+    if (!String(card.action.href || "").trim()) {
+      errors.push(`${label}: action href is required.`);
+    }
+  }
+
+  return errors;
+}
+
+function validateOfficeOperationsDraft(operations) {
+  const errors = [];
+
+  ["tag", "title", "hoursLabel", "holidaysLabel"].forEach((field) => {
+    if (!String(operations[field] || "").trim()) {
+      errors.push(`Office Operations: ${field} is required.`);
+    }
+  });
+
+  if (!Array.isArray(operations.hours)) {
+    errors.push("Office Operations: hours must be a list.");
+  } else {
+    operations.hours.forEach((hour, index) => {
+      ["days", "time"].forEach((field) => {
+        if (!String(hour[field] || "").trim()) {
+          errors.push(`Office Operations Hours ${index + 1}: ${field} is required.`);
+        }
+      });
+    });
+  }
+
+  if (!Array.isArray(operations.holidays)) {
+    errors.push("Office Operations: holidays must be a list.");
+  } else {
+    operations.holidays.forEach((holiday, index) => {
+      if (!String(holiday || "").trim()) {
+        errors.push(`Office Operations Holiday ${index + 1}: holiday is required.`);
+      }
+    });
+  }
+
+  return errors;
+}
+
+function validateRoomsDraft(rooms) {
+  const errors = [];
+
+  if (!String(rooms.summary || "").trim()) {
+    errors.push("Rooms: summary is required.");
+  }
+
+  if (!Array.isArray(rooms.actions)) {
+    errors.push("Rooms: actions must be a list.");
+  } else {
+    rooms.actions.forEach((action, index) => {
+      ["label", "url"].forEach((field) => {
+        if (!String(action[field] || "").trim()) {
+          errors.push(`Rooms Action ${index + 1}: ${field} is required.`);
+        }
+      });
+    });
+  }
+
+  if (!Array.isArray(rooms.calendars)) {
+    errors.push("Rooms: calendars must be a list.");
+  } else {
+    rooms.calendars.forEach((calendar, index) => {
+      ["label", "title", "src"].forEach((field) => {
+        if (!String(calendar[field] || "").trim()) {
+          errors.push(`Rooms Calendar ${index + 1}: ${field} is required.`);
+        }
+      });
+    });
+  }
 
   return errors;
 }
