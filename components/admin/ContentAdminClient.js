@@ -322,6 +322,80 @@ export function ContentAdminClient() {
     }));
   }
 
+  function addMarketingTool() {
+    updateMarketingTools((tools) => [
+      ...tools,
+      {
+        id: createMarketingToolId(tools),
+        kicker: "",
+        title: "",
+        summary: "",
+        links: [
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: false
+          }
+        ],
+        active: true
+      }
+    ]);
+  }
+
+  function removeMarketingTool(index) {
+    updateMarketingTools((tools) => tools.filter((_, toolIndex) => toolIndex !== index));
+  }
+
+  function moveMarketingTool(index, direction) {
+    updateMarketingTools((tools) => {
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= tools.length) {
+        return tools;
+      }
+
+      const nextTools = [...tools];
+      [nextTools[index], nextTools[nextIndex]] = [nextTools[nextIndex], nextTools[index]];
+
+      return nextTools;
+    });
+  }
+
+  function addMarketingToolLink(toolIndex) {
+    updateMarketingTools((tools) => tools.map((tool, currentToolIndex) => {
+      if (currentToolIndex !== toolIndex) {
+        return tool;
+      }
+
+      return {
+        ...tool,
+        links: [
+          ...(tool.links || []),
+          {
+            label: "",
+            href: "",
+            external: false,
+            download: false
+          }
+        ]
+      };
+    }));
+  }
+
+  function removeMarketingToolLink(toolIndex, linkIndex) {
+    updateMarketingTools((tools) => tools.map((tool, currentToolIndex) => {
+      if (currentToolIndex !== toolIndex) {
+        return tool;
+      }
+
+      return {
+        ...tool,
+        links: (tool.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex)
+      };
+    }));
+  }
+
   function updateMarketingTools(getNextTools) {
     setContent((currentContent) => {
       if (!currentContent?.brandAssets?.marketingTools) {
@@ -462,12 +536,17 @@ export function ContentAdminClient() {
               isSaving={isSaving}
               onAddCourse={addCourse}
               onAddLeadership={addLeadership}
+              onAddMarketingTool={addMarketingTool}
+              onAddMarketingToolLink={addMarketingToolLink}
               onAddVendor={addVendor}
               onMoveLeadership={moveLeadership}
               onMoveCourse={moveCourse}
+              onMoveMarketingTool={moveMarketingTool}
               onMoveVendor={moveVendor}
               onRemoveCourse={removeCourse}
               onRemoveLeadership={removeLeadership}
+              onRemoveMarketingTool={removeMarketingTool}
+              onRemoveMarketingToolLink={removeMarketingToolLink}
               onRemoveVendor={removeVendor}
               onSaveCourseDrafts={saveCourseDrafts}
               onSaveLeadershipDrafts={saveLeadershipDrafts}
@@ -493,12 +572,17 @@ function SectionReader({
   isSaving,
   onAddCourse,
   onAddLeadership,
+  onAddMarketingTool,
+  onAddMarketingToolLink,
   onAddVendor,
   onMoveLeadership,
   onMoveCourse,
+  onMoveMarketingTool,
   onMoveVendor,
   onRemoveCourse,
   onRemoveLeadership,
+  onRemoveMarketingTool,
+  onRemoveMarketingToolLink,
   onRemoveVendor,
   onSaveCourseDrafts,
   onSaveLeadershipDrafts,
@@ -566,6 +650,11 @@ function SectionReader({
       <MarketingToolFields
         isSaving={isSaving}
         items={section.value || []}
+        onAddMarketingTool={onAddMarketingTool}
+        onAddMarketingToolLink={onAddMarketingToolLink}
+        onMoveMarketingTool={onMoveMarketingTool}
+        onRemoveMarketingTool={onRemoveMarketingTool}
+        onRemoveMarketingToolLink={onRemoveMarketingToolLink}
         onSaveMarketingToolDrafts={onSaveMarketingToolDrafts}
         onUpdateMarketingTool={onUpdateMarketingTool}
         onUpdateMarketingToolLink={onUpdateMarketingToolLink}
@@ -908,6 +997,11 @@ function LeadershipFields({
 function MarketingToolFields({
   isSaving,
   items,
+  onAddMarketingTool,
+  onAddMarketingToolLink,
+  onMoveMarketingTool,
+  onRemoveMarketingTool,
+  onRemoveMarketingToolLink,
   onSaveMarketingToolDrafts,
   onUpdateMarketingTool,
   onUpdateMarketingToolLink,
@@ -924,9 +1018,14 @@ function MarketingToolFields({
           <strong>{items.length}</strong>
           <span>marketing tool cards</span>
         </div>
-        <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
-          {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
-        </span>
+        <div className="admin-summary-actions">
+          <span className={validationErrors.length ? "admin-status admin-status--error" : "admin-status admin-status--ok"}>
+            {validationErrors.length ? `${validationErrors.length} issue${validationErrors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <button className="admin-button admin-button--secondary" type="button" onClick={onAddMarketingTool}>
+            Add Tool
+          </button>
+        </div>
       </div>
       {validationErrors.length ? (
         <div className="admin-validation" role="status">
@@ -963,14 +1062,50 @@ function MarketingToolFields({
           <article className="admin-course-item" key={tool.id || index}>
             <div className="admin-course-item__header">
               <span>Marketing Tool {index + 1}</span>
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={Boolean(tool.active)}
-                  onChange={(event) => onUpdateMarketingTool(index, "active", event.target.checked)}
-                />
-                Active
-              </label>
+              <div className="admin-course-controls">
+                <button
+                  className="admin-icon-button"
+                  disabled={index === 0}
+                  type="button"
+                  onClick={() => onMoveMarketingTool(index, -1)}
+                  aria-label={`Move Marketing Tool ${index + 1} up`}
+                >
+                  Up
+                </button>
+                <button
+                  className="admin-icon-button"
+                  disabled={index === items.length - 1}
+                  type="button"
+                  onClick={() => onMoveMarketingTool(index, 1)}
+                  aria-label={`Move Marketing Tool ${index + 1} down`}
+                >
+                  Down
+                </button>
+                <button
+                  className="admin-icon-button admin-icon-button--danger"
+                  type="button"
+                  onClick={() => onRemoveMarketingTool(index)}
+                  aria-label={`Remove Marketing Tool ${index + 1}`}
+                >
+                  Remove
+                </button>
+                <button
+                  className="admin-icon-button"
+                  type="button"
+                  onClick={() => onAddMarketingToolLink(index)}
+                  aria-label={`Add link to Marketing Tool ${index + 1}`}
+                >
+                  Add Link
+                </button>
+                <label className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(tool.active)}
+                    onChange={(event) => onUpdateMarketingTool(index, "active", event.target.checked)}
+                  />
+                  Active
+                </label>
+              </div>
             </div>
             <div className="admin-field-grid">
               <AdminTextField
@@ -1023,6 +1158,14 @@ function MarketingToolFields({
                     />
                     Download
                   </label>
+                  <button
+                    className="admin-icon-button admin-icon-button--danger"
+                    type="button"
+                    onClick={() => onRemoveMarketingToolLink(index, linkIndex)}
+                    aria-label={`Remove Link ${linkIndex + 1} from Marketing Tool ${index + 1}`}
+                  >
+                    Remove Link
+                  </button>
                 </div>
               </div>
             ))}
@@ -1371,6 +1514,19 @@ function createLeadershipId(leaders) {
   while (ids.has(id)) {
     index += 1;
     id = `new-leader-${index}`;
+  }
+
+  return id;
+}
+
+function createMarketingToolId(tools) {
+  const ids = new Set(tools.map((tool) => tool.id));
+  let index = tools.length + 1;
+  let id = `new-marketing-tool-${index}`;
+
+  while (ids.has(id)) {
+    index += 1;
+    id = `new-marketing-tool-${index}`;
   }
 
   return id;
