@@ -5,16 +5,16 @@ import { createCourseId, validateCourseDrafts } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
-  { id: "courses", label: "Training Resources", target: "#training-resources", status: "Courses module" },
+  { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Static training links" },
   { id: "office", label: "Office", target: "#office", status: "Office module" },
   { id: "rooms", label: "Rooms", target: "#conference-rooms", status: "Calendar module" },
   { id: "leadership", label: "Leadership", target: "#leadership", status: "People module" },
   { id: "vendors", label: "Vendor Row", target: "#vendor-row", status: "Vendor module" },
-  { id: "productivity", label: "Productivity Coaching", target: "#training", status: "Courses module" }
+  { id: "productivityCourses", label: "Productivity Coaching", target: "#training", status: "Courses module" }
 ];
 
 export function VisualEditorOverlay({ initialContent }) {
-  const [activeSectionId, setActiveSectionId] = useState("courses");
+  const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
   const [content, setContent] = useState(initialContent);
   const [passcode, setPasscode] = useState("");
   const [adminPasscode, setAdminPasscode] = useState("");
@@ -232,7 +232,7 @@ export function VisualEditorOverlay({ initialContent }) {
               ))}
             </div>
 
-            {activeSectionId === "courses" ? (
+            {activeSectionId === "productivityCourses" ? (
               <CourseVisualPanel
                 courses={courses}
                 errors={courseErrors}
@@ -246,7 +246,11 @@ export function VisualEditorOverlay({ initialContent }) {
             ) : (
               <div className="visual-editor-empty-state">
                 <strong>{activeSection.label}</strong>
-                <p>This section is selectable now. Editing controls will be added in the next module slices.</p>
+                <p>
+                  {activeSectionId === "trainingResources"
+                    ? "This row is the static Training Resources section with 66 Day Challenge, Scott Le Roy Marketing, and KW Answers. It needs its own structured-data module before it can be edited here."
+                    : "This section is selectable now. Editing controls will be added in the next module slices."}
+                </p>
               </div>
             )}
           </>
