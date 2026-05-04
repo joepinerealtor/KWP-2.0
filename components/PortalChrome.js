@@ -201,7 +201,7 @@ export function PortalFooter({ showLogout }) {
         <a href="tel:+14013334900">401-333-4900</a>
         {showLogout ? (
           <>
-            <a className="site-footer-admin" href="/admin/content/">
+            <a className="site-footer-admin" href="/admin/visual/">
               Admin
             </a>
             <button className="site-footer-logout" type="button" data-portal-logout>

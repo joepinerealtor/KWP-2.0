@@ -43,6 +43,9 @@ Initial editor:
 
 Future editor:
 
+- Visual edit route at `/admin/visual/`.
+- Render the actual portal in edit mode.
+- Show section outlines, top editor controls, and a side inspector.
 - Preview changes before publishing.
 - Add, hide, show, and reorder homepage sections.
 - Add approved modules from a standardized module library.
