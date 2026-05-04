@@ -4101,14 +4101,19 @@ body.has-handbook-modal .page-content {
 .visual-editor-section-card {
   display: grid;
   gap: 4px;
+  width: 100%;
   padding: 12px;
   border: 1px solid rgba(77, 77, 77, 0.16);
   border-radius: 6px;
   background: #fff;
   color: var(--kw-black);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   text-decoration: none;
 }
 
+.visual-editor-section-card.is-active,
 .visual-editor-section-card:hover,
 .visual-editor-section-card:focus-visible {
   border-color: rgba(180, 1, 1, 0.42);
@@ -4127,6 +4132,190 @@ body.has-handbook-modal .page-content {
 
 .visual-editor-note {
   margin: 16px 0 0;
+}
+
+.visual-editor-unlock,
+.visual-editor-module,
+.visual-editor-course-list {
+  display: grid;
+  gap: 12px;
+}
+
+.visual-editor-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(77, 77, 77, 0.16);
+  border-radius: 6px;
+  background: rgba(250, 250, 250, 0.95);
+}
+
+.visual-editor-module-header strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--kw-black);
+}
+
+.visual-editor-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-status--ok {
+  background: rgba(9, 117, 67, 0.12);
+  color: #097543;
+}
+
+.visual-editor-status--error {
+  background: rgba(180, 1, 1, 0.12);
+  color: var(--kw-red);
+}
+
+.visual-editor-validation,
+.visual-editor-empty-state {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(180, 1, 1, 0.22);
+  border-radius: 6px;
+  background: rgba(180, 1, 1, 0.06);
+}
+
+.visual-editor-validation p,
+.visual-editor-empty-state p {
+  margin: 0;
+  color: var(--kw-gray);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.visual-editor-course {
+  border: 1px solid rgba(77, 77, 77, 0.16);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.visual-editor-course summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.visual-editor-course summary::-webkit-details-marker {
+  display: none;
+}
+
+.visual-editor-course summary span {
+  color: var(--kw-black);
+  font-weight: 700;
+}
+
+.visual-editor-course summary strong {
+  color: var(--kw-gray);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.visual-editor-course[open] {
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+}
+
+.visual-editor-course-controls,
+.visual-editor-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.visual-editor-course-controls button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(77, 77, 77, 0.2);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--kw-black);
+  cursor: pointer;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-course-controls button:disabled {
+  color: rgba(77, 77, 77, 0.42);
+  cursor: not-allowed;
+}
+
+.visual-editor-field {
+  display: grid;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.visual-editor-unlock .visual-editor-field {
+  padding: 0;
+}
+
+.visual-editor-field span {
+  color: var(--kw-gray);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-field input,
+.visual-editor-field textarea {
+  width: 100%;
+  border: 1px solid rgba(77, 77, 77, 0.18);
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+  color: var(--kw-black);
+  font: inherit;
+}
+
+.visual-editor-field textarea {
+  resize: vertical;
+}
+
+.visual-editor-check-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--kw-gray);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.visual-editor-message {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.visual-editor-message--error {
+  background: rgba(180, 1, 1, 0.08);
+  color: var(--kw-red);
+}
+
+.visual-editor-message--success {
+  background: rgba(9, 117, 67, 0.1);
+  color: #097543;
 }
 
 @media (max-width: 1180px) {

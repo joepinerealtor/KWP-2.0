@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { VisualEditorOverlay } from "@/components/admin/VisualEditorOverlay";
 import { LegacyPortalPage } from "@/components/LegacyPage";
 import { PortalScripts } from "@/components/PortalScripts";
+import portalContent from "@/data/portal-content.json";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,7 +19,7 @@ export default function VisualAdminPage() {
   return (
     <div className="visual-editor-mode">
       <LegacyPortalPage source="index.html" pageKey="home" />
-      <VisualEditorOverlay />
+      <VisualEditorOverlay initialContent={portalContent} />
       <PortalScripts includeTockify />
     </div>
   );
