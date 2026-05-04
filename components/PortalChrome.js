@@ -200,9 +200,14 @@ export function PortalFooter({ showLogout }) {
       <p className={classNames("site-footer-item site-footer-item--right", showLogout && "site-footer-actions")}>
         <a href="tel:+14013334900">401-333-4900</a>
         {showLogout ? (
-          <button className="site-footer-logout" type="button" data-portal-logout>
-            Logout
-          </button>
+          <>
+            <a className="site-footer-admin" href="/admin/content/">
+              Admin
+            </a>
+            <button className="site-footer-logout" type="button" data-portal-logout>
+              Logout
+            </button>
+          </>
         ) : null}
       </p>
     </footer>

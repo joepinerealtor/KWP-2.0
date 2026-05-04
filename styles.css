@@ -3896,6 +3896,7 @@ body.has-handbook-modal .page-content {
   gap: 10px;
 }
 
+.site-footer-admin,
 .site-footer-logout {
   appearance: none;
   border: 0;
@@ -3908,6 +3909,22 @@ body.has-handbook-modal .page-content {
   text-decoration: none;
 }
 
+.site-footer-admin {
+  font-weight: 700;
+}
+
+.site-footer-admin::before {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  margin-right: 10px;
+  background: rgba(77, 77, 77, 0.28);
+  vertical-align: -2px;
+}
+
+.site-footer-admin:hover,
+.site-footer-admin:focus-visible,
 .site-footer-logout:hover,
 .site-footer-logout:focus-visible {
   color: var(--kw-red);
