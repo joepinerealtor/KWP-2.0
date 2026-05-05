@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createCourseId, validateCourseDrafts } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
@@ -72,7 +72,7 @@ export function VisualEditorOverlay({ initialContent }) {
     }
 
     function selectCanvasElement(event) {
-      if (event.target.closest(".visual-editor-toolbar, .visual-editor-panel, .visual-editor-floating-toolbar")) {
+      if (event.target.closest(".visual-editor-toolbar, .visual-editor-panel, .visual-editor-floating-toolbar, .visual-editor-floating-editor")) {
         return;
       }
 
@@ -486,6 +486,14 @@ function describeSelectedElement(element) {
     tagName,
     type,
     visualId: element.dataset.visualEditorId,
+    bounds: {
+      bottom: rect.bottom,
+      height: rect.height,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      width: rect.width
+    },
     toolbarPosition: {
       top: Math.max(70, rect.top - 48),
       left: Math.min(window.innerWidth - 260, Math.max(18, rect.left))
@@ -657,13 +665,26 @@ function FloatingItemEditor({
   onUpdateCourse
 }) {
   const isCourseEditable = item.type === "course-card" && course && courseIndex >= 0;
+  const editorRef = useRef(null);
+  const [editorPosition, setEditorPosition] = useState(() => getInitialFloatingEditorPosition(item));
+
+  useLayoutEffect(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
+  }, [item, courseIndex, courseErrors.length]);
 
   return (
     <div
+      ref={editorRef}
       className="visual-editor-floating-editor"
       style={{
-        top: `${Math.max(86, item.toolbarPosition.top + 44)}px`,
-        left: `${Math.max(18, item.toolbarPosition.left)}px`
+        top: `${editorPosition.top}px`,
+        left: `${editorPosition.left}px`
       }}
       role="dialog"
       aria-label={`Edit ${item.label}`}
@@ -740,6 +761,39 @@ function FloatingItemEditor({
       )}
     </div>
   );
+}
+
+function getInitialFloatingEditorPosition(item) {
+  const safeLeft = typeof window === "undefined"
+    ? item.toolbarPosition.left
+    : Math.min(window.innerWidth - 390, item.toolbarPosition.left);
+
+  return {
+    top: Math.max(86, item.toolbarPosition.top + 44),
+    left: Math.max(18, safeLeft)
+  };
+}
+
+function getMeasuredFloatingEditorPosition(item, editor) {
+  const margin = 18;
+  const topLimit = 86;
+  const bottomLimit = window.innerHeight - margin;
+  const bounds = item.bounds || {};
+  const editorHeight = Math.min(editor.offsetHeight || 420, window.innerHeight - topLimit - margin);
+  const editorWidth = editor.offsetWidth || 360;
+  const openBelowTop = Math.max(topLimit, (bounds.bottom || item.toolbarPosition.top) + 12);
+  const openAboveTop = (bounds.top || item.toolbarPosition.top) - editorHeight - 12;
+  const preferredTop = openBelowTop + editorHeight > bottomLimit && openAboveTop >= topLimit
+    ? openAboveTop
+    : openBelowTop;
+  const clampedTop = Math.min(Math.max(topLimit, preferredTop), bottomLimit - editorHeight);
+  const rawLeft = bounds.left || item.toolbarPosition.left;
+  const clampedLeft = Math.min(Math.max(margin, rawLeft), window.innerWidth - editorWidth - margin);
+
+  return {
+    top: Math.max(topLimit, clampedTop),
+    left: Math.max(margin, clampedLeft)
+  };
 }
 
 function CourseVisualPanel({
