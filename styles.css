@@ -1279,7 +1279,7 @@ img {
 body.is-header-tech-floating .mobile-tech-help-bubble {
   position: fixed;
   right: max(20px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
+  bottom: max(96px, calc(env(safe-area-inset-bottom) + 20px));
   z-index: 50;
   display: block;
   color: var(--kw-black);
@@ -4010,6 +4010,21 @@ body.has-handbook-modal .page-content {
   backdrop-filter: blur(14px);
 }
 
+.visual-editor-toolbar-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  max-width: calc(100vw - 260px);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.visual-editor-toolbar .visual-editor-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 0.78rem;
+}
+
 .visual-editor-toolbar strong,
 .visual-editor-panel h2 {
   color: var(--kw-black);
@@ -4179,6 +4194,30 @@ body.has-handbook-modal .page-content {
   text-transform: uppercase;
 }
 
+.visual-editor-context-panel {
+  display: grid;
+}
+
+.visual-editor-context-note {
+  color: var(--kw-red) !important;
+  font-weight: 700;
+}
+
+.visual-editor-context-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.visual-editor-context-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(180, 1, 1, 0.28);
+  border-radius: 5px;
+  background: #fff;
+}
+
 .visual-editor-floating-toolbar {
   position: fixed;
   z-index: 90;
@@ -4218,6 +4257,48 @@ body.has-handbook-modal .page-content {
 .visual-editor-floating-toolbar button:focus-visible {
   border-color: rgba(180, 1, 1, 0.42);
   color: var(--kw-red);
+}
+
+.visual-editor-floating-editor {
+  position: fixed;
+  z-index: 95;
+  display: grid;
+  gap: 12px;
+  width: 360px;
+  max-width: calc(100vw - 36px);
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid rgba(20, 20, 20, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.99);
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.24);
+}
+
+.visual-editor-floating-editor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.visual-editor-floating-editor-header strong {
+  display: block;
+  color: var(--kw-black);
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.visual-editor-floating-editor-header button {
+  border: 0;
+  background: transparent;
+  color: var(--kw-red);
+  cursor: pointer;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .visual-editor-unlock,
@@ -4676,7 +4757,7 @@ body.has-handbook-modal .page-content {
   .mobile-tech-help-bubble {
     position: fixed;
     right: max(20px, env(safe-area-inset-right));
-    bottom: max(20px, env(safe-area-inset-bottom));
+    bottom: max(96px, calc(env(safe-area-inset-bottom) + 20px));
     z-index: 50;
     display: block;
     color: var(--kw-black);
@@ -4883,7 +4964,7 @@ body.has-handbook-modal .page-content {
   .mobile-tech-help-bubble {
     position: fixed;
     right: max(14px, env(safe-area-inset-right));
-    bottom: max(14px, env(safe-area-inset-bottom));
+    bottom: max(92px, calc(env(safe-area-inset-bottom) + 16px));
     z-index: 50;
     display: block;
     color: var(--kw-black);

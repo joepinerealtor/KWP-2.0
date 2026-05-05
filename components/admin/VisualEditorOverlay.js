@@ -39,6 +39,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingItemId, setEditingItemId] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
@@ -46,6 +47,10 @@ export function VisualEditorOverlay({ initialContent }) {
   const courses = content?.courses || [];
   const courseErrors = useMemo(() => validateCourseDrafts(courses), [courses]);
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
+  const selectedCourseIndex = selectedItem?.type === "course-card"
+    ? courses.findIndex((course) => course.id === selectedItem.editableId)
+    : -1;
+  const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -66,6 +71,7 @@ export function VisualEditorOverlay({ initialContent }) {
       event.preventDefault();
       event.stopPropagation();
       setSelectedItem(describeSelectedElement(element));
+      setEditingItemId("");
     }
 
     document.addEventListener("click", selectCanvasElement, true);
@@ -111,6 +117,7 @@ export function VisualEditorOverlay({ initialContent }) {
       setAdminPasscode(passcode);
       setPasscode("");
       setIsUnlocked(true);
+      setEditingItemId("");
       setSelectedItem(null);
       setStatusMessage("Editor unlocked.");
     } catch (unlockError) {
@@ -122,6 +129,7 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function selectSection(section) {
     setActiveSectionId(section.id);
+    setEditingItemId("");
     setSelectedItem(null);
 
     if (section.target) {
@@ -139,10 +147,12 @@ export function VisualEditorOverlay({ initialContent }) {
 
     if (selectedItem.type === "course-card" && selectedItem.editableId) {
       setActiveSectionId("productivityCourses");
-      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Course editor opened below." } : currentItem);
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this card." } : currentItem);
       return;
     }
 
+    setEditingItemId(selectedItem.visualId);
     setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Full editing controls for this item type are coming in a future module slice." } : currentItem);
   }
 
@@ -150,7 +160,14 @@ export function VisualEditorOverlay({ initialContent }) {
     setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: `${direction === "up" ? "Move up" : "Move down"} will be enabled when section ordering is data-backed.` } : currentItem);
   }
 
+  function setToolbarStatus(action) {
+    setError("");
+    setStatusMessage(`${action} is part of the visual editor plan. This control is staged here so the editor feels like a true page editor as each action becomes live.`);
+  }
+
   function updateCourse(index, field, value) {
+    const courseId = courses[index]?.id;
+
     setContent((currentContent) => ({
       ...currentContent,
       courses: (currentContent.courses || []).map((course, courseIndex) => (
@@ -162,6 +179,7 @@ export function VisualEditorOverlay({ initialContent }) {
           : course
       ))
     }));
+    syncCourseCardPreview(courseId, field, value);
     setStatusMessage("");
     setError("");
   }
@@ -191,10 +209,16 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   function removeCourse(index) {
+    const courseId = courses[index]?.id;
+
     setContent((currentContent) => ({
       ...currentContent,
       courses: (currentContent.courses || []).filter((_, courseIndex) => courseIndex !== index)
     }));
+    if (selectedItem?.editableId === courseId) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
     setStatusMessage("");
     setError("");
   }
@@ -261,22 +285,42 @@ export function VisualEditorOverlay({ initialContent }) {
           <strong>KWP Visual Editor</strong>
         </div>
         <div className="visual-editor-toolbar-actions">
-          <a className="visual-editor-button visual-editor-button--secondary" href="/admin/content/">
-            Form Editor
-          </a>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Add Section")}>
+            Add Section
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Edit Sections")}>
+            Edit Sections
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Edit Navigation")}>
+            Edit Navigation
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Undo")}>
+            Undo
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Redo")}>
+            Redo
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Save Draft")}>
+            Save Draft
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Publish")}>
+            Publish
+          </button>
           <a className="visual-editor-button" href="/">
-            Preview Portal
+            Preview
           </a>
         </div>
       </div>
 
       <aside className="visual-editor-panel" aria-label="Visual editor inspector">
         <div className="visual-editor-panel-header">
-          <span className="visual-editor-kicker">Inspector</span>
-          <h2>{isUnlocked ? activeSection.label : "Unlock Editor"}</h2>
+          <span className="visual-editor-kicker">{selectedItem ? "Selected Item" : "Page Tools"}</span>
+          <h2>{isUnlocked ? getPanelTitle(selectedItem, activeSection) : "Unlock Editor"}</h2>
           <p>
-            {isUnlocked
-              ? "Select a section, edit structured fields, then save the draft."
+            {isUnlocked && selectedItem
+              ? "This panel only shows the item you clicked. Use Edit for focused controls."
+              : isUnlocked
+              ? "Use the top bar for site-wide changes, or choose a page area to review."
               : "Enter the temporary admin passcode to edit content from this visual workspace."}
           </p>
         </div>
@@ -299,43 +343,55 @@ export function VisualEditorOverlay({ initialContent }) {
         ) : (
           <>
             {selectedItem ? (
-              <SelectedItemSummary item={selectedItem} onClear={() => setSelectedItem(null)} />
-            ) : null}
-
-            <div className="visual-editor-section-list">
-              {EDITABLE_SECTIONS.map((section) => (
-                <button
-                  className={`visual-editor-section-card${section.id === activeSectionId ? " is-active" : ""}`}
-                  type="button"
-                  onClick={() => selectSection(section)}
-                  key={section.id}
-                >
-                  <span>{section.label}</span>
-                  <strong>{section.status}</strong>
-                </button>
-              ))}
-            </div>
-
-            {activeSectionId === "productivityCourses" ? (
-              <CourseVisualPanel
-                courses={courses}
-                errors={courseErrors}
-                isSaving={isSaving}
-                onAddCourse={addCourse}
-                onMoveCourse={moveCourse}
-                onRemoveCourse={removeCourse}
-                onSaveCourses={saveCourses}
-                onUpdateCourse={updateCourse}
+              <SelectedItemPanel
+                item={selectedItem}
+                selectedCourse={selectedCourse}
+                onClear={() => {
+                  setEditingItemId("");
+                  setSelectedItem(null);
+                }}
+                onEdit={editSelectedItem}
+                onMoveDown={() => moveSelectedSection("down")}
+                onMoveUp={() => moveSelectedSection("up")}
               />
             ) : (
-              <div className="visual-editor-empty-state">
-                <strong>{activeSection.label}</strong>
-                <p>
-                  {activeSectionId === "trainingResources"
-                    ? "This row is the static Training Resources section with 66 Day Challenge, Scott Le Roy Marketing, and KW Answers. It needs its own structured-data module before it can be edited here."
-                    : "This section is selectable now. Editing controls will be added in the next module slices."}
-                </p>
-              </div>
+              <>
+                <div className="visual-editor-section-list">
+                  {EDITABLE_SECTIONS.map((section) => (
+                    <button
+                      className={`visual-editor-section-card${section.id === activeSectionId ? " is-active" : ""}`}
+                      type="button"
+                      onClick={() => selectSection(section)}
+                      key={section.id}
+                    >
+                      <span>{section.label}</span>
+                      <strong>{section.status}</strong>
+                    </button>
+                  ))}
+                </div>
+
+                {activeSectionId === "productivityCourses" ? (
+                  <CourseVisualPanel
+                    courses={courses}
+                    errors={courseErrors}
+                    isSaving={isSaving}
+                    onAddCourse={addCourse}
+                    onMoveCourse={moveCourse}
+                    onRemoveCourse={removeCourse}
+                    onSaveCourses={saveCourses}
+                    onUpdateCourse={updateCourse}
+                  />
+                ) : (
+                  <div className="visual-editor-empty-state">
+                    <strong>{activeSection.label}</strong>
+                    <p>
+                      {activeSectionId === "trainingResources"
+                        ? "This row is the static Training Resources section with 66 Day Challenge, Scott Le Roy Marketing, and KW Answers. It needs its own structured-data module before it can be edited here."
+                        : "This section is selectable now. Editing controls will be added in the next module slices."}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -347,10 +403,27 @@ export function VisualEditorOverlay({ initialContent }) {
       {isUnlocked && selectedItem ? (
         <FloatingSelectionToolbar
           item={selectedItem}
-          onClear={() => setSelectedItem(null)}
+          onClear={() => {
+            setEditingItemId("");
+            setSelectedItem(null);
+          }}
           onEdit={editSelectedItem}
           onMoveDown={() => moveSelectedSection("down")}
           onMoveUp={() => moveSelectedSection("up")}
+        />
+      ) : null}
+
+      {isUnlocked && selectedItem && editingItemId === selectedItem.visualId ? (
+        <FloatingItemEditor
+          course={selectedCourse}
+          courseErrors={courseErrors}
+          courseIndex={selectedCourseIndex}
+          isSaving={isSaving}
+          item={selectedItem}
+          onClose={() => setEditingItemId("")}
+          onRemoveCourse={removeCourse}
+          onSaveCourses={saveCourses}
+          onUpdateCourse={updateCourse}
         />
       ) : null}
     </>
@@ -419,19 +492,102 @@ function normalizeLabel(value) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, 90);
 }
 
-function SelectedItemSummary({ item, onClear }) {
+function getPanelTitle(selectedItem, activeSection) {
+  if (!selectedItem) {
+    return activeSection.label;
+  }
+
+  if (selectedItem.type === "course-card") {
+    return "Course Card";
+  }
+
+  if (selectedItem.type === "link-button") {
+    return "Link";
+  }
+
+  if (selectedItem.type === "section") {
+    return "Section";
+  }
+
+  return "Selected Item";
+}
+
+function syncCourseCardPreview(courseId, field, value) {
+  if (!courseId || typeof document === "undefined") {
+    return;
+  }
+
+  const safeCourseId = String(courseId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="course-card"][data-editable-id="${safeCourseId}"]`);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "tag") {
+    const tag = element.querySelector(".card-tag");
+    if (tag) {
+      tag.textContent = value;
+    }
+  }
+
+  if (field === "title") {
+    const title = element.querySelector("h3");
+    if (title) {
+      title.textContent = value;
+    }
+  }
+
+  if (field === "summary") {
+    const summary = element.querySelector("p");
+    if (summary) {
+      summary.textContent = value;
+    }
+  }
+
+  if (field === "href") {
+    element.setAttribute("href", value);
+  }
+
+  if (field === "external") {
+    if (value) {
+      element.setAttribute("target", "_blank");
+      element.setAttribute("rel", "noreferrer");
+    } else {
+      element.removeAttribute("target");
+      element.removeAttribute("rel");
+    }
+  }
+}
+
+function SelectedItemPanel({ item, selectedCourse, onClear, onEdit, onMoveDown, onMoveUp }) {
   return (
-    <div className="visual-editor-selection-summary">
+    <div className="visual-editor-selection-summary visual-editor-context-panel">
       <div>
-        <span className="visual-editor-kicker">Selected</span>
         <strong>{item.label}</strong>
         <p>{item.type} {item.sectionLabel ? `in ${item.sectionLabel}` : ""}</p>
         {item.href ? <p className="visual-editor-selection-link">{item.href}</p> : null}
-        {item.panelHint ? <p>{item.panelHint}</p> : null}
+        {item.type === "course-card" && selectedCourse ? (
+          <p>Click Edit to change this card in a focused floating editor.</p>
+        ) : (
+          <p>This item is selectable. Editing controls for this item type will be added in its module slice.</p>
+        )}
+        {item.panelHint ? <p className="visual-editor-context-note">{item.panelHint}</p> : null}
       </div>
-      <button type="button" onClick={onClear} aria-label="Clear selection">
-        Clear
-      </button>
+      <div className="visual-editor-context-actions">
+        <button type="button" onClick={onEdit}>
+          Edit
+        </button>
+        <button type="button" onClick={onMoveUp}>
+          Move Up
+        </button>
+        <button type="button" onClick={onMoveDown}>
+          Move Down
+        </button>
+        <button type="button" onClick={onClear}>
+          Back
+        </button>
+      </div>
     </div>
   );
 }
@@ -452,6 +608,103 @@ function FloatingSelectionToolbar({ item, onClear, onEdit, onMoveDown, onMoveUp 
       <button type="button" onClick={onMoveUp}>Move Up</button>
       <button type="button" onClick={onMoveDown}>Move Down</button>
       <button type="button" onClick={onClear}>Done</button>
+    </div>
+  );
+}
+
+function FloatingItemEditor({
+  course,
+  courseErrors,
+  courseIndex,
+  isSaving,
+  item,
+  onClose,
+  onRemoveCourse,
+  onSaveCourses,
+  onUpdateCourse
+}) {
+  const isCourseEditable = item.type === "course-card" && course && courseIndex >= 0;
+
+  return (
+    <div
+      className="visual-editor-floating-editor"
+      style={{
+        top: `${Math.max(86, item.toolbarPosition.top + 44)}px`,
+        left: `${Math.max(18, item.toolbarPosition.left)}px`
+      }}
+      role="dialog"
+      aria-label={`Edit ${item.label}`}
+    >
+      <div className="visual-editor-floating-editor-header">
+        <div>
+          <span className="visual-editor-kicker">Editing</span>
+          <strong>{item.label}</strong>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close editor">
+          Close
+        </button>
+      </div>
+
+      {isCourseEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={course.tag || ""} onChange={(event) => onUpdateCourse(courseIndex, "tag", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={course.title || ""} onChange={(event) => onUpdateCourse(courseIndex, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={course.summary || ""} rows={3} onChange={(event) => onUpdateCourse(courseIndex, "summary", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={course.href || ""} onChange={(event) => onUpdateCourse(courseIndex, "href", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={course.active !== false}
+                onChange={(event) => onUpdateCourse(courseIndex, "active", event.target.checked)}
+              />
+              Visible
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={course.external !== false}
+                onChange={(event) => onUpdateCourse(courseIndex, "external", event.target.checked)}
+              />
+              Opens externally
+            </label>
+          </div>
+          {courseErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {courseErrors.map((validationError) => (
+                <p key={validationError}>{validationError}</p>
+              ))}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(courseErrors.length) || isSaving} onClick={onSaveCourses}>
+              {isSaving ? "Saving" : "Save Card"}
+            </button>
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveCourse(courseIndex)}>
+              Delete
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="visual-editor-note">
+          This item is selectable now. The focused editor for this kind of block is coming next.
+        </p>
+      )}
     </div>
   );
 }
