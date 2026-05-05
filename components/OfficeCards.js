@@ -31,7 +31,7 @@ function createReferenceCardHtml(card = {}) {
     ? `<a class="button secondary compact" ${createLinkAttributes(card.action)}>${escapeHtml(card.action.label)}</a>`
     : "";
 
-  return `<article class="office-card"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}${action}</article>`;
+  return `<article class="office-card" data-editable-type="office-card" data-editable-id="referenceHub"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}${action}</article>`;
 }
 
 function createOperationsCardHtml(card = {}) {
@@ -42,11 +42,11 @@ function createOperationsCardHtml(card = {}) {
     .map((holiday) => `<li>${escapeHtml(holiday)}</li>`)
     .join("");
 
-  return `<article class="office-card office-operations-card"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><div class="office-operations-block"><p class="office-operations-label">${escapeHtml(card.hoursLabel)}</p><ul class="office-hours-list">${hours}</ul></div><div class="office-operations-block"><p class="office-operations-label">${escapeHtml(card.holidaysLabel)}</p><ul class="office-holiday-list">${holidays}</ul></div></article>`;
+  return `<article class="office-card office-operations-card" data-editable-type="office-card" data-editable-id="operations"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><div class="office-operations-block"><p class="office-operations-label">${escapeHtml(card.hoursLabel)}</p><ul class="office-hours-list">${hours}</ul></div><div class="office-operations-block"><p class="office-operations-label">${escapeHtml(card.holidaysLabel)}</p><ul class="office-holiday-list">${holidays}</ul></div></article>`;
 }
 
 function createMarketingFilesCardHtml(card = {}) {
-  return `<article class="office-card office-card-wide"><a class="card-tag card-tag-link" href="${escapeHtmlAttribute(card.tagHref)}">${escapeHtml(card.tag)}</a><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}</article>`;
+  return `<article class="office-card office-card-wide" data-editable-type="office-card" data-editable-id="marketingFiles"><a class="card-tag card-tag-link" href="${escapeHtmlAttribute(card.tagHref)}">${escapeHtml(card.tag)}</a><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}</article>`;
 }
 
 export function createRoomBookingCardHtml(rooms = {}) {

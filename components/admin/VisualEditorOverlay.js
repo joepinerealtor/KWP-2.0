@@ -47,6 +47,7 @@ export function VisualEditorOverlay({ initialContent }) {
 
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
+  const office = content?.office || {};
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
@@ -62,6 +63,8 @@ export function VisualEditorOverlay({ initialContent }) {
     : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
+  const selectedOfficeCardKey = selectedItem?.type === "office-card" ? selectedItem.editableId : "";
+  const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const selectedEditableCard = selectedCourse || selectedTrainingResource;
   const selectedEditableCardIndex = selectedCourse ? selectedCourseIndex : selectedTrainingResourceIndex;
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
@@ -234,6 +237,13 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (selectedItem.type === "office-card" && selectedItem.editableId) {
+      setActiveSectionId("office");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this office card." } : currentItem);
+      return;
+    }
+
     setEditingItemId(selectedItem.visualId);
     setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Full editing controls for this item type are coming in a future module slice." } : currentItem);
   }
@@ -285,6 +295,36 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function updateTrainingResource(index, field, value) {
     updateEditableCard("trainingResources", trainingResources, index, field, value, "training-resource-card");
+  }
+
+  function updateOfficeCard(cardKey, field, value) {
+    setContent((currentContent) => {
+      const currentOffice = currentContent.office || {};
+      const currentCard = currentOffice[cardKey] || {};
+      const nextCard = field.startsWith("action.")
+        ? {
+            ...currentCard,
+            action: {
+              ...(currentCard.action || {}),
+              [field.replace("action.", "")]: value
+            }
+          }
+        : {
+            ...currentCard,
+            [field]: value
+          };
+
+      return {
+        ...currentContent,
+        office: {
+          ...currentOffice,
+          [cardKey]: nextCard
+        }
+      };
+    });
+    syncOfficeCardPreview(cardKey, field, value);
+    setStatusMessage("");
+    setError("");
   }
 
   function updateEditableCard(collectionKey, items, index, field, value, editableType) {
@@ -406,6 +446,10 @@ export function VisualEditorOverlay({ initialContent }) {
 
   async function saveTrainingResourceSection() {
     await saveContent([], "Training Resources heading");
+  }
+
+  async function saveOfficeCard() {
+    await saveContent([], "Office card");
   }
 
   async function saveContent(validationErrors, label) {
@@ -600,7 +644,11 @@ export function VisualEditorOverlay({ initialContent }) {
           editableType={selectedEditableCardType}
           isSaving={isSaving}
           item={selectedItem}
+          officeCard={selectedOfficeCard}
+          officeCardKey={selectedOfficeCardKey}
           onClose={() => setEditingItemId("")}
+          onSaveOfficeCard={saveOfficeCard}
+          onUpdateOfficeCard={updateOfficeCard}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -766,6 +814,90 @@ function syncEditableCardPreview(editableType, itemId, field, value) {
   }
 }
 
+function syncOfficeCardPreview(cardKey, field, value) {
+  if (!cardKey || typeof document === "undefined") {
+    return;
+  }
+
+  const safeCardKey = String(cardKey).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="office-card"][data-editable-id="${safeCardKey}"]`);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "tag") {
+    const tag = element.querySelector(".card-tag");
+    if (tag) {
+      tag.textContent = value;
+    }
+  }
+
+  if (field === "title") {
+    const title = element.querySelector("h3");
+    if (title) {
+      title.textContent = value;
+    }
+  }
+
+  if (field === "summary") {
+    const summary = element.querySelector(":scope > p");
+    if (summary) {
+      summary.textContent = value;
+    }
+  }
+
+  if (field === "tagHref") {
+    const tagLink = element.querySelector(".card-tag-link");
+    if (tagLink) {
+      tagLink.setAttribute("href", value);
+    }
+  }
+
+  if (field === "hoursLabel") {
+    const labels = element.querySelectorAll(".office-operations-label");
+    if (labels[0]) {
+      labels[0].textContent = value;
+    }
+  }
+
+  if (field === "holidaysLabel") {
+    const labels = element.querySelectorAll(".office-operations-label");
+    if (labels[1]) {
+      labels[1].textContent = value;
+    }
+  }
+
+  if (field === "action.label") {
+    const button = element.querySelector(".button");
+    if (button) {
+      button.textContent = value;
+    }
+  }
+
+  if (field === "action.href") {
+    const button = element.querySelector(".button");
+    if (button) {
+      button.setAttribute("href", value);
+    }
+  }
+
+  if (field === "action.external") {
+    const button = element.querySelector(".button");
+    if (!button) {
+      return;
+    }
+
+    if (value) {
+      button.setAttribute("target", "_blank");
+      button.setAttribute("rel", "noreferrer");
+    } else {
+      button.removeAttribute("target");
+      button.removeAttribute("rel");
+    }
+  }
+}
+
 function syncTrainingResourceSectionPreview(field, value) {
   if (typeof document === "undefined") {
     return;
@@ -906,15 +1038,20 @@ function FloatingItemEditor({
   editableType,
   isSaving,
   item,
+  officeCard,
+  officeCardKey,
   onClose,
   onRemoveCard,
   onSaveCards,
+  onSaveOfficeCard,
   onUpdateCard,
+  onUpdateOfficeCard,
   sectionSettings,
   onSaveSection,
   onUpdateSection
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
+  const isOfficeCardEditable = item.type === "office-card" && officeCard && officeCardKey;
   const isTrainingResourceSectionEditable = (
     (item.type === "section" && item.sectionId === "training-resources") ||
     item.type === "section-eyebrow" ||
@@ -931,7 +1068,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length]);
+  }, [item, cardIndex, cardErrors.length, officeCardKey]);
 
   return (
     <div
@@ -970,6 +1107,71 @@ function FloatingItemEditor({
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveSection}>
               {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isOfficeCardEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this office card preview as you type. Chip and list editing will come in the next office slice.
+          </p>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={officeCard.tag || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "tag", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={officeCard.title || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "title", event.target.value)} />
+          </label>
+          {"summary" in officeCard ? (
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={officeCard.summary || ""} rows={3} onChange={(event) => onUpdateOfficeCard(officeCardKey, "summary", event.target.value)} />
+            </label>
+          ) : null}
+          {"tagHref" in officeCard ? (
+            <label className="visual-editor-field">
+              <span>Tag Link</span>
+              <input value={officeCard.tagHref || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "tagHref", event.target.value)} />
+            </label>
+          ) : null}
+          {"hoursLabel" in officeCard ? (
+            <label className="visual-editor-field">
+              <span>Hours Label</span>
+              <input value={officeCard.hoursLabel || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "hoursLabel", event.target.value)} />
+            </label>
+          ) : null}
+          {"holidaysLabel" in officeCard ? (
+            <label className="visual-editor-field">
+              <span>Holidays Label</span>
+              <input value={officeCard.holidaysLabel || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "holidaysLabel", event.target.value)} />
+            </label>
+          ) : null}
+          {officeCard.action ? (
+            <>
+              <label className="visual-editor-field">
+                <span>Button Label</span>
+                <input value={officeCard.action.label || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "action.label", event.target.value)} />
+              </label>
+              <label className="visual-editor-field">
+                <span>Button Link</span>
+                <input value={officeCard.action.href || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "action.href", event.target.value)} />
+              </label>
+              <div className="visual-editor-check-row">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={officeCard.action.external !== false}
+                    onChange={(event) => onUpdateOfficeCard(officeCardKey, "action.external", event.target.checked)}
+                  />
+                  Opens externally
+                </label>
+              </div>
+            </>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveOfficeCard}>
+              {isSaving ? "Saving" : "Save Office Card"}
             </button>
           </div>
         </>
