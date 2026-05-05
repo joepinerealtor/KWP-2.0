@@ -1963,6 +1963,7 @@ function normalizeJoeAvailabilityState(rawState = {}) {
   const availableNowLabel = rawState?.availableNowLabel || "Joe is available to chat";
   const busyNowLabel = rawState?.busyNowLabel || "Joe is in another appointment";
   const unavailableLabel = rawState?.unavailableLabel || "Joe is unavailable";
+  const availableNowSummary = rawState?.availableNowSummary || "Schedule an appointment with Joe.";
   const baseStatus = [
     "available",
     "available_now",
@@ -1974,8 +1975,18 @@ function normalizeJoeAvailabilityState(rawState = {}) {
 
   if (isBusyNow) {
     status = "unavailable";
+  } else if (baseStatus === "available") {
+    status = "available";
   } else if (baseStatus === "available_now" && Number.isFinite(availableNowEndMs) && isWithinWorkingHoursNow && nowMs < availableNowEndMs) {
     status = "available_now";
+  }
+
+  if (status === "available") {
+    return {
+      status,
+      label: availableNowLabel,
+      summary: availableNowSummary
+    };
   }
 
   if (status === "available_now") {
@@ -2000,7 +2011,7 @@ function normalizeJoeAvailabilityState(rawState = {}) {
         ? `Current availability runs until ${endLabel}. Next appointment available at ${nextAppointmentLabel}.`
         : (nextAppointmentLabel
         ? `Next appointment available at ${nextAppointmentLabel}.`
-        : (rawState?.availableNowSummary || (endLabel
+        : (availableNowSummary || (endLabel
         ? `Schedule an appointment with Joe. Current availability runs until ${endLabel}.`
         : "Schedule an appointment with Joe.")))
     };
@@ -2084,6 +2095,13 @@ function getCompactJoeAvailabilityState(rawState = {}, normalizedState = {}) {
     && busyNowEndMs > nowMs
     && (!Number.isFinite(busyNowStartMs) || busyNowStartMs <= nowMs);
 
+  if (normalizedState.status === "available") {
+    return {
+      label: rawState?.availableNowLabel || "Joe is available now",
+      summary: rawState?.availableNowSummary || officeHoursLabel || "Tap to schedule an appointment"
+    };
+  }
+
   if (normalizedState.status === "available_now") {
     const effectiveAvailableNowEndMs = getJoeAvailabilityEffectiveAvailableEndMs(
       availableNowEndMs,
@@ -2134,7 +2152,7 @@ function getCompactJoeAvailabilityState(rawState = {}, normalizedState = {}) {
 }
 
 function getMobileBubbleJoeAvailabilityState(normalizedState = {}) {
-  if (normalizedState.status === "available_now") {
+  if (normalizedState.status === "available" || normalizedState.status === "available_now") {
     return {
       label: "Joe is available now",
       summary: "Tap to schedule an appointment"
@@ -2235,6 +2253,13 @@ async function refreshJoeAvailability() {
     joeAvailabilityRefreshInFlight = false;
   }
 }
+
+window.addEventListener("kwp:joe-availability-preview", (event) => {
+  const nextState = event.detail && typeof event.detail === "object" ? event.detail : {};
+
+  writeJoeAvailability(nextState);
+  saveStoredJoeAvailability(nextState);
+});
 
 function loadStoredRates() {
   try {

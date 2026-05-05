@@ -70,10 +70,46 @@ const LEADERSHIP_SUPPORT_DEFAULT = {
   buttonLabel: "Schedule an appointment",
   buttonHref: "https://calendly.com/joepinerealtor/tech-meeting-with-joe"
 };
+const JOE_AVAILABILITY_DEFAULT = {
+  status: "unavailable",
+  timezone: "America/New_York",
+  eventDurationMinutes: 30,
+  nextOpenSlotIso: "",
+  nextOpenSlotWorkingWindowEndIso: "",
+  availableNowEndIso: "",
+  busyNowStartIso: "",
+  busyNowEndIso: "",
+  nextBusyStartIso: "",
+  nextBusyEndIso: "",
+  nextAppointmentAvailableIso: "",
+  workingHours: [
+    {
+      day: "Wednesday",
+      start: "09:00",
+      end: "17:00"
+    },
+    {
+      day: "Thursday",
+      start: "09:00",
+      end: "17:00"
+    },
+    {
+      day: "Friday",
+      start: "09:00",
+      end: "16:00"
+    }
+  ],
+  availableNowLabel: "Joe is available to chat",
+  availableNowSummary: "Schedule an appointment with Joe.",
+  busyNowLabel: "Joe is in another appointment",
+  unavailableLabel: "Joe is unavailable",
+  noSlotsSummary: "No open tech-help slots are listed right now."
+};
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
   const [content, setContent] = useState(initialContent);
+  const [joeAvailability, setJoeAvailability] = useState(JOE_AVAILABILITY_DEFAULT);
   const [passcode, setPasscode] = useState("");
   const [adminPasscode, setAdminPasscode] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -234,6 +270,7 @@ export function VisualEditorOverlay({ initialContent }) {
       }
 
       setContent(payload.content);
+      await loadJoeAvailability(nextPasscode);
       setAdminPasscode(nextPasscode);
       setPasscode("");
       setIsUnlocked(true);
@@ -253,6 +290,28 @@ export function VisualEditorOverlay({ initialContent }) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadJoeAvailability(nextPasscode) {
+    const response = await fetch("/api/admin/availability/", {
+      cache: "no-store",
+      headers: {
+        "x-kwp-admin-passcode": nextPasscode
+      }
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to load Joe availability.");
+    }
+
+    const nextAvailability = {
+      ...JOE_AVAILABILITY_DEFAULT,
+      ...(payload.availability || {})
+    };
+
+    setJoeAvailability(nextAvailability);
+    previewJoeAvailability(nextAvailability);
   }
 
   function selectSection(section) {
@@ -480,6 +539,64 @@ export function VisualEditorOverlay({ initialContent }) {
     syncLeadershipSupportPreview(field, value);
     setStatusMessage("");
     setError("");
+  }
+
+  function updateJoeAvailability(field, value) {
+    const nextAvailability = {
+      ...joeAvailability,
+      [field]: value
+    };
+
+    setJoeAvailability(nextAvailability);
+    previewJoeAvailability(nextAvailability);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateJoeAvailabilityStatus(isAvailable) {
+    const nextAvailability = {
+      ...joeAvailability,
+      status: isAvailable ? "available" : "unavailable"
+    };
+
+    setJoeAvailability(nextAvailability);
+    previewJoeAvailability(nextAvailability);
+    setStatusMessage(isAvailable ? "Availability preview is green across Joe widgets. Save to make it stick." : "Availability preview is red across Joe widgets. Save to make it stick.");
+    setError("");
+  }
+
+  async function saveJoeAvailability() {
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/availability/", {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: JSON.stringify({ availability: joeAvailability })
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to save Joe availability.");
+      }
+
+      const nextAvailability = {
+        ...JOE_AVAILABILITY_DEFAULT,
+        ...(payload.availability || {})
+      };
+
+      setJoeAvailability(nextAvailability);
+      previewJoeAvailability(nextAvailability);
+      setStatusMessage("Joe availability saved. All availability cards use this shared setting.");
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function uploadLeadershipSupportPhoto(file) {
@@ -1280,6 +1397,7 @@ export function VisualEditorOverlay({ initialContent }) {
           isSaving={isSaving}
           isUploading={isUploading}
           item={selectedItem}
+          joeAvailability={joeAvailability}
           leader={selectedLeader}
           leaderErrors={leadershipErrors}
           leaderIndex={selectedLeaderIndex}
@@ -1334,7 +1452,10 @@ export function VisualEditorOverlay({ initialContent }) {
           onUploadLeaderPhoto={uploadLeaderPhoto}
           onUploadLeadershipSupportPhoto={uploadLeadershipSupportPhoto}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
+          onSaveJoeAvailability={saveJoeAvailability}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
+          onUpdateJoeAvailability={updateJoeAvailability}
+          onUpdateJoeAvailabilityStatus={updateJoeAvailabilityStatus}
           sectionSettings={trainingResourceSection}
           onSaveSection={saveTrainingResourceSection}
           onUpdateSection={updateTrainingResourceSection}
@@ -1964,6 +2085,16 @@ function syncLeadershipSupportPreview(field, value) {
   }
 }
 
+function previewJoeAvailability(availability) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent("kwp:joe-availability-preview", {
+    detail: availability
+  }));
+}
+
 function syncLeadershipSectionPreview(sectionKey, field, value) {
   if (typeof document === "undefined") {
     return;
@@ -2166,6 +2297,7 @@ function FloatingItemEditor({
   isSaving,
   isUploading,
   item,
+  joeAvailability,
   leader,
   leaderErrors,
   leaderIndex,
@@ -2190,12 +2322,15 @@ function FloatingItemEditor({
   onRemoveCard,
   onRemoveLeader,
   onSaveCards,
+  onSaveJoeAvailability,
   onSaveLeadership,
   onSaveLeadershipSection,
   onSaveLeadershipSupport,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
+  onUpdateJoeAvailability,
+  onUpdateJoeAvailabilityStatus,
   onUpdateLeader,
   onUpdateLeadershipSection,
   onUpdateLeadershipSupport,
@@ -2460,6 +2595,45 @@ function FloatingItemEditor({
             <span>Button Link</span>
             <input value={leadershipSupport.buttonHref || ""} onChange={(event) => onUpdateLeadershipSupport("buttonHref", event.target.value)} />
           </label>
+          <div className="visual-editor-repeat-list">
+            <div className="visual-editor-repeat-header">
+              <span>Shared Availability</span>
+            </div>
+            <p className="visual-editor-note">
+              This controls every Joe availability card on the portal.
+            </p>
+            <div className="visual-editor-check-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={joeAvailability.status === "available"}
+                  onChange={(event) => onUpdateJoeAvailabilityStatus(event.target.checked)}
+                />
+                Joe is available
+              </label>
+            </div>
+            <label className="visual-editor-field">
+              <span>Available Label</span>
+              <input value={joeAvailability.availableNowLabel || ""} onChange={(event) => onUpdateJoeAvailability("availableNowLabel", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Available Summary</span>
+              <input value={joeAvailability.availableNowSummary || ""} onChange={(event) => onUpdateJoeAvailability("availableNowSummary", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Unavailable Label</span>
+              <input value={joeAvailability.unavailableLabel || ""} onChange={(event) => onUpdateJoeAvailability("unavailableLabel", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Unavailable Summary</span>
+              <input value={joeAvailability.noSlotsSummary || ""} onChange={(event) => onUpdateJoeAvailability("noSlotsSummary", event.target.value)} />
+            </label>
+            <div className="visual-editor-panel-actions">
+              <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={isSaving} onClick={onSaveJoeAvailability}>
+                {isSaving ? "Saving" : "Save Availability"}
+              </button>
+            </div>
+          </div>
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveLeadershipSupport}>
               {isSaving ? "Saving" : "Save Tech Help Card"}
