@@ -6,7 +6,8 @@ import {
   createTrainingResourceId,
   validateCourseDrafts,
   validateOfficeCardDraft,
-  validateOfficeOperationsDraft
+  validateOfficeOperationsDraft,
+  validateRoomsDraft
 } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
@@ -41,6 +42,10 @@ const OFFICE_SECTION_DEFAULT = {
   eyebrow: "Office Hub",
   title: "Resources, office information, and internal support"
 };
+const ROOMS_SECTION_DEFAULT = {
+  eyebrow: "Conference + Training Rooms",
+  title: "Book a room and review current reservations"
+};
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
@@ -59,6 +64,8 @@ export function VisualEditorOverlay({ initialContent }) {
   const trainingResources = content?.trainingResources || [];
   const office = content?.office || {};
   const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
+  const rooms = office.rooms || {};
+  const roomsSection = content?.sections?.rooms || ROOMS_SECTION_DEFAULT;
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
@@ -76,6 +83,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
+  const roomErrors = validateRoomsDraft(rooms);
   const selectedOfficeCardErrors = selectedOfficeCardKey === "operations"
     ? validateOfficeOperationsDraft(selectedOfficeCard || {})
     : selectedOfficeCard
@@ -259,6 +267,19 @@ export function VisualEditorOverlay({ initialContent }) {
       setActiveSectionId("office");
       setEditingItemId(selectedItem.visualId);
       setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this office section heading." } : currentItem);
+      return;
+    }
+
+    if (
+      selectedItem.sectionId === "conference-rooms" ||
+      selectedItem.editableId === "rooms" ||
+      selectedItem.type === "room-booking-card" ||
+      selectedItem.type === "room-action" ||
+      selectedItem.type === "room-calendar"
+    ) {
+      setActiveSectionId("rooms");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing room booking content." } : currentItem);
       return;
     }
 
@@ -517,6 +538,134 @@ export function VisualEditorOverlay({ initialContent }) {
     syncOfficeHolidaysPreview(nextHolidays);
   }
 
+  function updateRoomsSection(field, value) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        rooms: {
+          ...ROOMS_SECTION_DEFAULT,
+          ...((currentContent.sections || {}).rooms || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncRoomsSectionPreview(field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateRoomsField(field, value) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      office: {
+        ...(currentContent.office || {}),
+        rooms: {
+          ...((currentContent.office || {}).rooms || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncRoomsPreview(field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateRoomAction(index, field, value) {
+    const nextActions = (rooms.actions || []).map((action, actionIndex) => (
+      actionIndex === index
+        ? {
+            ...action,
+            [field]: value
+          }
+        : action
+    ));
+
+    updateRoomsField("actions", nextActions);
+    syncRoomActionsPreview(nextActions);
+  }
+
+  function addRoomAction() {
+    const nextActions = [
+      ...(rooms.actions || []),
+      {
+        label: "New Room",
+        url: "#"
+      }
+    ];
+
+    updateRoomsField("actions", nextActions);
+    syncRoomActionsPreview(nextActions);
+  }
+
+  function removeRoomAction(index) {
+    const nextActions = (rooms.actions || []).filter((_, actionIndex) => actionIndex !== index);
+
+    updateRoomsField("actions", nextActions);
+    syncRoomActionsPreview(nextActions);
+  }
+
+  function moveRoomAction(index, direction) {
+    const nextIndex = index + direction;
+    const nextActions = [...(rooms.actions || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextActions.length) {
+      return;
+    }
+
+    [nextActions[index], nextActions[nextIndex]] = [nextActions[nextIndex], nextActions[index]];
+    updateRoomsField("actions", nextActions);
+    syncRoomActionsPreview(nextActions);
+  }
+
+  function updateRoomCalendar(index, field, value) {
+    const nextCalendars = (rooms.calendars || []).map((calendar, calendarIndex) => (
+      calendarIndex === index
+        ? {
+            ...calendar,
+            [field]: value
+          }
+        : calendar
+    ));
+
+    updateRoomsField("calendars", nextCalendars);
+    syncRoomCalendarsPreview(nextCalendars);
+  }
+
+  function addRoomCalendar() {
+    const nextCalendars = [
+      ...(rooms.calendars || []),
+      {
+        label: "New Calendar",
+        title: "New calendar",
+        src: "https://calendar.google.com/calendar/embed"
+      }
+    ];
+
+    updateRoomsField("calendars", nextCalendars);
+    syncRoomCalendarsPreview(nextCalendars);
+  }
+
+  function removeRoomCalendar(index) {
+    const nextCalendars = (rooms.calendars || []).filter((_, calendarIndex) => calendarIndex !== index);
+
+    updateRoomsField("calendars", nextCalendars);
+    syncRoomCalendarsPreview(nextCalendars);
+  }
+
+  function moveRoomCalendar(index, direction) {
+    const nextIndex = index + direction;
+    const nextCalendars = [...(rooms.calendars || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextCalendars.length) {
+      return;
+    }
+
+    [nextCalendars[index], nextCalendars[nextIndex]] = [nextCalendars[nextIndex], nextCalendars[index]];
+    updateRoomsField("calendars", nextCalendars);
+    syncRoomCalendarsPreview(nextCalendars);
+  }
+
   function updateEditableCard(collectionKey, items, index, field, value, editableType) {
     const itemId = items[index]?.id;
 
@@ -644,6 +793,14 @@ export function VisualEditorOverlay({ initialContent }) {
 
   async function saveOfficeSection() {
     await saveContent([], "Office heading");
+  }
+
+  async function saveRooms() {
+    await saveContent(roomErrors, "Rooms");
+  }
+
+  async function saveRoomsSection() {
+    await saveContent([], "Rooms heading");
   }
 
   async function saveContent(validationErrors, label) {
@@ -842,6 +999,11 @@ export function VisualEditorOverlay({ initialContent }) {
           officeCardErrors={selectedOfficeCardErrors}
           officeCardKey={selectedOfficeCardKey}
           officeSectionSettings={officeSection}
+          roomErrors={roomErrors}
+          rooms={rooms}
+          roomsSectionSettings={roomsSection}
+          onAddRoomAction={addRoomAction}
+          onAddRoomCalendar={addRoomCalendar}
           onAddOfficeChip={addOfficeChip}
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
@@ -849,16 +1011,26 @@ export function VisualEditorOverlay({ initialContent }) {
           onMoveOfficeChip={moveOfficeChip}
           onMoveOfficeHoliday={moveOfficeHoliday}
           onMoveOfficeHour={moveOfficeHour}
+          onMoveRoomAction={moveRoomAction}
+          onMoveRoomCalendar={moveRoomCalendar}
           onRemoveOfficeChip={removeOfficeChip}
           onRemoveOfficeHoliday={removeOfficeHoliday}
           onRemoveOfficeHour={removeOfficeHour}
+          onRemoveRoomAction={removeRoomAction}
+          onRemoveRoomCalendar={removeRoomCalendar}
           onSaveOfficeCard={saveOfficeCard}
           onSaveOfficeSection={saveOfficeSection}
+          onSaveRooms={saveRooms}
+          onSaveRoomsSection={saveRoomsSection}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
           onUpdateOfficeHour={updateOfficeHour}
           onUpdateOfficeCard={updateOfficeCard}
           onUpdateOfficeSection={updateOfficeSection}
+          onUpdateRoomAction={updateRoomAction}
+          onUpdateRoomCalendar={updateRoomCalendar}
+          onUpdateRoomsField={updateRoomsField}
+          onUpdateRoomsSection={updateRoomsSection}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -1231,6 +1403,104 @@ function syncOfficeHolidaysPreview(holidays) {
   }));
 }
 
+function syncRoomsSectionPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? '[data-editable-type="section-eyebrow"][data-editable-id="rooms"]'
+    : '[data-editable-type="section-heading"][data-editable-id="rooms"]';
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function syncRoomsPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const element = document.querySelector('[data-editable-type="room-booking-card"][data-editable-id="rooms"]');
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "summary") {
+    const summary = element.querySelector(":scope > p");
+    if (summary) {
+      summary.textContent = value;
+    }
+  }
+}
+
+function syncRoomActionsPreview(actions) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const actionsElement = document.querySelector('[data-editable-type="room-booking-card"][data-editable-id="rooms"] .office-booking-actions');
+
+  if (!actionsElement) {
+    return;
+  }
+
+  actionsElement.replaceChildren(...actions.map((action, index) => createRoomActionPreviewElement(action, index)));
+}
+
+function createRoomActionPreviewElement(action, index) {
+  const button = document.createElement("button");
+
+  button.type = "button";
+  button.className = "button primary compact room-booking-trigger";
+  button.dataset.editableType = "room-action";
+  button.dataset.editableId = String(index);
+  button.dataset.roomBookingLabel = action.label || "";
+  button.dataset.roomBookingUrl = action.url || "";
+  button.textContent = action.label || "";
+
+  return button;
+}
+
+function syncRoomCalendarsPreview(calendars) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const grid = document.querySelector('[data-editable-type="room-booking-card"][data-editable-id="rooms"] .office-calendar-grid');
+
+  if (!grid) {
+    return;
+  }
+
+  grid.replaceChildren(...calendars.map((calendar, index) => createRoomCalendarPreviewElement(calendar, index)));
+}
+
+function createRoomCalendarPreviewElement(calendar, index) {
+  const section = document.createElement("section");
+  const head = document.createElement("div");
+  const label = document.createElement("p");
+  const iframe = document.createElement("iframe");
+
+  section.className = "office-calendar-card";
+  section.dataset.editableType = "room-calendar";
+  section.dataset.editableId = String(index);
+  head.className = "office-calendar-head";
+  label.className = "office-operations-label";
+  label.textContent = calendar.label || "";
+  iframe.className = "office-calendar-frame";
+  iframe.title = calendar.title || "";
+  iframe.src = calendar.src || "";
+  iframe.loading = "lazy";
+  head.append(label);
+  section.append(head, iframe);
+
+  return section;
+}
+
 function syncTrainingResourceSectionPreview(field, value) {
   if (typeof document === "undefined") {
     return;
@@ -1395,6 +1665,21 @@ function FloatingItemEditor({
   onUpdateOfficeHoliday,
   onUpdateOfficeHour,
   onUpdateOfficeSection,
+  roomErrors,
+  rooms,
+  roomsSectionSettings,
+  onAddRoomAction,
+  onAddRoomCalendar,
+  onMoveRoomAction,
+  onMoveRoomCalendar,
+  onRemoveRoomAction,
+  onRemoveRoomCalendar,
+  onSaveRooms,
+  onSaveRoomsSection,
+  onUpdateRoomAction,
+  onUpdateRoomCalendar,
+  onUpdateRoomsField,
+  onUpdateRoomsSection,
   sectionSettings,
   onSaveSection,
   onUpdateSection
@@ -1409,6 +1694,11 @@ function FloatingItemEditor({
     (item.type === "section" && item.sectionId === "office") ||
     item.editableId === "office"
   );
+  const isRoomsSectionEditable = (
+    (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading") &&
+    (item.sectionId === "conference-rooms" || item.editableId === "rooms")
+  );
+  const isRoomsEditable = item.type === "room-booking-card" || item.type === "room-action" || item.type === "room-calendar";
   const editorRef = useRef(null);
   const [editorPosition, setEditorPosition] = useState(() => getInitialFloatingEditorPosition(item));
 
@@ -1420,7 +1710,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length, officeCardErrors.length, officeCardKey]);
+  }, [item, cardIndex, cardErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey]);
 
   return (
     <div
@@ -1478,6 +1768,61 @@ function FloatingItemEditor({
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveOfficeSection}>
               {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isRoomsSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the room section heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={roomsSectionSettings.eyebrow || ""} onChange={(event) => onUpdateRoomsSection("eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={roomsSectionSettings.title || ""} onChange={(event) => onUpdateRoomsSection("title", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveRoomsSection}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isRoomsEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the room booking preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={rooms.summary || ""} rows={3} onChange={(event) => onUpdateRoomsField("summary", event.target.value)} />
+          </label>
+          <RoomActionsEditor
+            actions={rooms.actions || []}
+            onAddAction={onAddRoomAction}
+            onMoveAction={onMoveRoomAction}
+            onRemoveAction={onRemoveRoomAction}
+            onUpdateAction={onUpdateRoomAction}
+          />
+          <RoomCalendarsEditor
+            calendars={rooms.calendars || []}
+            onAddCalendar={onAddRoomCalendar}
+            onMoveCalendar={onMoveRoomCalendar}
+            onRemoveCalendar={onRemoveRoomCalendar}
+            onUpdateCalendar={onUpdateRoomCalendar}
+          />
+          {roomErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {roomErrors.map((validationError) => (
+                <p key={validationError}>{validationError}</p>
+              ))}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(roomErrors.length) || isSaving} onClick={onSaveRooms}>
+              {isSaving ? "Saving" : "Save Rooms"}
             </button>
           </div>
         </>
@@ -1666,6 +2011,66 @@ function OfficeHoursEditor({ hours, onAddHour, onMoveHour, onRemoveHour, onUpdat
           <label className="visual-editor-field">
             <span>Time</span>
             <input value={hour.time || ""} onChange={(event) => onUpdateHour(index, "time", event.target.value)} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RoomActionsEditor({ actions, onAddAction, onMoveAction, onRemoveAction, onUpdateAction }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Booking Buttons</span>
+        <button type="button" onClick={onAddAction}>Add Button</button>
+      </div>
+      {actions.map((action, index) => (
+        <div className="visual-editor-repeat-item" key={`${action.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveAction(index, -1)}>Up</button>
+            <button type="button" disabled={index === actions.length - 1} onClick={() => onMoveAction(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveAction(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={action.label || ""} onChange={(event) => onUpdateAction(index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Calendly Link</span>
+            <input value={action.url || ""} onChange={(event) => onUpdateAction(index, "url", event.target.value)} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RoomCalendarsEditor({ calendars, onAddCalendar, onMoveCalendar, onRemoveCalendar, onUpdateCalendar }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Calendar Embeds</span>
+        <button type="button" onClick={onAddCalendar}>Add Calendar</button>
+      </div>
+      {calendars.map((calendar, index) => (
+        <div className="visual-editor-repeat-item" key={`${calendar.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveCalendar(index, -1)}>Up</button>
+            <button type="button" disabled={index === calendars.length - 1} onClick={() => onMoveCalendar(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveCalendar(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={calendar.label || ""} onChange={(event) => onUpdateCalendar(index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Frame Title</span>
+            <input value={calendar.title || ""} onChange={(event) => onUpdateCalendar(index, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Google Calendar Embed URL</span>
+            <textarea value={calendar.src || ""} rows={3} onChange={(event) => onUpdateCalendar(index, "src", event.target.value)} />
           </label>
         </div>
       ))}

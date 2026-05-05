@@ -55,11 +55,11 @@ function createMarketingFilesCardHtml(card = {}) {
 
 export function createRoomBookingCardHtml(rooms = {}) {
   const buttons = (rooms.actions || [])
-    .map((action) => `<button type="button" class="button primary compact room-booking-trigger" data-room-booking-label="${escapeHtmlAttribute(action.label)}" data-room-booking-url="${escapeHtmlAttribute(action.url)}">${escapeHtml(action.label)}</button>`)
+    .map((action, index) => `<button type="button" class="button primary compact room-booking-trigger" data-editable-type="room-action" data-editable-id="${index}" data-room-booking-label="${escapeHtmlAttribute(action.label)}" data-room-booking-url="${escapeHtmlAttribute(action.url)}">${escapeHtml(action.label)}</button>`)
     .join("");
   const calendars = (rooms.calendars || [])
-    .map((calendar) => `<section class="office-calendar-card"><div class="office-calendar-head"><p class="office-operations-label">${escapeHtml(calendar.label)}</p></div><iframe class="office-calendar-frame" title="${escapeHtmlAttribute(calendar.title)}" src="${escapeHtmlAttribute(calendar.src)}" loading="lazy"></iframe></section>`)
+    .map((calendar, index) => `<section class="office-calendar-card" data-editable-type="room-calendar" data-editable-id="${index}"><div class="office-calendar-head"><p class="office-operations-label">${escapeHtml(calendar.label)}</p></div><iframe class="office-calendar-frame" title="${escapeHtmlAttribute(calendar.title)}" src="${escapeHtmlAttribute(calendar.src)}" loading="lazy"></iframe></section>`)
     .join("");
 
-  return `<article class="office-card office-booking-card"><p>${escapeHtml(rooms.summary)}</p><div class="office-booking-actions">${buttons}</div><div class="office-calendar-grid">${calendars}</div></article>`;
+  return `<article class="office-card office-booking-card" data-editable-type="room-booking-card" data-editable-id="rooms"><p>${escapeHtml(rooms.summary)}</p><div class="office-booking-actions">${buttons}</div><div class="office-calendar-grid">${calendars}</div></article>`;
 }
