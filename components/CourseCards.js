@@ -41,5 +41,5 @@ export function createCourseGridHtml(courses = []) {
 function createCourseCardHtml(course) {
   const externalAttrs = course.external === false ? "" : ' target="_blank" rel="noreferrer"';
 
-  return `<a class="course-card" href="${escapeHtmlAttribute(course.href)}"${externalAttrs}><span class="card-tag">${escapeHtml(course.tag)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.summary)}</p></a>`;
+  return `<a class="course-card" data-editable-type="course-card" data-editable-id="${escapeHtmlAttribute(course.id)}" href="${escapeHtmlAttribute(course.href)}"${externalAttrs}><span class="card-tag">${escapeHtml(course.tag)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.summary)}</p></a>`;
 }

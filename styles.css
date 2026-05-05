@@ -3987,6 +3987,12 @@ body.has-handbook-modal .page-content {
   outline-color: rgba(180, 1, 1, 0.68);
 }
 
+.visual-editor-mode .visual-editor-selected {
+  outline: 3px solid var(--kw-red) !important;
+  outline-offset: 6px !important;
+  box-shadow: 0 0 0 6px rgba(180, 1, 1, 0.1) !important;
+}
+
 .visual-editor-toolbar {
   position: fixed;
   z-index: 80;
@@ -4132,6 +4138,86 @@ body.has-handbook-modal .page-content {
 
 .visual-editor-note {
   margin: 16px 0 0;
+}
+
+.visual-editor-selection-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(180, 1, 1, 0.28);
+  border-radius: 6px;
+  background: rgba(180, 1, 1, 0.06);
+}
+
+.visual-editor-selection-summary strong,
+.visual-editor-empty-state strong {
+  display: block;
+  color: var(--kw-black);
+}
+
+.visual-editor-selection-summary p {
+  margin: 5px 0 0;
+  color: var(--kw-gray);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.visual-editor-selection-link {
+  word-break: break-all;
+}
+
+.visual-editor-selection-summary button {
+  border: 0;
+  background: transparent;
+  color: var(--kw-red);
+  cursor: pointer;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-floating-toolbar {
+  position: fixed;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 36px);
+  padding: 8px;
+  border: 1px solid rgba(20, 20, 20, 0.14);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+}
+
+.visual-editor-floating-toolbar strong {
+  padding: 0 6px;
+  color: var(--kw-gray);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.visual-editor-floating-toolbar button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(77, 77, 77, 0.18);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--kw-black);
+  cursor: pointer;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-floating-toolbar button:hover,
+.visual-editor-floating-toolbar button:focus-visible {
+  border-color: rgba(180, 1, 1, 0.42);
+  color: var(--kw-red);
 }
 
 .visual-editor-unlock,

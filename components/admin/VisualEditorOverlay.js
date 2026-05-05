@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createCourseId, validateCourseDrafts } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
@@ -13,6 +13,24 @@ const EDITABLE_SECTIONS = [
   { id: "productivityCourses", label: "Productivity Coaching", target: "#training", status: "Courses module" }
 ];
 
+const SELECTABLE_CANVAS_SELECTOR = [
+  "[data-editable-type]",
+  ".page-content > section",
+  ".course-card",
+  ".office-card",
+  ".vendor-card",
+  ".leadership-card",
+  ".portal-action-card",
+  ".launch-card",
+  ".content-strip-link",
+  ".section-nav-link",
+  ".button",
+  ".chip-link",
+  ".card-tag-link"
+].join(",");
+
+let nextVisualEditorId = 1;
+
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
   const [content, setContent] = useState(initialContent);
@@ -21,12 +39,54 @@ export function VisualEditorOverlay({ initialContent }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
 
   const courses = content?.courses || [];
   const courseErrors = useMemo(() => validateCourseDrafts(courses), [courses]);
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
+
+  useEffect(() => {
+    if (!isUnlocked) {
+      return undefined;
+    }
+
+    function selectCanvasElement(event) {
+      if (event.target.closest(".visual-editor-toolbar, .visual-editor-panel, .visual-editor-floating-toolbar")) {
+        return;
+      }
+
+      const element = event.target.closest(SELECTABLE_CANVAS_SELECTOR);
+
+      if (!element || !document.body.contains(element)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedItem(describeSelectedElement(element));
+    }
+
+    document.addEventListener("click", selectCanvasElement, true);
+
+    return () => {
+      document.removeEventListener("click", selectCanvasElement, true);
+    };
+  }, [isUnlocked]);
+
+  useEffect(() => {
+    document.querySelectorAll(".visual-editor-selected").forEach((element) => {
+      element.classList.remove("visual-editor-selected");
+    });
+
+    if (!selectedItem?.visualId) {
+      return;
+    }
+
+    const element = document.querySelector(`[data-visual-editor-id="${selectedItem.visualId}"]`);
+    element?.classList.add("visual-editor-selected");
+  }, [selectedItem]);
 
   async function unlockEditor(event) {
     event.preventDefault();
@@ -51,6 +111,7 @@ export function VisualEditorOverlay({ initialContent }) {
       setAdminPasscode(passcode);
       setPasscode("");
       setIsUnlocked(true);
+      setSelectedItem(null);
       setStatusMessage("Editor unlocked.");
     } catch (unlockError) {
       setError(unlockError.message);
@@ -61,6 +122,7 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function selectSection(section) {
     setActiveSectionId(section.id);
+    setSelectedItem(null);
 
     if (section.target) {
       document.querySelector(section.target)?.scrollIntoView({
@@ -68,6 +130,24 @@ export function VisualEditorOverlay({ initialContent }) {
         block: "start"
       });
     }
+  }
+
+  function editSelectedItem() {
+    if (!selectedItem) {
+      return;
+    }
+
+    if (selectedItem.type === "course-card" && selectedItem.editableId) {
+      setActiveSectionId("productivityCourses");
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Course editor opened below." } : currentItem);
+      return;
+    }
+
+    setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Full editing controls for this item type are coming in a future module slice." } : currentItem);
+  }
+
+  function moveSelectedSection(direction) {
+    setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: `${direction === "up" ? "Move up" : "Move down"} will be enabled when section ordering is data-backed.` } : currentItem);
   }
 
   function updateCourse(index, field, value) {
@@ -218,6 +298,10 @@ export function VisualEditorOverlay({ initialContent }) {
           </form>
         ) : (
           <>
+            {selectedItem ? (
+              <SelectedItemSummary item={selectedItem} onClear={() => setSelectedItem(null)} />
+            ) : null}
+
             <div className="visual-editor-section-list">
               {EDITABLE_SECTIONS.map((section) => (
                 <button
@@ -259,7 +343,116 @@ export function VisualEditorOverlay({ initialContent }) {
         {error ? <p className="visual-editor-message visual-editor-message--error">{error}</p> : null}
         {statusMessage ? <p className="visual-editor-message visual-editor-message--success">{statusMessage}</p> : null}
       </aside>
+
+      {isUnlocked && selectedItem ? (
+        <FloatingSelectionToolbar
+          item={selectedItem}
+          onClear={() => setSelectedItem(null)}
+          onEdit={editSelectedItem}
+          onMoveDown={() => moveSelectedSection("down")}
+          onMoveUp={() => moveSelectedSection("up")}
+        />
+      ) : null}
     </>
+  );
+}
+
+function describeSelectedElement(element) {
+  if (!element.dataset.visualEditorId) {
+    element.dataset.visualEditorId = `visual-editor-${nextVisualEditorId}`;
+    nextVisualEditorId += 1;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const section = element.closest(".page-content > section[id], .page-content > div[id]");
+  const heading = element.querySelector("h2, h3, strong")?.textContent || element.textContent || "";
+  const sectionHeading = section?.querySelector("h2, h3")?.textContent || section?.id || "Page";
+  const tagName = element.tagName.toLowerCase();
+  const type = element.dataset.editableType || inferElementType(element);
+
+  return {
+    editableId: element.dataset.editableId || "",
+    href: element.getAttribute("href") || "",
+    label: normalizeLabel(heading) || element.getAttribute("aria-label") || tagName,
+    panelHint: "",
+    sectionId: section?.id || "",
+    sectionLabel: normalizeLabel(sectionHeading),
+    tagName,
+    type,
+    visualId: element.dataset.visualEditorId,
+    toolbarPosition: {
+      top: Math.max(70, rect.top - 48),
+      left: Math.min(window.innerWidth - 260, Math.max(18, rect.left))
+    }
+  };
+}
+
+function inferElementType(element) {
+  if (element.matches(".page-content > section")) {
+    return "section";
+  }
+
+  if (element.matches(".course-card")) {
+    return "course-card";
+  }
+
+  if (element.matches(".office-card")) {
+    return "office-card";
+  }
+
+  if (element.matches(".vendor-card")) {
+    return "vendor-card";
+  }
+
+  if (element.matches(".leadership-card")) {
+    return "leadership-card";
+  }
+
+  if (element.matches("a, button")) {
+    return "link-button";
+  }
+
+  return "content-block";
+}
+
+function normalizeLabel(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 90);
+}
+
+function SelectedItemSummary({ item, onClear }) {
+  return (
+    <div className="visual-editor-selection-summary">
+      <div>
+        <span className="visual-editor-kicker">Selected</span>
+        <strong>{item.label}</strong>
+        <p>{item.type} {item.sectionLabel ? `in ${item.sectionLabel}` : ""}</p>
+        {item.href ? <p className="visual-editor-selection-link">{item.href}</p> : null}
+        {item.panelHint ? <p>{item.panelHint}</p> : null}
+      </div>
+      <button type="button" onClick={onClear} aria-label="Clear selection">
+        Clear
+      </button>
+    </div>
+  );
+}
+
+function FloatingSelectionToolbar({ item, onClear, onEdit, onMoveDown, onMoveUp }) {
+  return (
+    <div
+      className="visual-editor-floating-toolbar"
+      style={{
+        top: `${item.toolbarPosition.top}px`,
+        left: `${item.toolbarPosition.left}px`
+      }}
+      role="toolbar"
+      aria-label={`Editing ${item.label}`}
+    >
+      <strong>{item.type}</strong>
+      <button type="button" onClick={onEdit}>Edit</button>
+      <button type="button" onClick={onMoveUp}>Move Up</button>
+      <button type="button" onClick={onMoveDown}>Move Down</button>
+      <button type="button" onClick={onClear}>Done</button>
+    </div>
   );
 }
 
