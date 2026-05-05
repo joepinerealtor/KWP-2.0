@@ -8,7 +8,7 @@ import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
 import { createVendorGridHtml } from "@/components/VendorCards";
 import portalContent from "@/data/portal-content.json";
-import { escapeHtml } from "@/lib/portal-html";
+import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
 
 function readLegacyHtml(source) {
@@ -132,14 +132,45 @@ function replaceLegacyLeadershipGrids(mainHtml) {
     title: "2026 ALC Board of Directors",
     summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
   };
+  const leadershipSupport = portalContent.sections?.leadershipSupport || {
+    eyebrow: "Tech Help with Joe",
+    title: "Schedule a one-on-one with Joe",
+    summary: "Use Joe's calendar for live help with KW Command, DocuSign, Canva, social media, and day-to-day real estate tech tools.",
+    photo: "team/joe-pine-chair.jpg",
+    photoAlt: "Joe Pine sitting in a chair",
+    buttonLabel: "Schedule an appointment",
+    buttonHref: "https://calendly.com/joepinerealtor/tech-meeting-with-joe"
+  };
   const legacyLeadershipHeadPattern = /(<section class="panel" id="leadership">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
   const legacyAlcHeadPattern = /(<article class="alc-card" id="alc-board">\s*<div class="alc-card-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h3>[\s\S]*?<\/h3>\s*<p class="alc-card-summary">[\s\S]*?<\/p>/;
+  const legacyLeadershipSupportPattern = /<article class="leadership-support-card" id="leadership-support"[\s\S]*?<\/article>/;
   const leadershipHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="leadership">${escapeHtml(leadershipSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="leadership">${escapeHtml(leadershipSection.title)}</h2>`;
   const alcHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="alc">${escapeHtml(alcSection.eyebrow)}</p><h3 data-editable-type="section-heading" data-editable-id="alc">${escapeHtml(alcSection.title)}</h3><p class="alc-card-summary" data-editable-type="section-summary" data-editable-id="alc">${escapeHtml(alcSection.summary)}</p>`;
+  const supportPhoto = leadershipSupport.photo || "team/joe-pine-chair.jpg";
+  const supportPhotoAlt = leadershipSupport.photoAlt || leadershipSupport.title || "Tech Help with Joe";
+  const leadershipSupportHtml = `<article class="leadership-support-card" id="leadership-support" data-editable-type="leadership-support-card" data-editable-id="leadershipSupport" data-joe-availability-card data-joe-availability-src="data/joe-tech-status.json">
+          <img src="${escapeHtmlAttribute(supportPhoto)}" alt="${escapeHtmlAttribute(supportPhotoAlt)}" class="leadership-support-photo" data-editable-type="leadership-support-field" data-editable-id="leadershipSupport:photo">
+          <div class="leadership-support-copy">
+            <p class="eyebrow small" data-editable-type="leadership-support-field" data-editable-id="leadershipSupport:eyebrow">${escapeHtml(leadershipSupport.eyebrow)}</p>
+            <h3 data-editable-type="leadership-support-field" data-editable-id="leadershipSupport:title">${escapeHtml(leadershipSupport.title)}</h3>
+            <p class="leadership-support-summary" data-editable-type="leadership-support-field" data-editable-id="leadershipSupport:summary">${escapeHtml(leadershipSupport.summary)}</p>
+          </div>
+          <div class="joe-availability-panel joe-availability-panel--leadership" data-status="unavailable" aria-live="polite">
+            <span class="joe-availability-light" data-joe-availability-light aria-hidden="true"></span>
+            <div class="joe-availability-copy">
+              <p class="joe-availability-label" data-joe-availability-label>Joe is unavailable</p>
+              <p class="joe-availability-summary" data-joe-availability-summary>No open tech-help slots are listed right now.</p>
+            </div>
+          </div>
+          <div class="leadership-support-actions">
+            <a class="button secondary leadership-support-button" href="${escapeHtmlAttribute(leadershipSupport.buttonHref)}" target="_blank" rel="noreferrer" data-joe-primary-action data-editable-type="leadership-support-field" data-editable-id="leadershipSupport:button">${escapeHtml(leadershipSupport.buttonLabel)}</a>
+          </div>
+        </article>`;
 
   return mainHtml
     .replace(legacyLeadershipHeadPattern, `$1${leadershipHeadHtml}`)
     .replace(legacyAlcHeadPattern, `$1${alcHeadHtml}`)
+    .replace(legacyLeadershipSupportPattern, leadershipSupportHtml)
     .replace(
       '<div class="leadership-grid" data-leadership-grid aria-live="polite"></div>',
       createLeadershipGridHtml(portalContent.leadership)

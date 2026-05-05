@@ -61,6 +61,15 @@ const ALC_SECTION_DEFAULT = {
   title: "2026 ALC Board of Directors",
   summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
 };
+const LEADERSHIP_SUPPORT_DEFAULT = {
+  eyebrow: "Tech Help with Joe",
+  title: "Schedule a one-on-one with Joe",
+  summary: "Use Joe's calendar for live help with KW Command, DocuSign, Canva, social media, and day-to-day real estate tech tools.",
+  photo: "team/joe-pine-chair.jpg",
+  photoAlt: "Joe Pine sitting in a chair",
+  buttonLabel: "Schedule an appointment",
+  buttonHref: "https://calendly.com/joepinerealtor/tech-meeting-with-joe"
+};
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
@@ -85,6 +94,10 @@ export function VisualEditorOverlay({ initialContent }) {
   const roomsSection = content?.sections?.rooms || ROOMS_SECTION_DEFAULT;
   const leadershipSection = content?.sections?.leadership || LEADERSHIP_SECTION_DEFAULT;
   const alcSection = content?.sections?.alc || ALC_SECTION_DEFAULT;
+  const leadershipSupport = {
+    ...LEADERSHIP_SUPPORT_DEFAULT,
+    ...(content?.sections?.leadershipSupport || {})
+  };
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
@@ -314,6 +327,13 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (selectedItem.type === "leadership-support-card" || selectedItem.type === "leadership-support-field" || selectedItem.editableId?.startsWith("leadershipSupport")) {
+      setActiveSectionId("leadership");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the Tech Help with Joe card." } : currentItem);
+      return;
+    }
+
     if (
       (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
       (selectedItem.sectionId === "leadership" || selectedItem.editableId === "leadership" || selectedItem.editableId === "alc")
@@ -438,6 +458,59 @@ export function VisualEditorOverlay({ initialContent }) {
 
       updateLeader(index, "photo", payload.path);
       setStatusMessage("Photo uploaded. Save leadership when it looks right.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function updateLeadershipSupport(field, value) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        leadershipSupport: {
+          ...LEADERSHIP_SUPPORT_DEFAULT,
+          ...((currentContent.sections || {}).leadershipSupport || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncLeadershipSupportPreview(field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  async function uploadLeadershipSupportPhoto(file) {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "leadership");
+
+      const response = await fetch("/api/admin/upload/", {
+        method: "POST",
+        headers: {
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to upload photo.");
+      }
+
+      updateLeadershipSupport("photo", payload.path);
+      setStatusMessage("Tech Help photo uploaded. Save the support card when it looks right.");
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
@@ -977,6 +1050,10 @@ export function VisualEditorOverlay({ initialContent }) {
     await saveContent([], sectionLabel);
   }
 
+  async function saveLeadershipSupport() {
+    await saveContent([], "Tech Help with Joe");
+  }
+
   async function saveTrainingResourceSection() {
     await saveContent([], "Training Resources heading");
   }
@@ -1206,6 +1283,7 @@ export function VisualEditorOverlay({ initialContent }) {
           leader={selectedLeader}
           leaderErrors={leadershipErrors}
           leaderIndex={selectedLeaderIndex}
+          leadershipSupport={leadershipSupport}
           leadershipSectionSettings={leadershipSection}
           alcSectionSettings={alcSection}
           officeCard={selectedOfficeCard}
@@ -1249,9 +1327,12 @@ export function VisualEditorOverlay({ initialContent }) {
           onRemoveLeader={removeLeader}
           onSaveLeadership={saveLeadership}
           onSaveLeadershipSection={saveLeadershipSection}
+          onSaveLeadershipSupport={saveLeadershipSupport}
           onUpdateLeader={updateLeader}
           onUpdateLeadershipSection={updateLeadershipSection}
+          onUpdateLeadershipSupport={updateLeadershipSupport}
           onUploadLeaderPhoto={uploadLeaderPhoto}
+          onUploadLeadershipSupportPhoto={uploadLeadershipSupportPhoto}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
           sectionSettings={trainingResourceSection}
@@ -1320,6 +1401,10 @@ function inferElementType(element) {
 
   if (element.matches(".alc-poster-card")) {
     return "alc-poster-card";
+  }
+
+  if (element.matches(".leadership-support-card")) {
+    return "leadership-support-card";
   }
 
   if (element.matches(".vendor-card")) {
@@ -1818,6 +1903,67 @@ function syncLeaderContactPreview(element, field, value) {
   link.href = field === "email" ? `mailto:${value}` : `tel:${value.replace(/\D/g, "")}`;
 }
 
+function syncLeadershipSupportPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const element = document.querySelector('[data-editable-type="leadership-support-card"][data-editable-id="leadershipSupport"], #leadership-support');
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "eyebrow") {
+    const eyebrow = element.querySelector(".leadership-support-copy .eyebrow");
+    if (eyebrow) {
+      eyebrow.textContent = value;
+    }
+  }
+
+  if (field === "title") {
+    const title = element.querySelector(".leadership-support-copy h3");
+    if (title) {
+      title.textContent = value;
+    }
+  }
+
+  if (field === "summary") {
+    const summary = element.querySelector(".leadership-support-summary");
+    if (summary) {
+      summary.textContent = value;
+    }
+  }
+
+  if (field === "photo") {
+    const image = element.querySelector(".leadership-support-photo");
+    if (image) {
+      image.src = value || LEADERSHIP_SUPPORT_DEFAULT.photo;
+    }
+  }
+
+  if (field === "photoAlt") {
+    const image = element.querySelector(".leadership-support-photo");
+    if (image) {
+      image.alt = value || LEADERSHIP_SUPPORT_DEFAULT.photoAlt;
+    }
+  }
+
+  if (field === "buttonLabel") {
+    const button = element.querySelector("[data-joe-primary-action]");
+    if (button) {
+      button.textContent = value;
+    }
+  }
+
+  if (field === "buttonHref") {
+    const button = element.querySelector("[data-joe-primary-action]");
+    if (button) {
+      button.setAttribute("href", value);
+    }
+  }
+}
+
 function syncLeadershipSectionPreview(sectionKey, field, value) {
   if (typeof document === "undefined") {
     return;
@@ -2023,6 +2169,7 @@ function FloatingItemEditor({
   leader,
   leaderErrors,
   leaderIndex,
+  leadershipSupport,
   leadershipSectionSettings,
   alcSectionSettings,
   officeCard,
@@ -2045,12 +2192,15 @@ function FloatingItemEditor({
   onSaveCards,
   onSaveLeadership,
   onSaveLeadershipSection,
+  onSaveLeadershipSupport,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
   onUpdateLeader,
   onUpdateLeadershipSection,
+  onUpdateLeadershipSupport,
   onUploadLeaderPhoto,
+  onUploadLeadershipSupportPhoto,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -2094,6 +2244,7 @@ function FloatingItemEditor({
     item.editableId === "alc"
   );
   const isLeadershipCardEditable = (item.type === "leader-card" || item.type === "alc-poster-card") && leader && leaderIndex >= 0;
+  const isLeadershipSupportEditable = item.type === "leadership-support-card" || item.type === "leadership-support-field" || item.editableId?.startsWith("leadershipSupport");
   const isRoomsSectionEditable = (
     (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading") &&
     (item.sectionId === "conference-rooms" || item.editableId === "rooms")
@@ -2266,6 +2417,54 @@ function FloatingItemEditor({
             <button className="visual-editor-button" type="button" disabled={Boolean(roomErrors.length) || isSaving} onClick={onSaveRooms}>
               {isSaving ? "Saving" : "Save Rooms"}
             </button>
+          </div>
+        </>
+      ) : isLeadershipSupportEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the Tech Help with Joe preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={leadershipSupport.eyebrow || ""} onChange={(event) => onUpdateLeadershipSupport("eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={leadershipSupport.title || ""} onChange={(event) => onUpdateLeadershipSupport("title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={leadershipSupport.summary || ""} rows={3} onChange={(event) => onUpdateLeadershipSupport("summary", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Photo</span>
+            <input value={leadershipSupport.photo || ""} onChange={(event) => onUpdateLeadershipSupport("photo", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Upload Photo</span>
+            <input
+              accept="image/gif,image/jpeg,image/png,image/webp"
+              type="file"
+              onChange={(event) => onUploadLeadershipSupportPhoto(event.target.files?.[0])}
+            />
+          </label>
+          <label className="visual-editor-field">
+            <span>Photo Alt Text</span>
+            <input value={leadershipSupport.photoAlt || ""} onChange={(event) => onUpdateLeadershipSupport("photoAlt", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Button Label</span>
+            <input value={leadershipSupport.buttonLabel || ""} onChange={(event) => onUpdateLeadershipSupport("buttonLabel", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Button Link</span>
+            <input value={leadershipSupport.buttonHref || ""} onChange={(event) => onUpdateLeadershipSupport("buttonHref", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveLeadershipSupport}>
+              {isSaving ? "Saving" : "Save Tech Help Card"}
+            </button>
+            {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
           </div>
         </>
       ) : isLeadershipCardEditable ? (
