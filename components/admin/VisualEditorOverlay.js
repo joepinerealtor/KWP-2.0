@@ -915,7 +915,11 @@ function FloatingItemEditor({
   onUpdateSection
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
-  const isTrainingResourceSectionEditable = item.sectionId === "training-resources" || item.type === "section-eyebrow" || item.type === "section-heading";
+  const isTrainingResourceSectionEditable = (
+    (item.type === "section" && item.sectionId === "training-resources") ||
+    item.type === "section-eyebrow" ||
+    item.type === "section-heading"
+  );
   const editorRef = useRef(null);
   const [editorPosition, setEditorPosition] = useState(() => getInitialFloatingEditorPosition(item));
 
