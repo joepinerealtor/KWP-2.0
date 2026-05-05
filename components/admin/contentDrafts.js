@@ -281,6 +281,10 @@ export function createCourseId(courses) {
   return createDraftId(courses, "new-course");
 }
 
+export function createTrainingResourceId(trainingResources) {
+  return createDraftId(trainingResources, "new-training-resource");
+}
+
 export function createVendorId(vendors) {
   return createDraftId(vendors, "new-vendor");
 }

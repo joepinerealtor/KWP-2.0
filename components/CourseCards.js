@@ -29,17 +29,17 @@ export function CourseGrid({ courses = [] }) {
   );
 }
 
-export function createCourseGridHtml(courses = []) {
+export function createCourseGridHtml(courses = [], options = {}) {
   const courseCards = courses
     .filter((course) => course.active !== false)
-    .map(createCourseCardHtml)
+    .map((course) => createCourseCardHtml(course, options))
     .join("");
 
   return `<div class="course-grid">${courseCards}</div>`;
 }
 
-function createCourseCardHtml(course) {
+function createCourseCardHtml(course, { editableType = "course-card" } = {}) {
   const externalAttrs = course.external === false ? "" : ' target="_blank" rel="noreferrer"';
 
-  return `<a class="course-card" data-editable-type="course-card" data-editable-id="${escapeHtmlAttribute(course.id)}" href="${escapeHtmlAttribute(course.href)}"${externalAttrs}><span class="card-tag">${escapeHtml(course.tag)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.summary)}</p></a>`;
+  return `<a class="course-card" data-editable-type="${escapeHtmlAttribute(editableType)}" data-editable-id="${escapeHtmlAttribute(course.id)}" href="${escapeHtmlAttribute(course.href)}"${externalAttrs}><span class="card-tag">${escapeHtml(course.tag)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.summary)}</p></a>`;
 }

@@ -75,7 +75,7 @@ function getLegacyPortalFragments(source) {
 
 function hydrateLegacyMainHtml(source, mainHtml) {
   if (source === "index.html") {
-    return replaceLegacyCourseGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml))));
+    return replaceLegacyCourseGrid(replaceLegacyTrainingResourceGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml)))));
   }
 
   if (source === "brand-assets.html") {
@@ -83,6 +83,15 @@ function hydrateLegacyMainHtml(source, mainHtml) {
   }
 
   return mainHtml;
+}
+
+function replaceLegacyTrainingResourceGrid(mainHtml) {
+  const trainingResourcesGridHtml = createCourseGridHtml(portalContent.trainingResources, {
+    editableType: "training-resource-card"
+  });
+  const legacyTrainingGridPattern = /(<section class="panel" id="training-resources">[\s\S]*?)<div class="course-grid">\s*(?:<a class="course-card"[\s\S]*?<\/a>\s*)+<\/div>/;
+
+  return mainHtml.replace(legacyTrainingGridPattern, `$1${trainingResourcesGridHtml}`);
 }
 
 function replaceLegacyCourseGrid(mainHtml) {

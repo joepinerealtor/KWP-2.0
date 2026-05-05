@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createCourseId, validateCourseDrafts } from "./contentDrafts";
+import { createCourseId, createTrainingResourceId, validateCourseDrafts } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
-  { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Static training links" },
+  { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Training cards" },
   { id: "office", label: "Office", target: "#office", status: "Office module" },
   { id: "rooms", label: "Rooms", target: "#conference-rooms", status: "Calendar module" },
   { id: "leadership", label: "Leadership", target: "#leadership", status: "People module" },
@@ -46,12 +46,22 @@ export function VisualEditorOverlay({ initialContent }) {
   const [error, setError] = useState("");
 
   const courses = content?.courses || [];
+  const trainingResources = content?.trainingResources || [];
   const courseErrors = useMemo(() => validateCourseDrafts(courses), [courses]);
+  const trainingResourceErrors = useMemo(() => validateCourseDrafts(trainingResources), [trainingResources]);
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
   const selectedCourseIndex = selectedItem?.type === "course-card"
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
     : -1;
+  const selectedTrainingResourceIndex = selectedItem?.type === "training-resource-card"
+    ? trainingResources.findIndex((resource) => resource.id === selectedItem.editableId)
+    : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
+  const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
+  const selectedEditableCard = selectedCourse || selectedTrainingResource;
+  const selectedEditableCardIndex = selectedCourse ? selectedCourseIndex : selectedTrainingResourceIndex;
+  const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
+  const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -84,7 +94,14 @@ export function VisualEditorOverlay({ initialContent }) {
 
       event.preventDefault();
       event.stopPropagation();
-      setSelectedItem(describeSelectedElement(element));
+      const nextSelectedItem = describeSelectedElement(element);
+      const relatedSection = findSectionForSelectedItem(nextSelectedItem);
+
+      if (relatedSection) {
+        setActiveSectionId(relatedSection.id);
+      }
+
+      setSelectedItem(nextSelectedItem);
       setEditingItemId("");
     }
 
@@ -185,6 +202,13 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (selectedItem.type === "training-resource-card" && selectedItem.editableId) {
+      setActiveSectionId("trainingResources");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this training card." } : currentItem);
+      return;
+    }
+
     setEditingItemId(selectedItem.visualId);
     setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Full editing controls for this item type are coming in a future module slice." } : currentItem);
   }
@@ -199,34 +223,50 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   function updateCourse(index, field, value) {
-    const courseId = courses[index]?.id;
+    updateEditableCard("courses", courses, index, field, value, "course-card");
+  }
+
+  function updateTrainingResource(index, field, value) {
+    updateEditableCard("trainingResources", trainingResources, index, field, value, "training-resource-card");
+  }
+
+  function updateEditableCard(collectionKey, items, index, field, value, editableType) {
+    const itemId = items[index]?.id;
 
     setContent((currentContent) => ({
       ...currentContent,
-      courses: (currentContent.courses || []).map((course, courseIndex) => (
-        courseIndex === index
+      [collectionKey]: (currentContent[collectionKey] || []).map((item, itemIndex) => (
+        itemIndex === index
           ? {
-              ...course,
+              ...item,
               [field]: value
             }
-          : course
+          : item
       ))
     }));
-    syncCourseCardPreview(courseId, field, value);
+    syncEditableCardPreview(editableType, itemId, field, value);
     setStatusMessage("");
     setError("");
   }
 
   function addCourse() {
+    addEditableCard("courses", courses, createCourseId(courses));
+  }
+
+  function addTrainingResource() {
+    addEditableCard("trainingResources", trainingResources, createTrainingResourceId(trainingResources));
+  }
+
+  function addEditableCard(collectionKey, items, id) {
     setContent((currentContent) => {
-      const currentCourses = currentContent.courses || [];
+      const currentItems = currentContent[collectionKey] || items;
 
       return {
         ...currentContent,
-        courses: [
-          ...currentCourses,
+        [collectionKey]: [
+          ...currentItems,
           {
-            id: createCourseId(currentCourses),
+            id,
             tag: "",
             title: "",
             summary: "",
@@ -242,13 +282,21 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   function removeCourse(index) {
-    const courseId = courses[index]?.id;
+    removeEditableCard("courses", courses, index, "course-card");
+  }
+
+  function removeTrainingResource(index) {
+    removeEditableCard("trainingResources", trainingResources, index, "training-resource-card");
+  }
+
+  function removeEditableCard(collectionKey, items, index, editableType) {
+    const itemId = items[index]?.id;
 
     setContent((currentContent) => ({
       ...currentContent,
-      courses: (currentContent.courses || []).filter((_, courseIndex) => courseIndex !== index)
+      [collectionKey]: (currentContent[collectionKey] || []).filter((_, itemIndex) => itemIndex !== index)
     }));
-    if (selectedItem?.editableId === courseId) {
+    if (selectedItem?.editableId === itemId && selectedItem?.type === editableType) {
       setEditingItemId("");
       setSelectedItem(null);
     }
@@ -257,20 +305,28 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   function moveCourse(index, direction) {
+    moveEditableCard("courses", index, direction);
+  }
+
+  function moveTrainingResource(index, direction) {
+    moveEditableCard("trainingResources", index, direction);
+  }
+
+  function moveEditableCard(collectionKey, index, direction) {
     setContent((currentContent) => {
-      const currentCourses = currentContent.courses || [];
+      const currentItems = currentContent[collectionKey] || [];
       const nextIndex = index + direction;
 
-      if (nextIndex < 0 || nextIndex >= currentCourses.length) {
+      if (nextIndex < 0 || nextIndex >= currentItems.length) {
         return currentContent;
       }
 
-      const nextCourses = [...currentCourses];
-      [nextCourses[index], nextCourses[nextIndex]] = [nextCourses[nextIndex], nextCourses[index]];
+      const nextItems = [...currentItems];
+      [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
 
       return {
         ...currentContent,
-        courses: nextCourses
+        [collectionKey]: nextItems
       };
     });
     setStatusMessage("");
@@ -278,8 +334,16 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   async function saveCourses() {
-    if (courseErrors.length) {
-      setError("Fix course validation before saving.");
+    await saveContent(courseErrors, "Courses");
+  }
+
+  async function saveTrainingResources() {
+    await saveContent(trainingResourceErrors, "Training resources");
+  }
+
+  async function saveContent(validationErrors, label) {
+    if (validationErrors.length) {
+      setError(`Fix ${label.toLowerCase()} validation before saving.`);
       return;
     }
 
@@ -302,7 +366,7 @@ export function VisualEditorOverlay({ initialContent }) {
         throw new Error(payload.validationErrors?.join(" ") || payload.error || "Unable to save courses.");
       }
 
-      setStatusMessage(payload.changed ? "Courses saved. Refresh preview to see saved portal output." : "No content changes detected.");
+      setStatusMessage(payload.changed ? `${label} saved. Refresh preview to see saved portal output.` : "No content changes detected.");
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -378,7 +442,7 @@ export function VisualEditorOverlay({ initialContent }) {
             {selectedItem ? (
               <SelectedItemPanel
                 item={selectedItem}
-                selectedCourse={selectedCourse}
+                selectedEditableCard={selectedEditableCard}
                 onClear={() => {
                   setEditingItemId("");
                   setSelectedItem(null);
@@ -403,10 +467,25 @@ export function VisualEditorOverlay({ initialContent }) {
                   ))}
                 </div>
 
-                {activeSectionId === "productivityCourses" ? (
+                {activeSectionId === "trainingResources" ? (
+                  <CourseVisualPanel
+                    addLabel="Add Card"
+                    courses={trainingResources}
+                    errors={trainingResourceErrors}
+                    itemLabel="training cards"
+                    isSaving={isSaving}
+                    onAddCourse={addTrainingResource}
+                    onMoveCourse={moveTrainingResource}
+                    onRemoveCourse={removeTrainingResource}
+                    onSaveCourses={saveTrainingResources}
+                    onUpdateCourse={updateTrainingResource}
+                    saveLabel="Save Training Cards"
+                  />
+                ) : activeSectionId === "productivityCourses" ? (
                   <CourseVisualPanel
                     courses={courses}
                     errors={courseErrors}
+                    itemLabel="course cards"
                     isSaving={isSaving}
                     onAddCourse={addCourse}
                     onMoveCourse={moveCourse}
@@ -417,11 +496,7 @@ export function VisualEditorOverlay({ initialContent }) {
                 ) : (
                   <div className="visual-editor-empty-state">
                     <strong>{activeSection.label}</strong>
-                    <p>
-                      {activeSectionId === "trainingResources"
-                        ? "This row is the static Training Resources section with 66 Day Challenge, Scott Le Roy Marketing, and KW Answers. It needs its own structured-data module before it can be edited here."
-                        : "This section is selectable now. Editing controls will be added in the next module slices."}
-                    </p>
+                    <p>This section is selectable now. Editing controls will be added in the next module slices.</p>
                   </div>
                 )}
               </>
@@ -448,15 +523,16 @@ export function VisualEditorOverlay({ initialContent }) {
 
       {isUnlocked && selectedItem && editingItemId === selectedItem.visualId ? (
         <FloatingItemEditor
-          course={selectedCourse}
-          courseErrors={courseErrors}
-          courseIndex={selectedCourseIndex}
+          card={selectedEditableCard}
+          cardErrors={selectedEditableCardErrors}
+          cardIndex={selectedEditableCardIndex}
+          editableType={selectedEditableCardType}
           isSaving={isSaving}
           item={selectedItem}
           onClose={() => setEditingItemId("")}
-          onRemoveCourse={removeCourse}
-          onSaveCourses={saveCourses}
-          onUpdateCourse={updateCourse}
+          onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
+          onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
+          onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
         />
       ) : null}
     </>
@@ -533,6 +609,16 @@ function normalizeLabel(value) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, 90);
 }
 
+function findSectionForSelectedItem(item) {
+  const target = item.href?.startsWith("#") ? item.href : item.sectionId ? `#${item.sectionId}` : "";
+
+  if (!target) {
+    return null;
+  }
+
+  return EDITABLE_SECTIONS.find((section) => section.target === target) || null;
+}
+
 function getPanelTitle(selectedItem, activeSection) {
   if (!selectedItem) {
     return activeSection.label;
@@ -540,6 +626,10 @@ function getPanelTitle(selectedItem, activeSection) {
 
   if (selectedItem.type === "course-card") {
     return "Course Card";
+  }
+
+  if (selectedItem.type === "training-resource-card") {
+    return "Training Card";
   }
 
   if (selectedItem.type === "link-button") {
@@ -553,13 +643,14 @@ function getPanelTitle(selectedItem, activeSection) {
   return "Selected Item";
 }
 
-function syncCourseCardPreview(courseId, field, value) {
-  if (!courseId || typeof document === "undefined") {
+function syncEditableCardPreview(editableType, itemId, field, value) {
+  if (!editableType || !itemId || typeof document === "undefined") {
     return;
   }
 
-  const safeCourseId = String(courseId).replace(/"/g, '\\"');
-  const element = document.querySelector(`[data-editable-type="course-card"][data-editable-id="${safeCourseId}"]`);
+  const safeEditableType = String(editableType).replace(/"/g, '\\"');
+  const safeItemId = String(itemId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="${safeEditableType}"][data-editable-id="${safeItemId}"]`);
 
   if (!element) {
     return;
@@ -601,14 +692,14 @@ function syncCourseCardPreview(courseId, field, value) {
   }
 }
 
-function SelectedItemPanel({ item, selectedCourse, onClear, onEdit, onMoveDown, onMoveUp }) {
+function SelectedItemPanel({ item, selectedEditableCard, onClear, onEdit, onMoveDown, onMoveUp }) {
   return (
     <div className="visual-editor-selection-summary visual-editor-context-panel">
       <div>
         <strong>{item.label}</strong>
         <p>{item.type} {item.sectionLabel ? `in ${item.sectionLabel}` : ""}</p>
         {item.href ? <p className="visual-editor-selection-link">{item.href}</p> : null}
-        {item.type === "course-card" && selectedCourse ? (
+        {(item.type === "course-card" || item.type === "training-resource-card") && selectedEditableCard ? (
           <p>Click Edit to change this card in a focused floating editor.</p>
         ) : (
           <p>This item is selectable. Editing controls for this item type will be added in its module slice.</p>
@@ -654,17 +745,18 @@ function FloatingSelectionToolbar({ item, onClear, onEdit, onMoveDown, onMoveUp 
 }
 
 function FloatingItemEditor({
-  course,
-  courseErrors,
-  courseIndex,
+  card,
+  cardErrors,
+  cardIndex,
+  editableType,
   isSaving,
   item,
   onClose,
-  onRemoveCourse,
-  onSaveCourses,
-  onUpdateCourse
+  onRemoveCard,
+  onSaveCards,
+  onUpdateCard
 }) {
-  const isCourseEditable = item.type === "course-card" && course && courseIndex >= 0;
+  const isCardEditable = item.type === editableType && card && cardIndex >= 0;
   const editorRef = useRef(null);
   const [editorPosition, setEditorPosition] = useState(() => getInitialFloatingEditorPosition(item));
 
@@ -676,7 +768,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, courseIndex, courseErrors.length]);
+  }, [item, cardIndex, cardErrors.length]);
 
   return (
     <div
@@ -699,57 +791,57 @@ function FloatingItemEditor({
         </button>
       </div>
 
-      {isCourseEditable ? (
+      {isCardEditable ? (
         <>
           <p className="visual-editor-note">
             Changes update this card preview as you type. Save when it looks right.
           </p>
           <label className="visual-editor-field">
             <span>Tag</span>
-            <input value={course.tag || ""} onChange={(event) => onUpdateCourse(courseIndex, "tag", event.target.value)} />
+            <input value={card.tag || ""} onChange={(event) => onUpdateCard(cardIndex, "tag", event.target.value)} />
           </label>
           <label className="visual-editor-field">
             <span>Title</span>
-            <input value={course.title || ""} onChange={(event) => onUpdateCourse(courseIndex, "title", event.target.value)} />
+            <input value={card.title || ""} onChange={(event) => onUpdateCard(cardIndex, "title", event.target.value)} />
           </label>
           <label className="visual-editor-field">
             <span>Description</span>
-            <textarea value={course.summary || ""} rows={3} onChange={(event) => onUpdateCourse(courseIndex, "summary", event.target.value)} />
+            <textarea value={card.summary || ""} rows={3} onChange={(event) => onUpdateCard(cardIndex, "summary", event.target.value)} />
           </label>
           <label className="visual-editor-field">
             <span>Link</span>
-            <input value={course.href || ""} onChange={(event) => onUpdateCourse(courseIndex, "href", event.target.value)} />
+            <input value={card.href || ""} onChange={(event) => onUpdateCard(cardIndex, "href", event.target.value)} />
           </label>
           <div className="visual-editor-check-row">
             <label>
               <input
                 type="checkbox"
-                checked={course.active !== false}
-                onChange={(event) => onUpdateCourse(courseIndex, "active", event.target.checked)}
+                checked={card.active !== false}
+                onChange={(event) => onUpdateCard(cardIndex, "active", event.target.checked)}
               />
               Visible
             </label>
             <label>
               <input
                 type="checkbox"
-                checked={course.external !== false}
-                onChange={(event) => onUpdateCourse(courseIndex, "external", event.target.checked)}
+                checked={card.external !== false}
+                onChange={(event) => onUpdateCard(cardIndex, "external", event.target.checked)}
               />
               Opens externally
             </label>
           </div>
-          {courseErrors.length ? (
+          {cardErrors.length ? (
             <div className="visual-editor-validation" role="status">
-              {courseErrors.map((validationError) => (
+              {cardErrors.map((validationError) => (
                 <p key={validationError}>{validationError}</p>
               ))}
             </div>
           ) : null}
           <div className="visual-editor-panel-actions">
-            <button className="visual-editor-button" type="button" disabled={Boolean(courseErrors.length) || isSaving} onClick={onSaveCourses}>
+            <button className="visual-editor-button" type="button" disabled={Boolean(cardErrors.length) || isSaving} onClick={onSaveCards}>
               {isSaving ? "Saving" : "Save Card"}
             </button>
-            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveCourse(courseIndex)}>
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveCard(cardIndex)}>
               Delete
             </button>
           </div>
@@ -797,14 +889,17 @@ function getMeasuredFloatingEditorPosition(item, editor) {
 }
 
 function CourseVisualPanel({
+  addLabel = "Add",
   courses,
   errors,
+  itemLabel = "course cards",
   isSaving,
   onAddCourse,
   onMoveCourse,
   onRemoveCourse,
   onSaveCourses,
-  onUpdateCourse
+  onUpdateCourse,
+  saveLabel = "Save Courses"
 }) {
   return (
     <div className="visual-editor-module">
@@ -813,10 +908,10 @@ function CourseVisualPanel({
           <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
             {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
           </span>
-          <strong>{courses.length} course cards</strong>
+          <strong>{courses.length} {itemLabel}</strong>
         </div>
         <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddCourse}>
-          Add
+          {addLabel}
         </button>
       </div>
 
@@ -886,7 +981,7 @@ function CourseVisualPanel({
 
       <div className="visual-editor-panel-actions">
         <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveCourses}>
-          {isSaving ? "Saving" : "Save Courses"}
+          {isSaving ? "Saving" : saveLabel}
         </button>
         <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
           Refresh Preview

@@ -2,6 +2,35 @@
   "settings": {
     "viewerPasscode": "0715"
   },
+  "trainingResources": [
+    {
+      "id": "66-day-challenge",
+      "tag": "KW Command",
+      "title": "66 Day Challenge with Marty Miller",
+      "summary": "A step-by-step Command playlist to help agents build daily habits and confidence inside the platform.",
+      "href": "https://www.youtube.com/watch?v=auCCe-uKFsE&list=PLK75KZDqV1zkhGWMGlO6OaWCudV_1wtrh",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "scott-le-roy-marketing",
+      "tag": "Systems Training",
+      "title": "Scott Le Roy Marketing",
+      "summary": "Ongoing video training for KW Command and other Keller Williams systems agents use every day.",
+      "href": "https://www.youtube.com/c/ScottLeRoyMarketing",
+      "external": true,
+      "active": true
+    },
+    {
+      "id": "kw-answers",
+      "tag": "How-To Library",
+      "title": "KW Answers",
+      "summary": "Keller Williams' tutorial library for Command and the rest of the KW systems agents use every day.",
+      "href": "https://answers.kw.com/hc/en-us",
+      "external": true,
+      "active": true
+    }
+  ],
   "courses": [
     {
       "id": "new-agent-launch",
