@@ -30,6 +30,7 @@ const SELECTABLE_CANVAS_SELECTOR = [
 ].join(",");
 
 let nextVisualEditorId = 1;
+const EDITOR_SESSION_PASSCODE_KEY = "kwpVisualEditorPasscode";
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
@@ -51,6 +52,19 @@ export function VisualEditorOverlay({ initialContent }) {
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
     : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
+
+  useEffect(() => {
+    const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
+
+    if (!storedPasscode) {
+      return;
+    }
+
+    unlockEditorWithPasscode(storedPasscode, {
+      rememberSession: false,
+      restoredSession: true
+    });
+  }, []);
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -96,15 +110,26 @@ export function VisualEditorOverlay({ initialContent }) {
 
   async function unlockEditor(event) {
     event.preventDefault();
+    await unlockEditorWithPasscode(passcode, {
+      rememberSession: true,
+      restoredSession: false
+    });
+  }
+
+  async function unlockEditorWithPasscode(nextPasscode, { rememberSession, restoredSession }) {
+    if (!nextPasscode) {
+      return;
+    }
+
     setIsLoading(true);
     setError("");
-    setStatusMessage("");
+    setStatusMessage(restoredSession ? "Restoring editor session." : "");
 
     try {
       const response = await fetch("/api/admin/content/", {
         cache: "no-store",
         headers: {
-          "x-kwp-admin-passcode": passcode
+          "x-kwp-admin-passcode": nextPasscode
         }
       });
       const payload = await response.json();
@@ -114,14 +139,22 @@ export function VisualEditorOverlay({ initialContent }) {
       }
 
       setContent(payload.content);
-      setAdminPasscode(passcode);
+      setAdminPasscode(nextPasscode);
       setPasscode("");
       setIsUnlocked(true);
       setEditingItemId("");
       setSelectedItem(null);
-      setStatusMessage("Editor unlocked.");
+      if (rememberSession) {
+        window.sessionStorage.setItem(EDITOR_SESSION_PASSCODE_KEY, nextPasscode);
+      }
+      setStatusMessage(restoredSession ? "Editor session restored." : "Editor unlocked for this browser session.");
     } catch (unlockError) {
-      setError(unlockError.message);
+      if (restoredSession) {
+        window.sessionStorage.removeItem(EDITOR_SESSION_PASSCODE_KEY);
+        setError("Editor session expired. Enter the passcode again.");
+      } else {
+        setError(unlockError.message);
+      }
     } finally {
       setIsLoading(false);
     }
