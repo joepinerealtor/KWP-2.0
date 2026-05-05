@@ -70,6 +70,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [editingItemId, setEditingItemId] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
@@ -406,6 +407,42 @@ export function VisualEditorOverlay({ initialContent }) {
     syncLeaderPreview(personId, field, value);
     setStatusMessage("");
     setError("");
+  }
+
+  async function uploadLeaderPhoto(index, file) {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "leadership");
+
+      const response = await fetch("/api/admin/upload/", {
+        method: "POST",
+        headers: {
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to upload photo.");
+      }
+
+      updateLeader(index, "photo", payload.path);
+      setStatusMessage("Photo uploaded. Save leadership when it looks right.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function updateLeadershipSection(sectionKey, field, value) {
@@ -1113,11 +1150,13 @@ export function VisualEditorOverlay({ initialContent }) {
                   <LeadershipVisualPanel
                     errors={leadershipErrors}
                     isSaving={isSaving}
+                    isUploading={isUploading}
                     leaders={leadership}
                     onAddLeader={addLeader}
                     onMoveLeader={moveLeader}
                     onRemoveLeader={removeLeader}
                     onSaveLeadership={saveLeadership}
+                    onUploadLeaderPhoto={uploadLeaderPhoto}
                     onUpdateLeader={updateLeader}
                   />
                 ) : (
@@ -1162,6 +1201,7 @@ export function VisualEditorOverlay({ initialContent }) {
           cardIndex={selectedEditableCardIndex}
           editableType={selectedEditableCardType}
           isSaving={isSaving}
+          isUploading={isUploading}
           item={selectedItem}
           leader={selectedLeader}
           leaderErrors={leadershipErrors}
@@ -1211,6 +1251,7 @@ export function VisualEditorOverlay({ initialContent }) {
           onSaveLeadershipSection={saveLeadershipSection}
           onUpdateLeader={updateLeader}
           onUpdateLeadershipSection={updateLeadershipSection}
+          onUploadLeaderPhoto={uploadLeaderPhoto}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
           sectionSettings={trainingResourceSection}
@@ -1977,6 +2018,7 @@ function FloatingItemEditor({
   cardIndex,
   editableType,
   isSaving,
+  isUploading,
   item,
   leader,
   leaderErrors,
@@ -2008,6 +2050,7 @@ function FloatingItemEditor({
   onUpdateCard,
   onUpdateLeader,
   onUpdateLeadershipSection,
+  onUploadLeaderPhoto,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -2250,6 +2293,14 @@ function FloatingItemEditor({
             <input value={leader.photo || ""} onChange={(event) => onUpdateLeader(leaderIndex, "photo", event.target.value)} />
           </label>
           <label className="visual-editor-field">
+            <span>Upload Photo</span>
+            <input
+              accept="image/gif,image/jpeg,image/png,image/webp"
+              type="file"
+              onChange={(event) => onUploadLeaderPhoto(leaderIndex, event.target.files?.[0])}
+            />
+          </label>
+          <label className="visual-editor-field">
             <span>Email</span>
             <input value={leader.email || ""} onChange={(event) => onUpdateLeader(leaderIndex, "email", event.target.value)} />
           </label>
@@ -2290,6 +2341,7 @@ function FloatingItemEditor({
             <button className="visual-editor-button" type="button" disabled={Boolean(leaderErrors.length) || isSaving} onClick={onSaveLeadership}>
               {isSaving ? "Saving" : "Save Leadership"}
             </button>
+            {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
             <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveLeader(leaderIndex)}>
               Delete
             </button>
@@ -2490,11 +2542,13 @@ function OfficeHoursEditor({ hours, onAddHour, onMoveHour, onRemoveHour, onUpdat
 function LeadershipVisualPanel({
   errors,
   isSaving,
+  isUploading,
   leaders,
   onAddLeader,
   onMoveLeader,
   onRemoveLeader,
   onSaveLeadership,
+  onUploadLeaderPhoto,
   onUpdateLeader
 }) {
   return (
@@ -2557,6 +2611,14 @@ function LeadershipVisualPanel({
               <input value={leader.photo || ""} onChange={(event) => onUpdateLeader(index, "photo", event.target.value)} />
             </label>
             <label className="visual-editor-field">
+              <span>Upload Photo</span>
+              <input
+                accept="image/gif,image/jpeg,image/png,image/webp"
+                type="file"
+                onChange={(event) => onUploadLeaderPhoto(index, event.target.files?.[0])}
+              />
+            </label>
+            <label className="visual-editor-field">
               <span>Email</span>
               <input value={leader.email || ""} onChange={(event) => onUpdateLeader(index, "email", event.target.value)} />
             </label>
@@ -2594,6 +2656,7 @@ function LeadershipVisualPanel({
         <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveLeadership}>
           {isSaving ? "Saving" : "Save Leadership"}
         </button>
+        {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
         <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
           Refresh Preview
         </button>
