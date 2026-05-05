@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createCourseId, createTrainingResourceId, validateCourseDrafts } from "./contentDrafts";
+import {
+  createCourseId,
+  createTrainingResourceId,
+  validateCourseDrafts,
+  validateOfficeCardDraft,
+  validateOfficeOperationsDraft
+} from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
@@ -31,6 +37,10 @@ const SELECTABLE_CANVAS_SELECTOR = [
 
 let nextVisualEditorId = 1;
 const EDITOR_SESSION_PASSCODE_KEY = "kwpVisualEditorPasscode";
+const OFFICE_SECTION_DEFAULT = {
+  eyebrow: "Office Hub",
+  title: "Resources, office information, and internal support"
+};
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
@@ -48,6 +58,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
   const office = content?.office || {};
+  const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
@@ -63,8 +74,13 @@ export function VisualEditorOverlay({ initialContent }) {
     : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
-  const selectedOfficeCardKey = selectedItem?.type === "office-card" ? selectedItem.editableId : "";
+  const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
+  const selectedOfficeCardErrors = selectedOfficeCardKey === "operations"
+    ? validateOfficeOperationsDraft(selectedOfficeCard || {})
+    : selectedOfficeCard
+    ? validateOfficeCardDraft(selectedOfficeCard, "Office card")
+    : [];
   const selectedEditableCard = selectedCourse || selectedTrainingResource;
   const selectedEditableCardIndex = selectedCourse ? selectedCourseIndex : selectedTrainingResourceIndex;
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
@@ -228,8 +244,7 @@ export function VisualEditorOverlay({ initialContent }) {
 
     if (
       selectedItem.sectionId === "training-resources" ||
-      selectedItem.type === "section-eyebrow" ||
-      selectedItem.type === "section-heading"
+      selectedItem.editableId === "trainingResources"
     ) {
       setActiveSectionId("trainingResources");
       setEditingItemId(selectedItem.visualId);
@@ -237,7 +252,17 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
-    if (selectedItem.type === "office-card" && selectedItem.editableId) {
+    if (
+      (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading") &&
+      (selectedItem.sectionId === "office" || selectedItem.editableId === "office")
+    ) {
+      setActiveSectionId("office");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this office section heading." } : currentItem);
+      return;
+    }
+
+    if ((selectedItem.type === "office-card" || selectedItem.type === "office-chip") && getOfficeCardKeyFromItem(selectedItem)) {
       setActiveSectionId("office");
       setEditingItemId(selectedItem.visualId);
       setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this office card." } : currentItem);
@@ -325,6 +350,171 @@ export function VisualEditorOverlay({ initialContent }) {
     syncOfficeCardPreview(cardKey, field, value);
     setStatusMessage("");
     setError("");
+  }
+
+  function updateOfficeSection(field, value) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        office: {
+          ...OFFICE_SECTION_DEFAULT,
+          ...((currentContent.sections || {}).office || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncOfficeSectionPreview(field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateOfficeChip(cardKey, chipIndex, field, value) {
+    const currentCard = office[cardKey] || {};
+    const nextChips = (currentCard.chips || []).map((chip, currentChipIndex) => (
+      currentChipIndex === chipIndex
+        ? {
+            ...chip,
+            [field]: value
+          }
+        : chip
+    ));
+
+    updateOfficeCard(cardKey, "chips", nextChips);
+    syncOfficeChipsPreview(cardKey, nextChips);
+  }
+
+  function addOfficeChip(cardKey) {
+    const currentCard = office[cardKey] || {};
+    const nextChips = [
+      ...(currentCard.chips || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: false,
+        download: false,
+        handbookModal: false
+      }
+    ];
+
+    updateOfficeCard(cardKey, "chips", nextChips);
+    syncOfficeChipsPreview(cardKey, nextChips);
+  }
+
+  function removeOfficeChip(cardKey, chipIndex) {
+    const currentCard = office[cardKey] || {};
+    const nextChips = (currentCard.chips || []).filter((_, currentChipIndex) => currentChipIndex !== chipIndex);
+
+    updateOfficeCard(cardKey, "chips", nextChips);
+    syncOfficeChipsPreview(cardKey, nextChips);
+  }
+
+  function moveOfficeChip(cardKey, chipIndex, direction) {
+    const currentCard = office[cardKey] || {};
+    const nextIndex = chipIndex + direction;
+    const nextChips = [...(currentCard.chips || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextChips.length) {
+      return;
+    }
+
+    [nextChips[chipIndex], nextChips[nextIndex]] = [nextChips[nextIndex], nextChips[chipIndex]];
+    updateOfficeCard(cardKey, "chips", nextChips);
+    syncOfficeChipsPreview(cardKey, nextChips);
+  }
+
+  function updateOfficeHour(index, field, value) {
+    const operations = office.operations || {};
+    const nextHours = (operations.hours || []).map((hour, hourIndex) => (
+      hourIndex === index
+        ? {
+            ...hour,
+            [field]: value
+          }
+        : hour
+    ));
+
+    updateOfficeCard("operations", "hours", nextHours);
+    syncOfficeHoursPreview(nextHours);
+  }
+
+  function addOfficeHour() {
+    const operations = office.operations || {};
+    const nextHours = [
+      ...(operations.hours || []),
+      {
+        days: "New Days",
+        time: "New Time"
+      }
+    ];
+
+    updateOfficeCard("operations", "hours", nextHours);
+    syncOfficeHoursPreview(nextHours);
+  }
+
+  function removeOfficeHour(index) {
+    const operations = office.operations || {};
+    const nextHours = (operations.hours || []).filter((_, hourIndex) => hourIndex !== index);
+
+    updateOfficeCard("operations", "hours", nextHours);
+    syncOfficeHoursPreview(nextHours);
+  }
+
+  function moveOfficeHour(index, direction) {
+    const operations = office.operations || {};
+    const nextIndex = index + direction;
+    const nextHours = [...(operations.hours || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextHours.length) {
+      return;
+    }
+
+    [nextHours[index], nextHours[nextIndex]] = [nextHours[nextIndex], nextHours[index]];
+    updateOfficeCard("operations", "hours", nextHours);
+    syncOfficeHoursPreview(nextHours);
+  }
+
+  function updateOfficeHoliday(index, value) {
+    const operations = office.operations || {};
+    const nextHolidays = (operations.holidays || []).map((holiday, holidayIndex) => (
+      holidayIndex === index ? value : holiday
+    ));
+
+    updateOfficeCard("operations", "holidays", nextHolidays);
+    syncOfficeHolidaysPreview(nextHolidays);
+  }
+
+  function addOfficeHoliday() {
+    const operations = office.operations || {};
+    const nextHolidays = [
+      ...(operations.holidays || []),
+      "New Holiday"
+    ];
+
+    updateOfficeCard("operations", "holidays", nextHolidays);
+    syncOfficeHolidaysPreview(nextHolidays);
+  }
+
+  function removeOfficeHoliday(index) {
+    const operations = office.operations || {};
+    const nextHolidays = (operations.holidays || []).filter((_, holidayIndex) => holidayIndex !== index);
+
+    updateOfficeCard("operations", "holidays", nextHolidays);
+    syncOfficeHolidaysPreview(nextHolidays);
+  }
+
+  function moveOfficeHoliday(index, direction) {
+    const operations = office.operations || {};
+    const nextIndex = index + direction;
+    const nextHolidays = [...(operations.holidays || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextHolidays.length) {
+      return;
+    }
+
+    [nextHolidays[index], nextHolidays[nextIndex]] = [nextHolidays[nextIndex], nextHolidays[index]];
+    updateOfficeCard("operations", "holidays", nextHolidays);
+    syncOfficeHolidaysPreview(nextHolidays);
   }
 
   function updateEditableCard(collectionKey, items, index, field, value, editableType) {
@@ -449,7 +639,11 @@ export function VisualEditorOverlay({ initialContent }) {
   }
 
   async function saveOfficeCard() {
-    await saveContent([], "Office card");
+    await saveContent(selectedOfficeCardErrors, "Office card");
+  }
+
+  async function saveOfficeSection() {
+    await saveContent([], "Office heading");
   }
 
   async function saveContent(validationErrors, label) {
@@ -645,10 +839,26 @@ export function VisualEditorOverlay({ initialContent }) {
           isSaving={isSaving}
           item={selectedItem}
           officeCard={selectedOfficeCard}
+          officeCardErrors={selectedOfficeCardErrors}
           officeCardKey={selectedOfficeCardKey}
+          officeSectionSettings={officeSection}
+          onAddOfficeChip={addOfficeChip}
+          onAddOfficeHoliday={addOfficeHoliday}
+          onAddOfficeHour={addOfficeHour}
           onClose={() => setEditingItemId("")}
+          onMoveOfficeChip={moveOfficeChip}
+          onMoveOfficeHoliday={moveOfficeHoliday}
+          onMoveOfficeHour={moveOfficeHour}
+          onRemoveOfficeChip={removeOfficeChip}
+          onRemoveOfficeHoliday={removeOfficeHoliday}
+          onRemoveOfficeHour={removeOfficeHour}
           onSaveOfficeCard={saveOfficeCard}
+          onSaveOfficeSection={saveOfficeSection}
+          onUpdateOfficeChip={updateOfficeChip}
+          onUpdateOfficeHoliday={updateOfficeHoliday}
+          onUpdateOfficeHour={updateOfficeHour}
           onUpdateOfficeCard={updateOfficeCard}
+          onUpdateOfficeSection={updateOfficeSection}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -729,6 +939,22 @@ function inferElementType(element) {
 
 function normalizeLabel(value) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, 90);
+}
+
+function getOfficeCardKeyFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (item.type === "office-card") {
+    return item.editableId || "";
+  }
+
+  if (item.type === "office-chip") {
+    return String(item.editableId || "").split(":")[0];
+  }
+
+  return "";
 }
 
 function findSectionForSelectedItem(item) {
@@ -898,6 +1124,113 @@ function syncOfficeCardPreview(cardKey, field, value) {
   }
 }
 
+function syncOfficeSectionPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? '[data-editable-type="section-eyebrow"][data-editable-id="office"]'
+    : '[data-editable-type="section-heading"][data-editable-id="office"]';
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function syncOfficeChipsPreview(cardKey, chips) {
+  if (!cardKey || typeof document === "undefined") {
+    return;
+  }
+
+  const safeCardKey = String(cardKey).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="office-card"][data-editable-id="${safeCardKey}"]`);
+  const chipRow = element?.querySelector(".chip-row");
+
+  if (!chipRow) {
+    return;
+  }
+
+  chipRow.replaceChildren(...chips.map((chip, index) => createOfficeChipPreviewElement(cardKey, chip, index)));
+}
+
+function createOfficeChipPreviewElement(cardKey, chip, index) {
+  const element = document.createElement(chip.href ? "a" : "span");
+
+  element.className = chip.href ? "chip chip-link" : "chip";
+  element.dataset.editableType = "office-chip";
+  element.dataset.editableId = `${cardKey}:${index}`;
+  element.textContent = chip.label || "";
+
+  if (!chip.href) {
+    return element;
+  }
+
+  element.setAttribute("href", chip.href);
+
+  if (chip.external) {
+    element.setAttribute("target", "_blank");
+    element.setAttribute("rel", "noreferrer");
+  }
+
+  if (chip.download) {
+    element.setAttribute("download", "");
+  }
+
+  if (chip.handbookModal) {
+    element.setAttribute("data-handbook-modal-trigger", "");
+    element.setAttribute("aria-haspopup", "dialog");
+    element.setAttribute("aria-controls", "agentHandbookModal");
+  }
+
+  return element;
+}
+
+function syncOfficeHoursPreview(hours) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const list = document.querySelector('[data-editable-type="office-card"][data-editable-id="operations"] .office-hours-list');
+
+  if (!list) {
+    return;
+  }
+
+  list.replaceChildren(...hours.map((hour) => {
+    const item = document.createElement("li");
+    const days = document.createElement("strong");
+    const time = document.createElement("span");
+
+    days.textContent = hour.days || "";
+    time.textContent = hour.time || "";
+    item.append(days, time);
+
+    return item;
+  }));
+}
+
+function syncOfficeHolidaysPreview(holidays) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const list = document.querySelector('[data-editable-type="office-card"][data-editable-id="operations"] .office-holiday-list');
+
+  if (!list) {
+    return;
+  }
+
+  list.replaceChildren(...holidays.map((holiday) => {
+    const item = document.createElement("li");
+
+    item.textContent = holiday || "";
+
+    return item;
+  }));
+}
+
 function syncTrainingResourceSectionPreview(field, value) {
   if (typeof document === "undefined") {
     return;
@@ -1039,23 +1372,42 @@ function FloatingItemEditor({
   isSaving,
   item,
   officeCard,
+  officeCardErrors,
   officeCardKey,
+  officeSectionSettings,
+  onAddOfficeChip,
+  onAddOfficeHoliday,
+  onAddOfficeHour,
   onClose,
+  onMoveOfficeChip,
+  onMoveOfficeHoliday,
+  onMoveOfficeHour,
+  onRemoveOfficeChip,
+  onRemoveOfficeHoliday,
+  onRemoveOfficeHour,
   onRemoveCard,
   onSaveCards,
   onSaveOfficeCard,
+  onSaveOfficeSection,
   onUpdateCard,
+  onUpdateOfficeChip,
   onUpdateOfficeCard,
+  onUpdateOfficeHoliday,
+  onUpdateOfficeHour,
+  onUpdateOfficeSection,
   sectionSettings,
   onSaveSection,
   onUpdateSection
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
-  const isOfficeCardEditable = item.type === "office-card" && officeCard && officeCardKey;
+  const isOfficeCardEditable = (item.type === "office-card" || item.type === "office-chip") && officeCard && officeCardKey;
   const isTrainingResourceSectionEditable = (
     (item.type === "section" && item.sectionId === "training-resources") ||
-    item.type === "section-eyebrow" ||
-    item.type === "section-heading"
+    item.editableId === "trainingResources"
+  );
+  const isOfficeSectionEditable = (
+    (item.type === "section" && item.sectionId === "office") ||
+    item.editableId === "office"
   );
   const editorRef = useRef(null);
   const [editorPosition, setEditorPosition] = useState(() => getInitialFloatingEditorPosition(item));
@@ -1068,7 +1420,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length, officeCardKey]);
+  }, [item, cardIndex, cardErrors.length, officeCardErrors.length, officeCardKey]);
 
   return (
     <div
@@ -1110,10 +1462,29 @@ function FloatingItemEditor({
             </button>
           </div>
         </>
+      ) : isOfficeSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the office section heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={officeSectionSettings.eyebrow || ""} onChange={(event) => onUpdateOfficeSection("eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={officeSectionSettings.title || ""} onChange={(event) => onUpdateOfficeSection("title", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveOfficeSection}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
       ) : isOfficeCardEditable ? (
         <>
           <p className="visual-editor-note">
-            Changes update this office card preview as you type. Chip and list editing will come in the next office slice.
+            Changes update this office card preview as you type. Save when it looks right.
           </p>
           <label className="visual-editor-field">
             <span>Tag</span>
@@ -1147,6 +1518,34 @@ function FloatingItemEditor({
               <input value={officeCard.holidaysLabel || ""} onChange={(event) => onUpdateOfficeCard(officeCardKey, "holidaysLabel", event.target.value)} />
             </label>
           ) : null}
+          {Array.isArray(officeCard.hours) ? (
+            <OfficeHoursEditor
+              hours={officeCard.hours}
+              onAddHour={onAddOfficeHour}
+              onMoveHour={onMoveOfficeHour}
+              onRemoveHour={onRemoveOfficeHour}
+              onUpdateHour={onUpdateOfficeHour}
+            />
+          ) : null}
+          {Array.isArray(officeCard.holidays) ? (
+            <OfficeHolidaysEditor
+              holidays={officeCard.holidays}
+              onAddHoliday={onAddOfficeHoliday}
+              onMoveHoliday={onMoveOfficeHoliday}
+              onRemoveHoliday={onRemoveOfficeHoliday}
+              onUpdateHoliday={onUpdateOfficeHoliday}
+            />
+          ) : null}
+          {Array.isArray(officeCard.chips) ? (
+            <OfficeChipsEditor
+              cardKey={officeCardKey}
+              chips={officeCard.chips}
+              onAddChip={onAddOfficeChip}
+              onMoveChip={onMoveOfficeChip}
+              onRemoveChip={onRemoveOfficeChip}
+              onUpdateChip={onUpdateOfficeChip}
+            />
+          ) : null}
           {officeCard.action ? (
             <>
               <label className="visual-editor-field">
@@ -1169,8 +1568,15 @@ function FloatingItemEditor({
               </div>
             </>
           ) : null}
+          {officeCardErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {officeCardErrors.map((validationError) => (
+                <p key={validationError}>{validationError}</p>
+              ))}
+            </div>
+          ) : null}
           <div className="visual-editor-panel-actions">
-            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveOfficeCard}>
+            <button className="visual-editor-button" type="button" disabled={Boolean(officeCardErrors.length) || isSaving} onClick={onSaveOfficeCard}>
               {isSaving ? "Saving" : "Save Office Card"}
             </button>
           </div>
@@ -1235,6 +1641,112 @@ function FloatingItemEditor({
           This item is selectable now. The focused editor for this kind of block is coming next.
         </p>
       )}
+    </div>
+  );
+}
+
+function OfficeHoursEditor({ hours, onAddHour, onMoveHour, onRemoveHour, onUpdateHour }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Office Hours</span>
+        <button type="button" onClick={onAddHour}>Add Hours</button>
+      </div>
+      {hours.map((hour, index) => (
+        <div className="visual-editor-repeat-item" key={`${hour.days}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveHour(index, -1)}>Up</button>
+            <button type="button" disabled={index === hours.length - 1} onClick={() => onMoveHour(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveHour(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Days</span>
+            <input value={hour.days || ""} onChange={(event) => onUpdateHour(index, "days", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Time</span>
+            <input value={hour.time || ""} onChange={(event) => onUpdateHour(index, "time", event.target.value)} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OfficeHolidaysEditor({ holidays, onAddHoliday, onMoveHoliday, onRemoveHoliday, onUpdateHoliday }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Holidays</span>
+        <button type="button" onClick={onAddHoliday}>Add Holiday</button>
+      </div>
+      {holidays.map((holiday, index) => (
+        <div className="visual-editor-repeat-item" key={`${holiday}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveHoliday(index, -1)}>Up</button>
+            <button type="button" disabled={index === holidays.length - 1} onClick={() => onMoveHoliday(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveHoliday(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Holiday</span>
+            <input value={holiday || ""} onChange={(event) => onUpdateHoliday(index, event.target.value)} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OfficeChipsEditor({ cardKey, chips, onAddChip, onMoveChip, onRemoveChip, onUpdateChip }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Tag Buttons</span>
+        <button type="button" onClick={() => onAddChip(cardKey)}>Add Button</button>
+      </div>
+      {chips.map((chip, index) => (
+        <div className="visual-editor-repeat-item" key={`${chip.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveChip(cardKey, index, -1)}>Up</button>
+            <button type="button" disabled={index === chips.length - 1} onClick={() => onMoveChip(cardKey, index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveChip(cardKey, index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={chip.label || ""} onChange={(event) => onUpdateChip(cardKey, index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={chip.href || ""} onChange={(event) => onUpdateChip(cardKey, index, "href", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(chip.external)}
+                onChange={(event) => onUpdateChip(cardKey, index, "external", event.target.checked)}
+              />
+              Opens externally
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(chip.download)}
+                onChange={(event) => onUpdateChip(cardKey, index, "download", event.target.checked)}
+              />
+              Download
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(chip.handbookModal)}
+                onChange={(event) => onUpdateChip(cardKey, index, "handbookModal", event.target.checked)}
+              />
+              Handbook modal
+            </label>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

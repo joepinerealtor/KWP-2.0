@@ -4481,6 +4481,47 @@ body.has-handbook-modal .page-content {
   font-weight: 700;
 }
 
+.visual-editor-repeat-list {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.visual-editor-repeat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.visual-editor-repeat-header span {
+  color: var(--kw-gray);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-repeat-header button {
+  min-height: 30px;
+  border: 1px solid var(--kw-red);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--kw-red);
+  cursor: pointer;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visual-editor-repeat-item {
+  display: grid;
+  gap: 0;
+  border: 1px solid rgba(77, 77, 77, 0.14);
+  border-radius: 7px;
+  padding-top: 10px;
+  background: rgba(247, 243, 238, 0.42);
+}
+
 .visual-editor-message {
   margin: 14px 0 0;
   padding: 10px 12px;

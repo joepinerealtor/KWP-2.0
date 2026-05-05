@@ -151,7 +151,15 @@ function replaceLegacyBrandAssetGrids(mainHtml) {
 }
 
 function replaceLegacyOfficeCards(mainHtml) {
+  const officeSection = portalContent.sections?.office || {
+    eyebrow: "Office Hub",
+    title: "Resources, office information, and internal support"
+  };
+  const legacyOfficeHeadPattern = /(<section class="panel" id="office">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const officeHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="office">${escapeHtml(officeSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="office">${escapeHtml(officeSection.title)}</h2>`;
+
   return mainHtml
+    .replace(legacyOfficeHeadPattern, `$1${officeHeadHtml}`)
     .replace(
       /<div class="office-grid">\s*(?:<article class="office-card(?: [^"]+)?">[\s\S]*?<\/article>\s*)+<\/div>/,
       createOfficeGridHtml(portalContent.office)

@@ -1,19 +1,23 @@
 import { createLinkAttributes, escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 
-function createChipHtml(chip) {
+function createChipHtml(chip, index, cardKey) {
+  const editableAttributes = cardKey
+    ? ` data-editable-type="office-chip" data-editable-id="${escapeHtmlAttribute(`${cardKey}:${index}`)}"`
+    : "";
+
   if (chip.href) {
     const extraAttributes = chip.handbookModal
       ? ["data-handbook-modal-trigger", 'aria-haspopup="dialog"', 'aria-controls="agentHandbookModal"']
       : [];
 
-    return `<a class="chip chip-link" ${createLinkAttributes(chip, extraAttributes)}>${escapeHtml(chip.label)}</a>`;
+    return `<a class="chip chip-link"${editableAttributes} ${createLinkAttributes(chip, extraAttributes)}>${escapeHtml(chip.label)}</a>`;
   }
 
-  return `<span class="chip">${escapeHtml(chip.label)}</span>`;
+  return `<span class="chip"${editableAttributes}>${escapeHtml(chip.label)}</span>`;
 }
 
-function createChipRowHtml(chips = []) {
-  return `<div class="chip-row">${chips.map(createChipHtml).join("")}</div>`;
+function createChipRowHtml(chips = [], cardKey) {
+  return `<div class="chip-row">${chips.map((chip, index) => createChipHtml(chip, index, cardKey)).join("")}</div>`;
 }
 
 export function createOfficeGridHtml(office = {}) {
@@ -28,10 +32,10 @@ export function createOfficeGridHtml(office = {}) {
 
 function createReferenceCardHtml(card = {}) {
   const action = card.action
-    ? `<a class="button secondary compact" ${createLinkAttributes(card.action)}>${escapeHtml(card.action.label)}</a>`
+    ? `<a class="button secondary compact" data-editable-type="office-card" data-editable-id="referenceHub" ${createLinkAttributes(card.action)}>${escapeHtml(card.action.label)}</a>`
     : "";
 
-  return `<article class="office-card" data-editable-type="office-card" data-editable-id="referenceHub"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}${action}</article>`;
+  return `<article class="office-card" data-editable-type="office-card" data-editable-id="referenceHub"><span class="card-tag">${escapeHtml(card.tag)}</span><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips, "referenceHub")}${action}</article>`;
 }
 
 function createOperationsCardHtml(card = {}) {
@@ -46,7 +50,7 @@ function createOperationsCardHtml(card = {}) {
 }
 
 function createMarketingFilesCardHtml(card = {}) {
-  return `<article class="office-card office-card-wide" data-editable-type="office-card" data-editable-id="marketingFiles"><a class="card-tag card-tag-link" href="${escapeHtmlAttribute(card.tagHref)}">${escapeHtml(card.tag)}</a><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips)}</article>`;
+  return `<article class="office-card office-card-wide" data-editable-type="office-card" data-editable-id="marketingFiles"><a class="card-tag card-tag-link" data-editable-type="office-card" data-editable-id="marketingFiles" href="${escapeHtmlAttribute(card.tagHref)}">${escapeHtml(card.tag)}</a><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p>${createChipRowHtml(card.chips, "marketingFiles")}</article>`;
 }
 
 export function createRoomBookingCardHtml(rooms = {}) {
