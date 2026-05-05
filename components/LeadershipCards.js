@@ -20,7 +20,7 @@ function LeaderCard({ person }) {
   const phoneHref = toPhoneHref(person.phone);
 
   return (
-    <article className={`leader-card${person.featured ? " leader-card-highlight" : ""}`}>
+    <article className={`leader-card${person.featured ? " leader-card-highlight" : ""}`} data-editable-type="leader-card" data-editable-id={person.id}>
       <img src={person.photo} alt={person.name} className="leader-photo" />
       <div className="leader-copy">
         <span className="leader-role">{person.role}</span>
@@ -49,7 +49,7 @@ export function AlcPosterGrid({ leaders = [] }) {
 
 function AlcPosterCard({ person }) {
   return (
-    <a className="alc-poster-card" href={person.photo} target="_blank" rel="noreferrer" aria-label={`Open ${person.name} ${person.role} ALC poster`}>
+    <a className="alc-poster-card" data-editable-type="alc-poster-card" data-editable-id={person.id} href={person.photo} target="_blank" rel="noreferrer" aria-label={`Open ${person.name} ${person.role} ALC poster`}>
       <img src={person.photo} alt={`${person.name} ${person.role} poster`} loading="lazy" decoding="async" />
       <span className="alc-poster-copy">
         <strong>{person.name}</strong>
@@ -87,9 +87,9 @@ function createLeaderCardHtml(person) {
     ? `<p class="leader-notes">${escapeHtml(person.notes)}</p>`
     : "";
 
-  return `<article class="leader-card${person.featured ? " leader-card-highlight" : ""}"><img src="${escapeHtmlAttribute(person.photo)}" alt="${escapeHtmlAttribute(person.name)}" class="leader-photo"><div class="leader-copy"><span class="leader-role">${escapeHtml(person.role)}</span><h3>${escapeHtml(person.name)}</h3>${notes}<div class="leader-contact-list">${email}${phone}</div></div></article>`;
+  return `<article class="leader-card${person.featured ? " leader-card-highlight" : ""}" data-editable-type="leader-card" data-editable-id="${escapeHtmlAttribute(person.id)}"><img src="${escapeHtmlAttribute(person.photo)}" alt="${escapeHtmlAttribute(person.name)}" class="leader-photo"><div class="leader-copy"><span class="leader-role">${escapeHtml(person.role)}</span><h3>${escapeHtml(person.name)}</h3>${notes}<div class="leader-contact-list">${email}${phone}</div></div></article>`;
 }
 
 function createAlcPosterCardHtml(person) {
-  return `<a class="alc-poster-card" href="${escapeHtmlAttribute(person.photo)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} ALC poster"><img src="${escapeHtmlAttribute(person.photo)}" alt="${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} poster" loading="lazy" decoding="async"><span class="alc-poster-copy"><strong>${escapeHtml(person.name)}</strong><span>${escapeHtml(person.role || person.notes)}</span></span></a>`;
+  return `<a class="alc-poster-card" data-editable-type="alc-poster-card" data-editable-id="${escapeHtmlAttribute(person.id)}" href="${escapeHtmlAttribute(person.photo)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} ALC poster"><img src="${escapeHtmlAttribute(person.photo)}" alt="${escapeHtmlAttribute(person.name)} ${escapeHtmlAttribute(person.role)} poster" loading="lazy" decoding="async"><span class="alc-poster-copy"><strong>${escapeHtml(person.name)}</strong><span>${escapeHtml(person.role || person.notes)}</span></span></a>`;
 }

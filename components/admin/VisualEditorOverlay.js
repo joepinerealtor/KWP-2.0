@@ -3,8 +3,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   createCourseId,
+  createLeadershipId,
   createTrainingResourceId,
   validateCourseDrafts,
+  validateLeadershipDrafts,
   validateOfficeCardDraft,
   validateOfficeOperationsDraft,
   validateRoomsDraft
@@ -25,6 +27,10 @@ const SELECTABLE_CANVAS_SELECTOR = [
   ".page-content > section",
   ".course-card",
   ".office-card",
+  ".leader-card",
+  ".alc-poster-card",
+  ".alc-card",
+  ".leadership-support-card",
   ".vendor-card",
   ".leadership-card",
   ".portal-action-card",
@@ -46,6 +52,15 @@ const ROOMS_SECTION_DEFAULT = {
   eyebrow: "Conference + Training Rooms",
   title: "Book a room and review current reservations"
 };
+const LEADERSHIP_SECTION_DEFAULT = {
+  eyebrow: "Leadership Directory",
+  title: "Office leadership team"
+};
+const ALC_SECTION_DEFAULT = {
+  eyebrow: "Associate Leadership Council",
+  title: "2026 ALC Board of Directors",
+  summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
+};
 
 export function VisualEditorOverlay({ initialContent }) {
   const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
@@ -62,16 +77,20 @@ export function VisualEditorOverlay({ initialContent }) {
 
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
+  const leadership = content?.leadership || [];
   const office = content?.office || {};
   const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
   const rooms = office.rooms || {};
   const roomsSection = content?.sections?.rooms || ROOMS_SECTION_DEFAULT;
+  const leadershipSection = content?.sections?.leadership || LEADERSHIP_SECTION_DEFAULT;
+  const alcSection = content?.sections?.alc || ALC_SECTION_DEFAULT;
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
   };
   const courseErrors = useMemo(() => validateCourseDrafts(courses), [courses]);
   const trainingResourceErrors = useMemo(() => validateCourseDrafts(trainingResources), [trainingResources]);
+  const leadershipErrors = useMemo(() => validateLeadershipDrafts(leadership), [leadership]);
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
   const selectedCourseIndex = selectedItem?.type === "course-card"
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
@@ -79,8 +98,12 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedTrainingResourceIndex = selectedItem?.type === "training-resource-card"
     ? trainingResources.findIndex((resource) => resource.id === selectedItem.editableId)
     : -1;
+  const selectedLeaderIndex = selectedItem?.type === "leader-card" || selectedItem?.type === "alc-poster-card"
+    ? leadership.findIndex((person) => person.id === selectedItem.editableId)
+    : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
+  const selectedLeader = selectedLeaderIndex >= 0 ? leadership[selectedLeaderIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -94,7 +117,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
   const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
   const shouldShowPanel = true;
-  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses";
+  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -283,6 +306,23 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (selectedItem.type === "leader-card" || selectedItem.type === "alc-poster-card") {
+      setActiveSectionId("leadership");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this leadership card." } : currentItem);
+      return;
+    }
+
+    if (
+      (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
+      (selectedItem.sectionId === "leadership" || selectedItem.editableId === "leadership" || selectedItem.editableId === "alc")
+    ) {
+      setActiveSectionId("leadership");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this leadership heading." } : currentItem);
+      return;
+    }
+
     if ((selectedItem.type === "office-card" || selectedItem.type === "office-chip") && getOfficeCardKeyFromItem(selectedItem)) {
       setActiveSectionId("office");
       setEditingItemId(selectedItem.visualId);
@@ -316,6 +356,12 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (activeSectionId === "leadership") {
+      addLeader();
+      setStatusMessage("Leadership card added. Edit the new card, then save when ready.");
+      return;
+    }
+
     setToolbarStatus("Add Card");
   }
 
@@ -341,6 +387,44 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function updateTrainingResource(index, field, value) {
     updateEditableCard("trainingResources", trainingResources, index, field, value, "training-resource-card");
+  }
+
+  function updateLeader(index, field, value) {
+    const personId = leadership[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      leadership: (currentContent.leadership || []).map((person, personIndex) => (
+        personIndex === index
+          ? {
+              ...person,
+              [field]: value
+            }
+          : person
+      ))
+    }));
+    syncLeaderPreview(personId, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateLeadershipSection(sectionKey, field, value) {
+    const defaults = sectionKey === "alc" ? ALC_SECTION_DEFAULT : LEADERSHIP_SECTION_DEFAULT;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        [sectionKey]: {
+          ...defaults,
+          ...((currentContent.sections || {})[sectionKey] || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncLeadershipSectionPreview(sectionKey, field, value);
+    setStatusMessage("");
+    setError("");
   }
 
   function updateOfficeCard(cardKey, field, value) {
@@ -693,6 +777,34 @@ export function VisualEditorOverlay({ initialContent }) {
     addEditableCard("trainingResources", trainingResources, createTrainingResourceId(trainingResources), "training-resource-card");
   }
 
+  function addLeader() {
+    const nextLeader = {
+      id: createLeadershipId(leadership),
+      group: "office",
+      role: "New Role",
+      name: "New Leader",
+      photo: "team/joe-pine-chair.jpg",
+      email: "",
+      phone: "",
+      notes: "",
+      featured: false,
+      active: true
+    };
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      leadership: [
+        ...(currentContent.leadership || []),
+        nextLeader
+      ]
+    }));
+    appendLeaderPreview(nextLeader);
+    setEditingItemId("");
+    setSelectedItem(null);
+    setStatusMessage("");
+    setError("");
+  }
+
   function addEditableCard(collectionKey, items, id, editableType) {
     const nextCard = {
       id,
@@ -730,6 +842,22 @@ export function VisualEditorOverlay({ initialContent }) {
     removeEditableCard("trainingResources", trainingResources, index, "training-resource-card");
   }
 
+  function removeLeader(index) {
+    const personId = leadership[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      leadership: (currentContent.leadership || []).filter((_, personIndex) => personIndex !== index)
+    }));
+    removeLeaderPreview(personId);
+    if (selectedItem?.editableId === personId) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+    setStatusMessage("");
+    setError("");
+  }
+
   function removeEditableCard(collectionKey, items, index, editableType) {
     const itemId = items[index]?.id;
 
@@ -752,6 +880,27 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function moveTrainingResource(index, direction) {
     moveEditableCard("trainingResources", index, direction);
+  }
+
+  function moveLeader(index, direction) {
+    setContent((currentContent) => {
+      const currentItems = currentContent.leadership || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= currentItems.length) {
+        return currentContent;
+      }
+
+      const nextItems = [...currentItems];
+      [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
+
+      return {
+        ...currentContent,
+        leadership: nextItems
+      };
+    });
+    setStatusMessage("");
+    setError("");
   }
 
   function moveEditableCard(collectionKey, index, direction) {
@@ -781,6 +930,14 @@ export function VisualEditorOverlay({ initialContent }) {
 
   async function saveTrainingResources() {
     await saveContent(trainingResourceErrors, "Training resources");
+  }
+
+  async function saveLeadership() {
+    await saveContent(leadershipErrors, "Leadership");
+  }
+
+  async function saveLeadershipSection(sectionLabel = "Leadership heading") {
+    await saveContent([], sectionLabel);
   }
 
   async function saveTrainingResourceSection() {
@@ -952,6 +1109,17 @@ export function VisualEditorOverlay({ initialContent }) {
                     onSaveCourses={saveCourses}
                     onUpdateCourse={updateCourse}
                   />
+                ) : activeSectionId === "leadership" ? (
+                  <LeadershipVisualPanel
+                    errors={leadershipErrors}
+                    isSaving={isSaving}
+                    leaders={leadership}
+                    onAddLeader={addLeader}
+                    onMoveLeader={moveLeader}
+                    onRemoveLeader={removeLeader}
+                    onSaveLeadership={saveLeadership}
+                    onUpdateLeader={updateLeader}
+                  />
                 ) : (
                   <div className="visual-editor-empty-state">
                     <strong>{activeSection.label}</strong>
@@ -995,6 +1163,11 @@ export function VisualEditorOverlay({ initialContent }) {
           editableType={selectedEditableCardType}
           isSaving={isSaving}
           item={selectedItem}
+          leader={selectedLeader}
+          leaderErrors={leadershipErrors}
+          leaderIndex={selectedLeaderIndex}
+          leadershipSectionSettings={leadershipSection}
+          alcSectionSettings={alcSection}
           officeCard={selectedOfficeCard}
           officeCardErrors={selectedOfficeCardErrors}
           officeCardKey={selectedOfficeCardKey}
@@ -1008,6 +1181,7 @@ export function VisualEditorOverlay({ initialContent }) {
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
           onClose={() => setEditingItemId("")}
+          onMoveLeader={moveLeader}
           onMoveOfficeChip={moveOfficeChip}
           onMoveOfficeHoliday={moveOfficeHoliday}
           onMoveOfficeHour={moveOfficeHour}
@@ -1032,6 +1206,11 @@ export function VisualEditorOverlay({ initialContent }) {
           onUpdateRoomsField={updateRoomsField}
           onUpdateRoomsSection={updateRoomsSection}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
+          onRemoveLeader={removeLeader}
+          onSaveLeadership={saveLeadership}
+          onSaveLeadershipSection={saveLeadershipSection}
+          onUpdateLeader={updateLeader}
+          onUpdateLeadershipSection={updateLeadershipSection}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
           sectionSettings={trainingResourceSection}
@@ -1092,6 +1271,14 @@ function inferElementType(element) {
 
   if (element.matches(".office-card")) {
     return "office-card";
+  }
+
+  if (element.matches(".leader-card")) {
+    return "leader-card";
+  }
+
+  if (element.matches(".alc-poster-card")) {
+    return "alc-poster-card";
   }
 
   if (element.matches(".vendor-card")) {
@@ -1501,6 +1688,156 @@ function createRoomCalendarPreviewElement(calendar, index) {
   return section;
 }
 
+function syncLeaderPreview(personId, field, value) {
+  if (!personId || typeof document === "undefined") {
+    return;
+  }
+
+  const safePersonId = String(personId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-id="${safePersonId}"][data-editable-type="leader-card"], [data-editable-id="${safePersonId}"][data-editable-type="alc-poster-card"]`);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "role") {
+    const role = element.querySelector(".leader-role, .alc-poster-copy span");
+    if (role) {
+      role.textContent = value;
+    }
+  }
+
+  if (field === "name") {
+    const name = element.querySelector("h3, .alc-poster-copy strong");
+    if (name) {
+      name.textContent = value;
+    }
+    const image = element.querySelector("img");
+    if (image) {
+      image.alt = value;
+    }
+  }
+
+  if (field === "notes") {
+    let notes = element.querySelector(".leader-notes");
+    if (!notes && element.matches(".leader-card") && value) {
+      notes = document.createElement("p");
+      notes.className = "leader-notes";
+      element.querySelector(".leader-copy h3")?.after(notes);
+    }
+    if (notes) {
+      notes.textContent = value;
+      if (!value) {
+        notes.remove();
+      }
+    }
+  }
+
+  if (field === "photo") {
+    const image = element.querySelector("img");
+    if (image) {
+      image.src = value;
+    }
+    if (element.matches("a")) {
+      element.href = value;
+    }
+  }
+
+  if (field === "email" || field === "phone") {
+    syncLeaderContactPreview(element, field, value);
+  }
+
+  if (field === "featured") {
+    element.classList.toggle("leader-card-highlight", Boolean(value));
+  }
+}
+
+function syncLeaderContactPreview(element, field, value) {
+  const list = element.querySelector(".leader-contact-list");
+
+  if (!list) {
+    return;
+  }
+
+  const selector = field === "email" ? 'a[href^="mailto:"]' : 'a[href^="tel:"]';
+  let link = list.querySelector(selector);
+
+  if (!value) {
+    link?.remove();
+    return;
+  }
+
+  if (!link) {
+    link = document.createElement("a");
+    link.className = "leader-contact-link";
+    list.append(link);
+  }
+
+  link.textContent = value;
+  link.href = field === "email" ? `mailto:${value}` : `tel:${value.replace(/\D/g, "")}`;
+}
+
+function syncLeadershipSectionPreview(sectionKey, field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? `[data-editable-type="section-eyebrow"][data-editable-id="${sectionKey}"]`
+    : field === "summary"
+    ? `[data-editable-type="section-summary"][data-editable-id="${sectionKey}"]`
+    : `[data-editable-type="section-heading"][data-editable-id="${sectionKey}"]`;
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function appendLeaderPreview(person) {
+  if (!person || typeof document === "undefined") {
+    return;
+  }
+
+  const grid = document.querySelector(".leadership-grid");
+
+  if (!grid) {
+    return;
+  }
+
+  const element = document.createElement("article");
+  const image = document.createElement("img");
+  const copy = document.createElement("div");
+  const role = document.createElement("span");
+  const name = document.createElement("h3");
+  const contacts = document.createElement("div");
+
+  element.className = "leader-card";
+  element.dataset.editableType = "leader-card";
+  element.dataset.editableId = person.id;
+  image.className = "leader-photo";
+  image.src = person.photo || "";
+  image.alt = person.name || "";
+  copy.className = "leader-copy";
+  role.className = "leader-role";
+  role.textContent = person.role || "";
+  name.textContent = person.name || "";
+  contacts.className = "leader-contact-list";
+  copy.append(role, name, contacts);
+  element.append(image, copy);
+  grid.append(element);
+}
+
+function removeLeaderPreview(personId) {
+  if (!personId || typeof document === "undefined") {
+    return;
+  }
+
+  const safePersonId = String(personId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-id="${safePersonId}"][data-editable-type="leader-card"], [data-editable-id="${safePersonId}"][data-editable-type="alc-poster-card"]`);
+  element?.remove();
+}
+
 function syncTrainingResourceSectionPreview(field, value) {
   if (typeof document === "undefined") {
     return;
@@ -1575,7 +1912,7 @@ function AddToolsPanel({ activeSection, canAddCard, onAddCard, onAddSection, onB
       </div>
       {!canAddCard ? (
         <p className="visual-editor-note">
-          Cards can be added in Training Resources and Productivity Coaching right now. More section types are coming as they become data-backed.
+          Cards can be added in Training Resources, Productivity Coaching, and Leadership right now. More section types are coming as they become data-backed.
         </p>
       ) : null}
     </div>
@@ -1641,6 +1978,11 @@ function FloatingItemEditor({
   editableType,
   isSaving,
   item,
+  leader,
+  leaderErrors,
+  leaderIndex,
+  leadershipSectionSettings,
+  alcSectionSettings,
   officeCard,
   officeCardErrors,
   officeCardKey,
@@ -1649,6 +1991,7 @@ function FloatingItemEditor({
   onAddOfficeHoliday,
   onAddOfficeHour,
   onClose,
+  onMoveLeader,
   onMoveOfficeChip,
   onMoveOfficeHoliday,
   onMoveOfficeHour,
@@ -1656,10 +1999,15 @@ function FloatingItemEditor({
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
   onRemoveCard,
+  onRemoveLeader,
   onSaveCards,
+  onSaveLeadership,
+  onSaveLeadershipSection,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
+  onUpdateLeader,
+  onUpdateLeadershipSection,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -1694,6 +2042,15 @@ function FloatingItemEditor({
     (item.type === "section" && item.sectionId === "office") ||
     item.editableId === "office"
   );
+  const isLeadershipSectionEditable = (
+    (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading") &&
+    (item.sectionId === "leadership" || item.editableId === "leadership")
+  );
+  const isAlcSectionEditable = (
+    (item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary") &&
+    item.editableId === "alc"
+  );
+  const isLeadershipCardEditable = (item.type === "leader-card" || item.type === "alc-poster-card") && leader && leaderIndex >= 0;
   const isRoomsSectionEditable = (
     (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading") &&
     (item.sectionId === "conference-rooms" || item.editableId === "rooms")
@@ -1710,7 +2067,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey]);
+  }, [item, cardIndex, cardErrors.length, leaderErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey]);
 
   return (
     <div
@@ -1771,6 +2128,48 @@ function FloatingItemEditor({
             </button>
           </div>
         </>
+      ) : isLeadershipSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the leadership section heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={leadershipSectionSettings.eyebrow || ""} onChange={(event) => onUpdateLeadershipSection("leadership", "eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={leadershipSectionSettings.title || ""} onChange={(event) => onUpdateLeadershipSection("leadership", "title", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={() => onSaveLeadershipSection("Leadership heading")}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isAlcSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the ALC section preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={alcSectionSettings.eyebrow || ""} onChange={(event) => onUpdateLeadershipSection("alc", "eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={alcSectionSettings.title || ""} onChange={(event) => onUpdateLeadershipSection("alc", "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={alcSectionSettings.summary || ""} rows={3} onChange={(event) => onUpdateLeadershipSection("alc", "summary", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={() => onSaveLeadershipSection("ALC heading")}>
+              {isSaving ? "Saving" : "Save ALC Heading"}
+            </button>
+          </div>
+        </>
       ) : isRoomsSectionEditable ? (
         <>
           <p className="visual-editor-note">
@@ -1823,6 +2222,76 @@ function FloatingItemEditor({
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={Boolean(roomErrors.length) || isSaving} onClick={onSaveRooms}>
               {isSaving ? "Saving" : "Save Rooms"}
+            </button>
+          </div>
+        </>
+      ) : isLeadershipCardEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this leadership card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Group</span>
+            <select value={leader.group || "office"} onChange={(event) => onUpdateLeader(leaderIndex, "group", event.target.value)}>
+              <option value="office">Office Leadership</option>
+              <option value="alc">ALC Poster</option>
+            </select>
+          </label>
+          <label className="visual-editor-field">
+            <span>Role</span>
+            <input value={leader.role || ""} onChange={(event) => onUpdateLeader(leaderIndex, "role", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Name</span>
+            <input value={leader.name || ""} onChange={(event) => onUpdateLeader(leaderIndex, "name", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Photo</span>
+            <input value={leader.photo || ""} onChange={(event) => onUpdateLeader(leaderIndex, "photo", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Email</span>
+            <input value={leader.email || ""} onChange={(event) => onUpdateLeader(leaderIndex, "email", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Phone</span>
+            <input value={leader.phone || ""} onChange={(event) => onUpdateLeader(leaderIndex, "phone", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Notes</span>
+            <textarea value={leader.notes || ""} rows={3} onChange={(event) => onUpdateLeader(leaderIndex, "notes", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={leader.active !== false}
+                onChange={(event) => onUpdateLeader(leaderIndex, "active", event.target.checked)}
+              />
+              Visible
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(leader.featured)}
+                onChange={(event) => onUpdateLeader(leaderIndex, "featured", event.target.checked)}
+              />
+              Featured
+            </label>
+          </div>
+          {leaderErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {leaderErrors.map((validationError) => (
+                <p key={validationError}>{validationError}</p>
+              ))}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(leaderErrors.length) || isSaving} onClick={onSaveLeadership}>
+              {isSaving ? "Saving" : "Save Leadership"}
+            </button>
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveLeader(leaderIndex)}>
+              Delete
             </button>
           </div>
         </>
@@ -2014,6 +2483,121 @@ function OfficeHoursEditor({ hours, onAddHour, onMoveHour, onRemoveHour, onUpdat
           </label>
         </div>
       ))}
+    </div>
+  );
+}
+
+function LeadershipVisualPanel({
+  errors,
+  isSaving,
+  leaders,
+  onAddLeader,
+  onMoveLeader,
+  onRemoveLeader,
+  onSaveLeadership,
+  onUpdateLeader
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{leaders.length} leadership cards</strong>
+        </div>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddLeader}>
+          Add Card
+        </button>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="visual-editor-course-list">
+        {leaders.map((leader, index) => (
+          <details className="visual-editor-course" key={leader.id || index} open={index === 0}>
+            <summary>
+              <span>{leader.name || `Leader ${index + 1}`}</span>
+              <strong>{leader.active === false ? "Hidden" : leader.group === "alc" ? "ALC" : "Office"}</strong>
+            </summary>
+            <div className="visual-editor-course-controls">
+              <button type="button" disabled={index === 0} onClick={() => onMoveLeader(index, -1)}>
+                Up
+              </button>
+              <button type="button" disabled={index === leaders.length - 1} onClick={() => onMoveLeader(index, 1)}>
+                Down
+              </button>
+              <button type="button" onClick={() => onRemoveLeader(index)}>
+                Remove
+              </button>
+            </div>
+            <label className="visual-editor-field">
+              <span>Group</span>
+              <select value={leader.group || "office"} onChange={(event) => onUpdateLeader(index, "group", event.target.value)}>
+                <option value="office">Office Leadership</option>
+                <option value="alc">ALC Poster</option>
+              </select>
+            </label>
+            <label className="visual-editor-field">
+              <span>Role</span>
+              <input value={leader.role || ""} onChange={(event) => onUpdateLeader(index, "role", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Name</span>
+              <input value={leader.name || ""} onChange={(event) => onUpdateLeader(index, "name", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Photo</span>
+              <input value={leader.photo || ""} onChange={(event) => onUpdateLeader(index, "photo", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Email</span>
+              <input value={leader.email || ""} onChange={(event) => onUpdateLeader(index, "email", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Phone</span>
+              <input value={leader.phone || ""} onChange={(event) => onUpdateLeader(index, "phone", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Notes</span>
+              <textarea value={leader.notes || ""} rows={3} onChange={(event) => onUpdateLeader(index, "notes", event.target.value)} />
+            </label>
+            <div className="visual-editor-check-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={leader.active !== false}
+                  onChange={(event) => onUpdateLeader(index, "active", event.target.checked)}
+                />
+                Visible
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={Boolean(leader.featured)}
+                  onChange={(event) => onUpdateLeader(index, "featured", event.target.checked)}
+                />
+                Featured
+              </label>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveLeadership}>
+          {isSaving ? "Saving" : "Save Leadership"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
     </div>
   );
 }

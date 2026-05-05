@@ -123,7 +123,23 @@ function replaceLegacyVendorGrids(mainHtml) {
 }
 
 function replaceLegacyLeadershipGrids(mainHtml) {
+  const leadershipSection = portalContent.sections?.leadership || {
+    eyebrow: "Leadership Directory",
+    title: "Office leadership team"
+  };
+  const alcSection = portalContent.sections?.alc || {
+    eyebrow: "Associate Leadership Council",
+    title: "2026 ALC Board of Directors",
+    summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
+  };
+  const legacyLeadershipHeadPattern = /(<section class="panel" id="leadership">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const legacyAlcHeadPattern = /(<article class="alc-card" id="alc-board">\s*<div class="alc-card-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h3>[\s\S]*?<\/h3>\s*<p class="alc-card-summary">[\s\S]*?<\/p>/;
+  const leadershipHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="leadership">${escapeHtml(leadershipSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="leadership">${escapeHtml(leadershipSection.title)}</h2>`;
+  const alcHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="alc">${escapeHtml(alcSection.eyebrow)}</p><h3 data-editable-type="section-heading" data-editable-id="alc">${escapeHtml(alcSection.title)}</h3><p class="alc-card-summary" data-editable-type="section-summary" data-editable-id="alc">${escapeHtml(alcSection.summary)}</p>`;
+
   return mainHtml
+    .replace(legacyLeadershipHeadPattern, `$1${leadershipHeadHtml}`)
+    .replace(legacyAlcHeadPattern, `$1${alcHeadHtml}`)
     .replace(
       '<div class="leadership-grid" data-leadership-grid aria-live="polite"></div>',
       createLeadershipGridHtml(portalContent.leadership)
