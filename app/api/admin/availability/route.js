@@ -70,10 +70,16 @@ async function loadAvailability() {
 function normalizeAvailabilityPayload(value) {
   const availability = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const status = ALLOWED_STATUSES.has(availability.status) ? availability.status : "unavailable";
+  const {
+    status: _status,
+    trackerEnabled,
+    ...rest
+  } = availability;
 
   return {
-    ...availability,
-    status
+    status,
+    trackerEnabled: trackerEnabled !== false,
+    ...rest
   };
 }
 
