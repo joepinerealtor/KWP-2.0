@@ -72,6 +72,7 @@ const LEADERSHIP_SUPPORT_DEFAULT = {
 };
 const JOE_AVAILABILITY_DEFAULT = {
   status: "unavailable",
+  trackerEnabled: true,
   timezone: "America/New_York",
   eventDurationMinutes: 30,
   nextOpenSlotIso: "",
@@ -562,6 +563,18 @@ export function VisualEditorOverlay({ initialContent }) {
     setJoeAvailability(nextAvailability);
     previewJoeAvailability(nextAvailability);
     setStatusMessage(isAvailable ? "Availability preview is green across Joe widgets. Save to make it stick." : "Availability preview is red across Joe widgets. Save to make it stick.");
+    setError("");
+  }
+
+  function updateJoeAvailabilityTracker(isEnabled) {
+    const nextAvailability = {
+      ...joeAvailability,
+      trackerEnabled: isEnabled
+    };
+
+    setJoeAvailability(nextAvailability);
+    previewJoeAvailability(nextAvailability);
+    setStatusMessage(isEnabled ? "Availability tracker preview is visible. Save to make it stick." : "Availability tracker preview is hidden. Schedule buttons remain available.");
     setError("");
   }
 
@@ -1456,6 +1469,7 @@ export function VisualEditorOverlay({ initialContent }) {
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
           onUpdateJoeAvailability={updateJoeAvailability}
           onUpdateJoeAvailabilityStatus={updateJoeAvailabilityStatus}
+          onUpdateJoeAvailabilityTracker={updateJoeAvailabilityTracker}
           sectionSettings={trainingResourceSection}
           onSaveSection={saveTrainingResourceSection}
           onUpdateSection={updateTrainingResourceSection}
@@ -2331,6 +2345,7 @@ function FloatingItemEditor({
   onUpdateCard,
   onUpdateJoeAvailability,
   onUpdateJoeAvailabilityStatus,
+  onUpdateJoeAvailabilityTracker,
   onUpdateLeader,
   onUpdateLeadershipSection,
   onUpdateLeadershipSupport,
@@ -2606,12 +2621,24 @@ function FloatingItemEditor({
               <label>
                 <input
                   type="checkbox"
-                  checked={joeAvailability.status === "available"}
-                  onChange={(event) => onUpdateJoeAvailabilityStatus(event.target.checked)}
+                  checked={joeAvailability.trackerEnabled !== false}
+                  onChange={(event) => onUpdateJoeAvailabilityTracker(event.target.checked)}
                 />
-                Joe is available
+                Show availability tracker
               </label>
             </div>
+            {joeAvailability.trackerEnabled !== false ? (
+              <div className="visual-editor-check-row">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={joeAvailability.status === "available"}
+                    onChange={(event) => onUpdateJoeAvailabilityStatus(event.target.checked)}
+                  />
+                  Joe is available
+                </label>
+              </div>
+            ) : null}
             <label className="visual-editor-field">
               <span>Available Label</span>
               <input value={joeAvailability.availableNowLabel || ""} onChange={(event) => onUpdateJoeAvailability("availableNowLabel", event.target.value)} />

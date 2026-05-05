@@ -1,5 +1,6 @@
 {
   "status": "unavailable",
+  "trackerEnabled": true,
   "timezone": "America/New_York",
   "eventDurationMinutes": 30,
   "nextOpenSlotIso": "2026-05-01T18:00:00.000Z",

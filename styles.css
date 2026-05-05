@@ -1272,6 +1272,18 @@ img {
   line-height: 1.25;
 }
 
+.content-strip-tech-support.joe-availability-tracker-disabled .joe-availability-panel--compact {
+  grid-template-columns: 1fr;
+  justify-items: end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.content-strip-tech-support.joe-availability-tracker-disabled .joe-availability-compact-copy {
+  display: none;
+}
+
 .mobile-tech-help-bubble {
   display: none;
 }
@@ -3089,6 +3101,15 @@ body.portal-protected .mobile-tech-help-bubble {
 }
 
 .joe-availability-panel[hidden] {
+  display: none;
+}
+
+.mobile-tech-help-bubble.joe-availability-tracker-disabled .joe-availability-panel--mobile-bubble {
+  padding: 10px 16px;
+}
+
+.mobile-tech-help-bubble.joe-availability-tracker-disabled .mobile-tech-help-avatar,
+.mobile-tech-help-bubble.joe-availability-tracker-disabled .mobile-tech-help-kicker {
   display: none;
 }
 

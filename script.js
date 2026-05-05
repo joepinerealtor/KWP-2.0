@@ -2197,17 +2197,31 @@ function writeJoeAvailability(rawState = {}) {
   currentJoeAvailabilityRawState = rawState;
   const state = normalizeJoeAvailabilityState(rawState);
   currentJoeAvailabilityState = state;
+  const isTrackerEnabled = rawState?.trackerEnabled !== false;
 
   joeAvailabilityRefs.forEach((ref) => {
     const isCompactHeaderWidget = ref.panel.classList.contains("joe-availability-panel--compact");
     const isLeadershipSupportWidget = ref.card.classList.contains("leadership-support-card");
     const isModalHeaderWidget = ref.panel.classList.contains("joe-availability-panel--modal");
     const isMobileBubbleWidget = ref.card.classList.contains("mobile-tech-help-bubble");
+    const isStandaloneStatusWidget = isLeadershipSupportWidget || isModalHeaderWidget || ref.card.hasAttribute("data-room-booking-availability");
     const ctaState = isCompactHeaderWidget || isLeadershipSupportWidget || isModalHeaderWidget
       ? getCompactJoeAvailabilityState(rawState, state)
       : null;
     const bubbleState = isMobileBubbleWidget ? getMobileBubbleJoeAvailabilityState(state) : null;
     const displayState = bubbleState || ctaState;
+
+    ref.card.classList.toggle("joe-availability-tracker-disabled", !isTrackerEnabled);
+    ref.panel.hidden = !isTrackerEnabled && isStandaloneStatusWidget;
+    if (!isTrackerEnabled) {
+      if (isMobileBubbleWidget) {
+        ref.label.textContent = "Schedule an appointment";
+        ref.summary.textContent = "Tap to schedule an appointment";
+        ref.summary.hidden = false;
+      }
+      syncJoeAvailabilityActions(ref, state);
+      return;
+    }
 
     ref.panel.dataset.status = state.status;
     ref.panel.hidden = false;
