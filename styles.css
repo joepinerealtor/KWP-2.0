@@ -4218,6 +4218,20 @@ body.has-handbook-modal .page-content {
   background: #fff;
 }
 
+.visual-editor-add-tools {
+  display: grid;
+  gap: 12px;
+}
+
+.visual-editor-add-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.visual-editor-add-grid .visual-editor-button {
+  width: 100%;
+}
+
 .visual-editor-floating-toolbar {
   position: fixed;
   z-index: 90;

@@ -2,6 +2,12 @@
   "settings": {
     "viewerPasscode": "0715"
   },
+  "sections": {
+    "trainingResources": {
+      "eyebrow": "Self-Paced Support",
+      "title": "Training Resources"
+    }
+  },
   "trainingResources": [
     {
       "id": "66-day-challenge",

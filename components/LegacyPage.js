@@ -8,6 +8,7 @@ import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
 import { createVendorGridHtml } from "@/components/VendorCards";
 import portalContent from "@/data/portal-content.json";
+import { escapeHtml } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
 
 function readLegacyHtml(source) {
@@ -86,12 +87,20 @@ function hydrateLegacyMainHtml(source, mainHtml) {
 }
 
 function replaceLegacyTrainingResourceGrid(mainHtml) {
+  const trainingResourceSection = portalContent.sections?.trainingResources || {
+    eyebrow: "Self-Paced Support",
+    title: "Training Resources"
+  };
   const trainingResourcesGridHtml = createCourseGridHtml(portalContent.trainingResources, {
     editableType: "training-resource-card"
   });
+  const legacyTrainingHeadPattern = /(<section class="panel" id="training-resources">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
   const legacyTrainingGridPattern = /(<section class="panel" id="training-resources">[\s\S]*?)<div class="course-grid">\s*(?:<a class="course-card"[\s\S]*?<\/a>\s*)+<\/div>/;
+  const trainingResourceHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="trainingResources">${escapeHtml(trainingResourceSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="trainingResources">${escapeHtml(trainingResourceSection.title)}</h2>`;
 
-  return mainHtml.replace(legacyTrainingGridPattern, `$1${trainingResourcesGridHtml}`);
+  return mainHtml
+    .replace(legacyTrainingHeadPattern, `$1${trainingResourceHeadHtml}`)
+    .replace(legacyTrainingGridPattern, `$1${trainingResourcesGridHtml}`);
 }
 
 function replaceLegacyCourseGrid(mainHtml) {
