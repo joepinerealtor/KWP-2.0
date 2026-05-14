@@ -437,7 +437,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       if (rememberSession) {
         window.sessionStorage.setItem(EDITOR_SESSION_PASSCODE_KEY, nextPasscode);
       }
-      setStatusMessage(restoredSession ? "Editor session restored." : "Editor unlocked for this browser session.");
+      setStatusMessage(payload.hasDraft ? "Editor opened the saved draft." : restoredSession ? "Editor session restored." : "Editor unlocked for this browser session.");
     } catch (unlockError) {
       if (restoredSession) {
         window.sessionStorage.removeItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -2906,7 +2906,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent([], "Rooms heading");
   }
 
-  async function saveContent(validationErrors, label) {
+  async function saveContent(validationErrors, label, mode = "draft") {
     if (validationErrors.length) {
       setError(`Fix ${label.toLowerCase()} validation before saving.`);
       return;
@@ -2923,7 +2923,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           "content-type": "application/json",
           "x-kwp-admin-passcode": adminPasscode
         },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, mode })
       });
       const payload = await response.json();
 
@@ -2931,12 +2931,17 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
         throw new Error(payload.validationErrors?.join(" ") || payload.error || "Unable to save courses.");
       }
 
-      setStatusMessage(payload.changed ? `${label} saved. Refresh preview to see saved portal output.` : "No content changes detected.");
+      const savedLabel = mode === "publish" ? `${label} published` : `${label} draft saved`;
+      setStatusMessage(payload.changed ? `${savedLabel}.` : "No content changes detected.");
     } catch (saveError) {
       setError(saveError.message);
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function publishContent() {
+    await saveContent([], "Portal", "publish");
   }
 
   return (
@@ -2976,10 +2981,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Redo")}>
             Redo
           </button>
-          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Save Draft")}>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked || isSaving} onClick={() => saveContent([], "Portal")}>
             Save Draft
           </button>
-          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Publish")}>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked || isSaving} onClick={publishContent}>
             Publish
           </button>
           <a className="visual-editor-button" href={previewHref}>

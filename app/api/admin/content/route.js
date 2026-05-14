@@ -5,8 +5,12 @@ import portalContent from "../../../../lib/portal-content";
 
 const {
   CANONICAL_CONTENT_PATH,
+  DRAFT_CONTENT_PATH,
   PUBLIC_CONTENT_PATH,
+  loadDraftPortalContent,
   loadPortalContent,
+  publishPortalContent,
+  savePortalDraft,
   savePortalContent,
   validatePortalContent
 } = portalContent;
@@ -25,9 +29,12 @@ export function GET(request) {
     return access;
   }
 
+  const draft = loadDraftPortalContent();
+
   return noStoreJson({
-    content: loadPortalContent(),
-    source: toRepoPath(CANONICAL_CONTENT_PATH)
+    content: draft.content,
+    hasDraft: draft.hasDraft,
+    source: toRepoPath(draft.sourcePath)
   });
 }
 
@@ -55,13 +62,19 @@ export async function PUT(request) {
   }
 
   try {
-    const result = savePortalContent(content);
+    const mode = body?.mode === "publish" ? "publish" : body?.mode === "live" ? "live" : "draft";
+    const result = mode === "publish"
+      ? publishPortalContent(content)
+      : mode === "live"
+      ? savePortalContent(content)
+      : savePortalDraft(content);
 
     return noStoreJson({
       ok: true,
+      mode,
       backup: toRepoPath(result.backupPath),
       changed: result.changed,
-      source: toRepoPath(result.canonicalPath),
+      source: toRepoPath(result.draftPath || result.canonicalPath),
       publicMirror: toRepoPath(result.publicPath)
     });
   } catch (error) {
@@ -143,6 +156,10 @@ function toRepoPath(filePath) {
 
   if (filePath === CANONICAL_CONTENT_PATH) {
     return "data/portal-content.json";
+  }
+
+  if (filePath === DRAFT_CONTENT_PATH) {
+    return "data/portal-content.draft.json";
   }
 
   if (filePath === PUBLIC_CONTENT_PATH) {
