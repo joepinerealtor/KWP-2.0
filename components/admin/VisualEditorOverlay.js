@@ -26,10 +26,12 @@ import { portalPages } from "@/lib/portal-config";
 import { createCustomSectionCardId, createCustomSectionId, getCustomSectionsForPage } from "@/lib/custom-sections";
 import { getOverviewContent } from "@/lib/overview-content";
 import { getNavigationContent } from "@/lib/portal-navigation";
+import { getSiteChromeContent } from "@/lib/portal-site-chrome";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
   { id: "navigation", label: "Navigation", target: "", status: "Page menu" },
+  { id: "siteChrome", label: "Site Chrome", target: "", status: "Brand + footer" },
   { id: "customSections", label: "Custom Sections", target: "", status: "Section builder" },
   { id: "overview", label: "Overview", target: "#overview", status: "Homepage intro" },
   { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Training cards" },
@@ -184,6 +186,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const pageDefaults = portalPages[currentEditorPage] || portalPages.home;
   const navigation = getNavigationContent(content, currentEditorPage, pageDefaults);
   const navigationErrors = useMemo(() => validateNavigationDraft(navigation), [navigation]);
+  const siteChrome = getSiteChromeContent(content, currentEditorPage, pageDefaults);
+  const siteChromeErrors = useMemo(() => validateSiteChromeDraft(siteChrome), [siteChrome]);
   const overview = getOverviewContent(content);
   const overviewErrors = useMemo(() => validateOverviewDraft(overview), [overview]);
   const customSections = getCustomSectionsForPage(content, currentEditorPage);
@@ -281,6 +285,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedNavigationItems = selectedNavigationListKey ? navigation[selectedNavigationListKey] || [] : [];
   const selectedNavigationIndex = selectedNavigationListKey ? Number.parseInt(selectedItem?.editableId || "-1", 10) : -1;
   const selectedNavigationLink = selectedNavigationIndex >= 0 ? selectedNavigationItems[selectedNavigationIndex] : null;
+  const selectedSiteChromeItem = getSiteChromeSelectionFromItem(selectedItem);
   const selectedOverviewItem = getOverviewSelectionFromItem(selectedItem);
   const selectedCustomSectionId = getCustomSectionIdFromItem(selectedItem);
   const selectedCustomSectionIndex = selectedCustomSectionId ? customSections.findIndex((section) => section.id === selectedCustomSectionId) : -1;
@@ -472,6 +477,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       setActiveSectionId("navigation");
       setEditingItemId(selectedItem.visualId);
       setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this navigation link." } : currentItem);
+      return;
+    }
+
+    if (getSiteChromeSelectionFromItem(selectedItem)) {
+      setActiveSectionId("siteChrome");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this site chrome item." } : currentItem);
       return;
     }
 
@@ -814,6 +826,44 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
     [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
     setNavigationList(listKey, nextItems);
+  }
+
+  function setSiteChrome(nextSiteChrome) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      siteChrome: {
+        ...(currentContent.siteChrome || {}),
+        footer: nextSiteChrome.footer,
+        pages: {
+          ...((currentContent.siteChrome || {}).pages || {}),
+          [currentEditorPage]: {
+            brandHref: nextSiteChrome.brandHref,
+            brandLogo: nextSiteChrome.brandLogo,
+            brandTitle: nextSiteChrome.brandTitle
+          }
+        }
+      }
+    }));
+    syncSiteChromePreview(nextSiteChrome);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateSiteBrand(field, value) {
+    setSiteChrome({
+      ...siteChrome,
+      [field]: value
+    });
+  }
+
+  function updateSiteFooter(field, value) {
+    setSiteChrome({
+      ...siteChrome,
+      footer: {
+        ...(siteChrome.footer || {}),
+        [field]: value
+      }
+    });
   }
 
   function setOverview(nextOverview) {
@@ -2640,6 +2690,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent(navigationErrors, "Navigation");
   }
 
+  async function saveSiteChrome() {
+    await saveContent(siteChromeErrors, "Site chrome");
+  }
+
   async function saveOverview() {
     await saveContent(overviewErrors, "Overview");
   }
@@ -2909,6 +2963,15 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                     onSaveNavigation={saveNavigation}
                     onUpdateLink={updateNavigationLink}
                   />
+                ) : activeSectionId === "siteChrome" ? (
+                  <SiteChromeVisualPanel
+                    errors={siteChromeErrors}
+                    isSaving={isSaving}
+                    siteChrome={siteChrome}
+                    onSaveSiteChrome={saveSiteChrome}
+                    onUpdateFooter={updateSiteFooter}
+                    onUpdateBrand={updateSiteBrand}
+                  />
                 ) : activeSectionId === "customSections" ? (
                   <CustomSectionsVisualPanel
                     errors={customSectionErrors}
@@ -3005,6 +3068,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           navigationListKey={selectedNavigationListKey}
           navigationLink={selectedNavigationLink}
           navigationLinkIndex={selectedNavigationIndex}
+          siteChrome={siteChrome}
+          siteChromeErrors={siteChromeErrors}
+          siteChromeSelection={selectedSiteChromeItem}
           overview={overview}
           overviewErrors={overviewErrors}
           overviewSelection={selectedOverviewItem}
@@ -3115,6 +3181,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onSaveTechConnectSection={saveTechConnectSection}
           onSaveTechJoeSupport={saveTechJoeSupport}
           onSaveNavigation={saveNavigation}
+          onSaveSiteChrome={saveSiteChrome}
           onSaveOverview={saveOverview}
           onSaveCustomSections={saveCustomSections}
           onUpdateOfficeChip={updateOfficeChip}
@@ -3136,6 +3203,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechQuickLink={updateTechQuickLink}
           onUpdateTechSection={updateTechSection}
           onUpdateNavigationLink={updateNavigationLink}
+          onUpdateSiteBrand={updateSiteBrand}
+          onUpdateSiteFooter={updateSiteFooter}
           onUpdateOverviewField={updateOverviewField}
           onUpdateOverviewGroup={updateOverviewGroup}
           onUpdateOverviewLink={updateOverviewLink}
@@ -3310,6 +3379,54 @@ function getNavigationListKeyFromItem(item) {
   }
 
   return "";
+}
+
+function getSiteChromeSelectionFromItem(item) {
+  if (!item) {
+    return null;
+  }
+
+  if (item.type === "site-brand") {
+    return { type: "brand" };
+  }
+
+  if (item.type === "site-footer" || item.type === "site-footer-field") {
+    return {
+      type: "footer",
+      field: item.type === "site-footer-field" ? item.editableId || "" : ""
+    };
+  }
+
+  return null;
+}
+
+function validateSiteChromeDraft(siteChrome) {
+  const errors = [];
+  const footer = siteChrome.footer || {};
+
+  [
+    ["brandTitle", "Brand title"],
+    ["brandLogo", "Brand logo"],
+    ["brandHref", "Brand link"]
+  ].forEach(([field, label]) => {
+    if (!String(siteChrome[field] || "").trim()) {
+      errors.push(`${label} is required.`);
+    }
+  });
+
+  [
+    ["copyright", "Footer copyright"],
+    ["addressLabel", "Footer address"],
+    ["addressHref", "Footer address link"],
+    ["phoneLabel", "Footer phone"],
+    ["phoneHref", "Footer phone link"]
+  ].forEach(([field, label]) => {
+    if (!String(footer[field] || "").trim()) {
+      errors.push(`${label} is required.`);
+    }
+  });
+
+  return errors;
 }
 
 function getOverviewSelectionFromItem(item) {
@@ -4512,6 +4629,46 @@ function createBrandAssetLinkPreviewElement(link) {
   return element;
 }
 
+function syncSiteChromePreview(siteChrome) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const brand = document.querySelector('[data-editable-type="site-brand"][data-editable-id="brand"]');
+  const brandLogo = brand?.querySelector("[data-site-brand-logo]");
+  const brandTitle = brand?.querySelector("[data-site-brand-title]");
+  const footer = siteChrome.footer || {};
+  const copyright = document.querySelector('[data-editable-type="site-footer-field"][data-editable-id="copyright"]');
+  const address = document.querySelector('[data-editable-type="site-footer-field"][data-editable-id="address"]');
+  const phone = document.querySelector('[data-editable-type="site-footer-field"][data-editable-id="phone"]');
+
+  if (brand) {
+    brand.href = siteChrome.brandHref || "#";
+  }
+
+  if (brandLogo) {
+    brandLogo.src = siteChrome.brandLogo || "";
+  }
+
+  if (brandTitle) {
+    brandTitle.textContent = siteChrome.brandTitle || "";
+  }
+
+  if (copyright) {
+    copyright.textContent = footer.copyright || "";
+  }
+
+  if (address) {
+    address.textContent = footer.addressLabel || "";
+    address.href = footer.addressHref || "#";
+  }
+
+  if (phone) {
+    phone.textContent = footer.phoneLabel || "";
+    phone.href = footer.phoneHref || "#";
+  }
+}
+
 function syncOverviewPreview(overview) {
   if (typeof document === "undefined") {
     return;
@@ -5202,6 +5359,9 @@ function FloatingItemEditor({
   navigationListKey,
   navigationLink,
   navigationLinkIndex,
+  siteChrome,
+  siteChromeErrors,
+  siteChromeSelection,
   overview,
   overviewErrors,
   overviewSelection,
@@ -5310,6 +5470,7 @@ function FloatingItemEditor({
   onSaveTechConnectSection,
   onSaveTechJoeSupport,
   onSaveNavigation,
+  onSaveSiteChrome,
   onSaveOverview,
   onSaveOfficeCard,
   onSaveOfficeSection,
@@ -5335,6 +5496,8 @@ function FloatingItemEditor({
   onUpdateTechQuickLink,
   onUpdateTechSection,
   onUpdateNavigationLink,
+  onUpdateSiteBrand,
+  onUpdateSiteFooter,
   onUpdateOverviewField,
   onUpdateOverviewGroup,
   onUpdateOverviewLink,
@@ -5372,6 +5535,7 @@ function FloatingItemEditor({
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
   const isNavigationLinkEditable = Boolean(navigationListKey && navigationLink && navigationLinkIndex >= 0);
+  const isSiteChromeEditable = Boolean(siteChromeSelection && siteChrome);
   const isOverviewEditable = Boolean(overviewSelection && overview);
   const isCustomSectionCardEditable = item.type === "custom-section-card" && customSection && customSectionCard && customSectionIndex >= 0 && customSectionCardIndex >= 0;
   const isCustomSectionEditable = !isCustomSectionCardEditable && Boolean(getCustomSectionIdFromItem(item) && customSection && customSectionIndex >= 0);
@@ -5485,6 +5649,16 @@ function FloatingItemEditor({
           onRemoveLink={onRemoveNavigationLink}
           onSave={onSaveNavigation}
           onUpdateLink={onUpdateNavigationLink}
+        />
+      ) : isSiteChromeEditable ? (
+        <SiteChromeFloatingEditor
+          errors={siteChromeErrors}
+          isSaving={isSaving}
+          selection={siteChromeSelection}
+          siteChrome={siteChrome}
+          onSave={onSaveSiteChrome}
+          onUpdateBrand={onUpdateSiteBrand}
+          onUpdateFooter={onUpdateSiteFooter}
         />
       ) : isOverviewEditable ? (
         <OverviewFloatingEditor
@@ -6925,6 +7099,122 @@ function NavigationLinkEditor({
       </div>
     </>
   );
+}
+
+function SiteChromeFloatingEditor({
+  errors,
+  isSaving,
+  selection,
+  siteChrome,
+  onSave,
+  onUpdateBrand,
+  onUpdateFooter
+}) {
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update the visible portal chrome as you type. Save when it looks right.
+      </p>
+      {selection.type === "brand" ? (
+        <SiteBrandFields siteChrome={siteChrome} onUpdateBrand={onUpdateBrand} />
+      ) : (
+        <SiteFooterFields footer={siteChrome.footer || {}} focusField={selection.field} onUpdateFooter={onUpdateFooter} />
+      )}
+      <SiteChromeValidation errors={errors} />
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Site Chrome"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function SiteChromeVisualPanel({
+  errors,
+  isSaving,
+  siteChrome,
+  onSaveSiteChrome,
+  onUpdateBrand,
+  onUpdateFooter
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>Brand and footer</strong>
+        </div>
+      </div>
+      <p className="visual-editor-note">
+        These controls edit the current page brand lockup and the shared footer.
+      </p>
+      <SiteBrandFields siteChrome={siteChrome} onUpdateBrand={onUpdateBrand} />
+      <SiteFooterFields footer={siteChrome.footer || {}} onUpdateFooter={onUpdateFooter} />
+      <SiteChromeValidation errors={errors} />
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveSiteChrome}>
+          {isSaving ? "Saving" : "Save Site Chrome"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SiteBrandFields({ siteChrome, onUpdateBrand }) {
+  return (
+    <>
+      <label className="visual-editor-field">
+        <span>Brand Title</span>
+        <input value={siteChrome.brandTitle || ""} onChange={(event) => onUpdateBrand("brandTitle", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Logo Path</span>
+        <input value={siteChrome.brandLogo || ""} onChange={(event) => onUpdateBrand("brandLogo", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Brand Link</span>
+        <input value={siteChrome.brandHref || ""} onChange={(event) => onUpdateBrand("brandHref", event.target.value)} />
+      </label>
+    </>
+  );
+}
+
+function SiteFooterFields({ footer, focusField = "", onUpdateFooter }) {
+  return (
+    <>
+      <label className="visual-editor-field">
+        <span>Copyright</span>
+        <input autoFocus={focusField === "copyright"} value={footer.copyright || ""} onChange={(event) => onUpdateFooter("copyright", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Address</span>
+        <input autoFocus={focusField === "address"} value={footer.addressLabel || ""} onChange={(event) => onUpdateFooter("addressLabel", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Address Link</span>
+        <input value={footer.addressHref || ""} onChange={(event) => onUpdateFooter("addressHref", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Phone</span>
+        <input autoFocus={focusField === "phone"} value={footer.phoneLabel || ""} onChange={(event) => onUpdateFooter("phoneLabel", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Phone Link</span>
+        <input value={footer.phoneHref || ""} onChange={(event) => onUpdateFooter("phoneHref", event.target.value)} />
+      </label>
+    </>
+  );
+}
+
+function SiteChromeValidation({ errors }) {
+  return errors.length ? (
+    <div className="visual-editor-validation" role="status">
+      {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+    </div>
+  ) : null;
 }
 
 function SimpleLinksEditor({ links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {

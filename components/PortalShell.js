@@ -21,7 +21,7 @@ export function PortalShell({ mainHtml, overlaysHtml = "", page }) {
           <div className="portal-content">
             <QuickLinksStrip page={page} />
             <main className="page-content" dangerouslySetInnerHTML={{ __html: mainHtml }} />
-            <PortalFooter showLogout={page.showLogout} />
+            <PortalFooter page={page} />
           </div>
         </div>
       </div>

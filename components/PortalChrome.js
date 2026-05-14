@@ -58,12 +58,18 @@ function SectionNavLink({ link, editableType = "", editableId = "" }) {
 function SiteHeader({ page }) {
   return (
     <div className="site-header">
-      <a className="brand-link" href={page.brandHref} aria-label="KW Leading Edge portal home">
+      <a
+        className="brand-link"
+        href={page.brandHref}
+        aria-label="KW Leading Edge portal home"
+        data-editable-type="site-brand"
+        data-editable-id="brand"
+      >
         <div className="brand-lockup">
-          <img src={page.brandLogo} alt="Keller Williams Realty Leading Edge" className="brand-logo" />
+          <img src={page.brandLogo} alt="Keller Williams Realty Leading Edge" className="brand-logo" data-site-brand-logo />
         </div>
         <div className="brand-copy">
-          <strong>{page.brandTitle}</strong>
+          <strong data-site-brand-title>{page.brandTitle}</strong>
         </div>
       </a>
 
@@ -207,19 +213,28 @@ export function QuickLinksStrip({ page }) {
   );
 }
 
-export function PortalFooter({ showLogout }) {
+export function PortalFooter({ page }) {
+  const footer = page.footer || {};
+  const showLogout = page.showLogout;
+
   return (
-    <footer className="site-footer">
-      <p className="site-footer-item site-footer-item--left">
-        &copy; <span id="currentYear">2026</span> Keller Williams Leading Edge
+    <footer className="site-footer" data-editable-type="site-footer" data-editable-id="footer">
+      <p className="site-footer-item site-footer-item--left" data-editable-type="site-footer-field" data-editable-id="copyright">
+        {footer.copyright || "© 2026 Keller Williams Leading Edge"}
       </p>
       <p className="site-footer-item site-footer-item--center">
-        <a href="https://maps.google.com/?q=28+Thurber+Boulevard+Smithfield+RI+02917" target="_blank" rel="noreferrer">
-          28 Thurber Boulevard, Smithfield, RI 02917
+        <a
+          href={footer.addressHref || "#"}
+          target="_blank"
+          rel="noreferrer"
+          data-editable-type="site-footer-field"
+          data-editable-id="address"
+        >
+          {footer.addressLabel || ""}
         </a>
       </p>
       <p className={classNames("site-footer-item site-footer-item--right", showLogout && "site-footer-actions")}>
-        <a href="tel:+14013334900">401-333-4900</a>
+        <a href={footer.phoneHref || "#"} data-editable-type="site-footer-field" data-editable-id="phone">{footer.phoneLabel || ""}</a>
         {showLogout ? (
           <>
             <a className="site-footer-admin" href="/admin/visual/">
