@@ -12,6 +12,7 @@ import portalContent from "@/data/portal-content.json";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
+import { getPortalPageWithContent } from "@/lib/portal-navigation";
 
 function readLegacyHtml(source) {
   const sourcePath = resolveLegacySourcePath(source);
@@ -336,7 +337,7 @@ function replaceLegacyOfficeCards(mainHtml) {
 }
 
 export function LegacyPortalPage({ pageKey, source }) {
-  const page = portalPages[pageKey];
+  const page = getPortalPageWithContent(pageKey, portalPages[pageKey], portalContent);
   const { mainHtml, overlaysHtml } = getLegacyPortalFragments(source);
 
   return (

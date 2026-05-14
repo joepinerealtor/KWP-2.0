@@ -21,15 +21,20 @@ function classNames(...values) {
   return values.filter(Boolean).join(" ");
 }
 
-function SidebarButtonLink({ link }) {
+function SidebarButtonLink({ link, editableType = "", editableId = "" }) {
   return (
-    <a className={`button ${link.button || "secondary"} sidebar-button`} {...portalLinkProps(link)}>
+    <a
+      className={`button ${link.button || "secondary"} sidebar-button`}
+      data-editable-type={editableType || undefined}
+      data-editable-id={editableId || undefined}
+      {...portalLinkProps(link)}
+    >
       {link.label}
     </a>
   );
 }
 
-function SectionNavLink({ link }) {
+function SectionNavLink({ link, editableType = "", editableId = "" }) {
   const className = classNames(
     "section-nav-link",
     link.active && "is-active",
@@ -38,7 +43,13 @@ function SectionNavLink({ link }) {
   );
 
   return (
-    <a className={className} aria-current={link.active ? "page" : undefined} {...portalLinkProps(link)}>
+    <a
+      className={className}
+      aria-current={link.active ? "page" : undefined}
+      data-editable-type={editableType || undefined}
+      data-editable-id={editableId || undefined}
+      {...portalLinkProps(link)}
+    >
       {link.label}
     </a>
   );
@@ -72,8 +83,8 @@ function SidebarUtility({ utility }) {
   if (utility.type === "feedback") {
     return (
       <div className="sidebar-utility panel" aria-label={utility.ariaLabel}>
-        {utility.links.map((link) => (
-          <SidebarButtonLink key={link.label} link={link} />
+        {utility.links.map((link, index) => (
+          <SidebarButtonLink editableType="navigation-utility-link" editableId={String(index)} key={link.label} link={link} />
         ))}
       </div>
     );
@@ -83,8 +94,8 @@ function SidebarUtility({ utility }) {
     <section className="panel sidebar-utility">
       <p className="eyebrow small">{utility.title}</p>
       <div className="sidebar-link-stack">
-        {utility.links.map((link) => (
-          <SidebarButtonLink key={link.label} link={link} />
+        {utility.links.map((link, index) => (
+          <SidebarButtonLink editableType="navigation-utility-link" editableId={String(index)} key={link.label} link={link} />
         ))}
       </div>
     </section>
@@ -97,8 +108,8 @@ export function PortalSidebar({ page }) {
       <SiteHeader page={page} />
 
       <nav className="section-nav panel" aria-label={page.navLabel}>
-        {page.navLinks.map((link) => (
-          <SectionNavLink key={`${link.href}-${link.label}`} link={link} />
+        {page.navLinks.map((link, index) => (
+          <SectionNavLink editableType="navigation-link" editableId={String(index)} key={`${link.href}-${link.label}`} link={link} />
         ))}
       </nav>
 
@@ -113,8 +124,8 @@ export function MobileSidebarMenus({ page }) {
       <details className="mobile-menu-panel">
         <summary className="mobile-menu-summary">Menu</summary>
         <div className="mobile-menu-links">
-          {page.navLinks.map((link) => (
-            <SectionNavLink key={`${link.href}-${link.label}`} link={link} />
+          {page.navLinks.map((link, index) => (
+            <SectionNavLink editableType="navigation-link" editableId={String(index)} key={`${link.href}-${link.label}`} link={link} />
           ))}
         </div>
       </details>
@@ -122,8 +133,8 @@ export function MobileSidebarMenus({ page }) {
       <details className="mobile-menu-panel">
         <summary className="mobile-menu-summary">Quick Links</summary>
         <div className="mobile-menu-links">
-          {page.mobileQuickLinks.map((link) => (
-            <SidebarButtonLink key={link.label} link={link} />
+          {page.mobileQuickLinks.map((link, index) => (
+            <SidebarButtonLink editableType="navigation-mobile-link" editableId={String(index)} key={link.label} link={link} />
           ))}
         </div>
       </details>
@@ -162,6 +173,8 @@ function JoeAvailabilityCompact({ statusSrc }) {
 }
 
 export function QuickLinksStrip({ page }) {
+  const links = page.dailyAccessLinks || dailyAccessLinks;
+
   return (
     <section className="content-strip content-strip--sticky panel" aria-label="Daily tools">
       <div className="content-strip-row content-strip-row--links">
@@ -170,10 +183,12 @@ export function QuickLinksStrip({ page }) {
           <strong>Daily Access</strong>
         </div>
         <div className="content-strip-links">
-          {dailyAccessLinks.map((link) => (
+          {links.map((link, index) => (
             <a
               key={link.label}
               className={classNames("content-strip-link", link.primary && "content-strip-link-primary")}
+              data-editable-type="navigation-daily-link"
+              data-editable-id={String(index)}
               {...portalLinkProps(link)}
             >
               {link.label}

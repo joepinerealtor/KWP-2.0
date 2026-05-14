@@ -22,9 +22,12 @@ import {
   validateSourceFileDrafts,
   validateVendorDrafts
 } from "./contentDrafts";
+import { portalPages } from "@/lib/portal-config";
+import { getNavigationContent } from "@/lib/portal-navigation";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
+  { id: "navigation", label: "Navigation", target: "", status: "Page menu" },
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
   { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Training cards" },
   { id: "office", label: "Office", target: "#office", status: "Office module" },
@@ -174,6 +177,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
 
+  const pageDefaults = portalPages[currentEditorPage] || portalPages.home;
+  const navigation = getNavigationContent(content, currentEditorPage, pageDefaults);
+  const navigationErrors = useMemo(() => validateNavigationDraft(navigation), [navigation]);
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
   const leadership = content?.leadership || [];
@@ -263,6 +269,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedTechHelpPath = selectedTechHelpPathIndex >= 0 ? techHelpPaths[selectedTechHelpPathIndex] : null;
   const selectedTechPaperCut = selectedTechPaperCutIndex >= 0 ? techPaperCutCards[selectedTechPaperCutIndex] : null;
   const selectedTechAnswer = selectedTechAnswerIndex >= 0 ? techAnswerCards[selectedTechAnswerIndex] : null;
+  const selectedNavigationListKey = getNavigationListKeyFromItem(selectedItem);
+  const selectedNavigationItems = selectedNavigationListKey ? navigation[selectedNavigationListKey] || [] : [];
+  const selectedNavigationIndex = selectedNavigationListKey ? Number.parseInt(selectedItem?.editableId || "-1", 10) : -1;
+  const selectedNavigationLink = selectedNavigationIndex >= 0 ? selectedNavigationItems[selectedNavigationIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -441,6 +451,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       return;
     }
 
+    if (getNavigationListKeyFromItem(selectedItem)) {
+      setActiveSectionId("navigation");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this navigation link." } : currentItem);
+      return;
+    }
+
     if (selectedItem.type === "course-card" && selectedItem.editableId) {
       setActiveSectionId("productivityCourses");
       setEditingItemId(selectedItem.visualId);
@@ -603,6 +620,14 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     setStatusMessage(`${action} is part of the visual editor plan. This control is staged here so the editor feels like a true page editor as each action becomes live.`);
   }
 
+  function openNavigationEditor() {
+    setActiveSectionId("navigation");
+    setEditingItemId("");
+    setSelectedItem(null);
+    setError("");
+    setStatusMessage("Navigation tools are open for this page.");
+  }
+
   function addCardFromToolbar() {
     if (activeSectionId === "trainingResources") {
       addTrainingResource();
@@ -641,6 +666,88 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     }
 
     setToolbarStatus("Add Card");
+  }
+
+  function setNavigationList(listKey, nextItems) {
+    if (listKey === "dailyAccessLinks") {
+      setContent((currentContent) => ({
+        ...currentContent,
+        navigation: {
+          ...(currentContent.navigation || {}),
+          dailyAccessLinks: nextItems
+        }
+      }));
+      syncNavigationListPreview(listKey, nextItems);
+      setStatusMessage("");
+      setError("");
+      return;
+    }
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      navigation: {
+        ...(currentContent.navigation || {}),
+        [currentEditorPage]: {
+          ...((currentContent.navigation || {})[currentEditorPage] || {}),
+          [listKey]: nextItems
+        }
+      }
+    }));
+    syncNavigationListPreview(listKey, nextItems);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateNavigationLink(listKey, index, field, value) {
+    const currentItems = navigation[listKey] || [];
+    const nextItems = currentItems.map((link, linkIndex) => (
+      linkIndex === index
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    setNavigationList(listKey, nextItems);
+  }
+
+  function addNavigationLink(listKey) {
+    const currentItems = navigation[listKey] || [];
+    const nextItems = [
+      ...currentItems,
+      {
+        label: "New Link",
+        href: "#",
+        button: listKey === "navLinks" ? "" : "secondary",
+        external: false,
+        active: false,
+        page: false,
+        primary: false
+      }
+    ];
+
+    setNavigationList(listKey, nextItems);
+  }
+
+  function removeNavigationLink(listKey, index) {
+    setNavigationList(listKey, (navigation[listKey] || []).filter((_, linkIndex) => linkIndex !== index));
+    if (selectedItem && selectedItem.editableId === String(index) && getNavigationListKeyFromItem(selectedItem) === listKey) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+  }
+
+  function moveNavigationLink(listKey, index, direction) {
+    const nextIndex = index + direction;
+    const nextItems = [...(navigation[listKey] || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextItems.length) {
+      return;
+    }
+
+    [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
+    setNavigationList(listKey, nextItems);
   }
 
   function updateTrainingResourceSection(field, value) {
@@ -2194,6 +2301,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent([], "Tech Connect Joe support");
   }
 
+  async function saveNavigation() {
+    await saveContent(navigationErrors, "Navigation");
+  }
+
   async function saveBrandAssetSection(sectionLabel = "Brand assets heading") {
     await saveContent([], sectionLabel);
   }
@@ -2285,7 +2396,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Edit Sections")}>
             Edit Sections
           </button>
-          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Edit Navigation")}>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={openNavigationEditor}>
             Edit Navigation
           </button>
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Undo")}>
@@ -2441,6 +2552,17 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                     sourceFileErrors={sourceFileErrors}
                     sourceFiles={sourceFiles}
                   />
+                ) : activeSectionId === "navigation" ? (
+                  <NavigationVisualPanel
+                    errors={navigationErrors}
+                    isSaving={isSaving}
+                    navigation={navigation}
+                    onAddLink={addNavigationLink}
+                    onMoveLink={moveNavigationLink}
+                    onRemoveLink={removeNavigationLink}
+                    onSaveNavigation={saveNavigation}
+                    onUpdateLink={updateNavigationLink}
+                  />
                 ) : activeSectionId === "techConnect" ? (
                   <TechConnectVisualPanel
                     answerCards={techAnswerCards}
@@ -2513,6 +2635,11 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           leadershipSupport={leadershipSupport}
           leadershipSectionSettings={leadershipSection}
           alcSectionSettings={alcSection}
+          navigation={navigation}
+          navigationErrors={navigationErrors}
+          navigationListKey={selectedNavigationListKey}
+          navigationLink={selectedNavigationLink}
+          navigationLinkIndex={selectedNavigationIndex}
           vendor={selectedVendor}
           brandOverviewSectionSettings={brandOverviewSection}
           digitalLogo={selectedDigitalLogo}
@@ -2562,6 +2689,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onAddBrandAssetLink={addBrandAssetLink}
           onAddTechLink={addTechLink}
           onAddTechQuickLink={addTechQuickLink}
+          onAddNavigationLink={addNavigationLink}
           onAddOfficeChip={addOfficeChip}
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
@@ -2579,6 +2707,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onMoveTechLink={moveTechLink}
           onMoveTechPaperCut={moveTechPaperCut}
           onMoveTechQuickLink={moveTechQuickLink}
+          onMoveNavigationLink={moveNavigationLink}
           onRemoveOfficeChip={removeOfficeChip}
           onRemoveOfficeHoliday={removeOfficeHoliday}
           onRemoveOfficeHour={removeOfficeHour}
@@ -2590,6 +2719,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onRemoveTechLink={removeTechLink}
           onRemoveTechPaperCut={removeTechPaperCut}
           onRemoveTechQuickLink={removeTechQuickLink}
+          onRemoveNavigationLink={removeNavigationLink}
           onSaveOfficeCard={saveOfficeCard}
           onSaveOfficeSection={saveOfficeSection}
           onSaveRooms={saveRooms}
@@ -2599,6 +2729,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onSaveTechConnect={saveTechConnect}
           onSaveTechConnectSection={saveTechConnectSection}
           onSaveTechJoeSupport={saveTechJoeSupport}
+          onSaveNavigation={saveNavigation}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
           onUpdateOfficeHour={updateOfficeHour}
@@ -2617,6 +2748,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechPaperCut={updateTechPaperCut}
           onUpdateTechQuickLink={updateTechQuickLink}
           onUpdateTechSection={updateTechSection}
+          onUpdateNavigationLink={updateNavigationLink}
           onUpdateDigitalLogo={updateDigitalLogo}
           onUpdateMarketingTool={updateMarketingTool}
           onUpdateSourceFile={updateSourceFile}
@@ -2761,6 +2893,55 @@ function getOfficeCardKeyFromItem(item) {
   }
 
   return "";
+}
+
+function getNavigationListKeyFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (item.type === "navigation-link") {
+    return "navLinks";
+  }
+
+  if (item.type === "navigation-utility-link") {
+    return "sidebarUtilityLinks";
+  }
+
+  if (item.type === "navigation-mobile-link") {
+    return "mobileQuickLinks";
+  }
+
+  if (item.type === "navigation-daily-link") {
+    return "dailyAccessLinks";
+  }
+
+  return "";
+}
+
+function validateNavigationDraft(navigation) {
+  const errors = [];
+
+  [
+    ["navLinks", "Menu"],
+    ["sidebarUtilityLinks", "Sidebar Quick Link"],
+    ["mobileQuickLinks", "Mobile Quick Link"],
+    ["dailyAccessLinks", "Daily Access Link"]
+  ].forEach(([listKey, label]) => {
+    const links = navigation[listKey] || [];
+
+    links.forEach((link, index) => {
+      if (!String(link.label || "").trim()) {
+        errors.push(`${label} ${index + 1}: label is required.`);
+      }
+
+      if (!String(link.href || "").trim()) {
+        errors.push(`${label} ${index + 1}: link is required.`);
+      }
+    });
+  });
+
+  return errors;
 }
 
 function getVendorSectionKeyFromItem(item) {
@@ -3965,6 +4146,78 @@ function removeTechItemPreview(editableType, itemId) {
   element?.remove();
 }
 
+function syncNavigationListPreview(listKey, links) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  if (listKey === "navLinks") {
+    const desktopNav = document.querySelector(".portal-sidebar .section-nav");
+    const mobileNav = document.querySelector(".mobile-menu-panel:first-child .mobile-menu-links");
+    const desktopLinks = (links || []).map((link, index) => createNavigationLinkPreviewElement(link, index, "navigation-link", "section-nav-link"));
+    const mobileLinks = (links || []).map((link, index) => createNavigationLinkPreviewElement(link, index, "navigation-link", "section-nav-link"));
+
+    desktopNav?.replaceChildren(...desktopLinks);
+    mobileNav?.replaceChildren(...mobileLinks);
+    return;
+  }
+
+  if (listKey === "sidebarUtilityLinks") {
+    const utility = document.querySelector(".portal-sidebar .sidebar-utility");
+    const stack = utility?.querySelector(".sidebar-link-stack") || utility;
+
+    stack?.replaceChildren(...(links || []).map((link, index) => createNavigationLinkPreviewElement(link, index, "navigation-utility-link", `button ${link.button || "secondary"} sidebar-button`)));
+    return;
+  }
+
+  if (listKey === "mobileQuickLinks") {
+    const mobileQuickLinks = document.querySelector(".mobile-menu-panel:nth-child(2) .mobile-menu-links");
+
+    mobileQuickLinks?.replaceChildren(...(links || []).map((link, index) => createNavigationLinkPreviewElement(link, index, "navigation-mobile-link", `button ${link.button || "secondary"} sidebar-button`)));
+    return;
+  }
+
+  if (listKey === "dailyAccessLinks") {
+    const dailyLinks = document.querySelector(".content-strip-links");
+
+    dailyLinks?.replaceChildren(...(links || []).map((link, index) => createNavigationLinkPreviewElement(link, index, "navigation-daily-link", `content-strip-link${link.primary ? " content-strip-link-primary" : ""}`)));
+  }
+}
+
+function createNavigationLinkPreviewElement(link, index, editableType, className) {
+  const element = document.createElement("a");
+
+  element.className = className;
+  element.dataset.editableType = editableType;
+  element.dataset.editableId = String(index);
+  element.textContent = link.label || "";
+  element.href = link.href || "#";
+
+  if (link.active) {
+    element.classList.add("is-active");
+    element.setAttribute("aria-current", "page");
+  }
+
+  if (link.page) {
+    element.classList.add("section-nav-link--page");
+  }
+
+  if (link.primary) {
+    element.classList.add(editableType === "navigation-daily-link" ? "content-strip-link-primary" : "section-nav-link--primary");
+  }
+
+  if (link.external) {
+    element.target = "_blank";
+    element.rel = "noreferrer";
+  }
+
+  if (link.download) {
+    element.setAttribute("download", "");
+  }
+
+  return element;
+}
+
 function appendBrandAssetPreview(editableType, item) {
   if (!editableType || !item || typeof document === "undefined") {
     return;
@@ -4161,6 +4414,11 @@ function FloatingItemEditor({
   leadershipSupport,
   leadershipSectionSettings,
   alcSectionSettings,
+  navigation,
+  navigationErrors,
+  navigationListKey,
+  navigationLink,
+  navigationLinkIndex,
   vendor,
   brandOverviewSectionSettings,
   digitalLogo,
@@ -4208,6 +4466,7 @@ function FloatingItemEditor({
   onAddBrandAssetLink,
   onAddTechLink,
   onAddTechQuickLink,
+  onAddNavigationLink,
   onClose,
   onMoveLeader,
   onMoveVendor,
@@ -4220,6 +4479,7 @@ function FloatingItemEditor({
   onMoveTechLink,
   onMoveTechPaperCut,
   onMoveTechQuickLink,
+  onMoveNavigationLink,
   onRemoveOfficeChip,
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
@@ -4229,6 +4489,7 @@ function FloatingItemEditor({
   onRemoveTechLink,
   onRemoveTechPaperCut,
   onRemoveTechQuickLink,
+  onRemoveNavigationLink,
   onRemoveCard,
   onRemoveLeader,
   onRemoveVendor,
@@ -4244,6 +4505,7 @@ function FloatingItemEditor({
   onSaveTechConnect,
   onSaveTechConnectSection,
   onSaveTechJoeSupport,
+  onSaveNavigation,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
@@ -4264,6 +4526,7 @@ function FloatingItemEditor({
   onUpdateTechPaperCut,
   onUpdateTechQuickLink,
   onUpdateTechSection,
+  onUpdateNavigationLink,
   onUpdateDigitalLogo,
   onUpdateMarketingTool,
   onUpdateSourceFile,
@@ -4297,6 +4560,7 @@ function FloatingItemEditor({
   onUpdateSection
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
+  const isNavigationLinkEditable = Boolean(navigationListKey && navigationLink && navigationLinkIndex >= 0);
   const isOfficeCardEditable = (item.type === "office-card" || item.type === "office-chip") && officeCard && officeCardKey;
   const isTrainingResourceSectionEditable = (
     (item.type === "section" && item.sectionId === "training-resources") ||
@@ -4393,7 +4657,21 @@ function FloatingItemEditor({
         </button>
       </div>
 
-      {isTrainingResourceSectionEditable ? (
+      {isNavigationLinkEditable ? (
+        <NavigationLinkEditor
+          errors={navigationErrors}
+          index={navigationLinkIndex}
+          isSaving={isSaving}
+          link={navigationLink}
+          listKey={navigationListKey}
+          navigation={navigation}
+          onAddLink={onAddNavigationLink}
+          onMoveLink={onMoveNavigationLink}
+          onRemoveLink={onRemoveNavigationLink}
+          onSave={onSaveNavigation}
+          onUpdateLink={onUpdateNavigationLink}
+        />
+      ) : isTrainingResourceSectionEditable ? (
         <>
           <p className="visual-editor-note">
             Changes update the section heading preview as you type. Save when it looks right.
@@ -5384,6 +5662,84 @@ function TechCardEditor({
   );
 }
 
+function NavigationLinkEditor({
+  errors,
+  index,
+  isSaving,
+  link,
+  listKey,
+  navigation,
+  onAddLink,
+  onMoveLink,
+  onRemoveLink,
+  onSave,
+  onUpdateLink
+}) {
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update this navigation link preview as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>Label</span>
+        <input value={link.label || ""} onChange={(event) => onUpdateLink(listKey, index, "label", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Link</span>
+        <input value={link.href || ""} onChange={(event) => onUpdateLink(listKey, index, "href", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Button Style</span>
+        <select value={link.button || ""} onChange={(event) => onUpdateLink(listKey, index, "button", event.target.value)}>
+          <option value="">Menu link</option>
+          <option value="secondary">Secondary button</option>
+          <option value="primary">Primary button</option>
+        </select>
+      </label>
+      <div className="visual-editor-check-row">
+        <label>
+          <input type="checkbox" checked={Boolean(link.page)} onChange={(event) => onUpdateLink(listKey, index, "page", event.target.checked)} />
+          Page link
+        </label>
+        <label>
+          <input type="checkbox" checked={Boolean(link.primary)} onChange={(event) => onUpdateLink(listKey, index, "primary", event.target.checked)} />
+          Highlight
+        </label>
+        <label>
+          <input type="checkbox" checked={Boolean(link.external)} onChange={(event) => onUpdateLink(listKey, index, "external", event.target.checked)} />
+          Opens externally
+        </label>
+        <label>
+          <input type="checkbox" checked={Boolean(link.download)} onChange={(event) => onUpdateLink(listKey, index, "download", event.target.checked)} />
+          Download
+        </label>
+      </div>
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+        </div>
+      ) : null}
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Navigation"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={index === 0} onClick={() => onMoveLink(listKey, index, -1)}>
+          Up
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={index === (navigation[listKey] || []).length - 1} onClick={() => onMoveLink(listKey, index, 1)}>
+          Down
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onAddLink(listKey)}>
+          Add
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveLink(listKey, index)}>
+          Delete
+        </button>
+      </div>
+    </>
+  );
+}
+
 function SimpleLinksEditor({ links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
   return (
     <div className="visual-editor-repeat-list">
@@ -5763,6 +6119,142 @@ function AssetLinksEditor({ collectionKey, editableType, itemIndex, items, links
             </label>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function NavigationVisualPanel({
+  errors,
+  isSaving,
+  navigation,
+  onAddLink,
+  onMoveLink,
+  onRemoveLink,
+  onSaveNavigation,
+  onUpdateLink
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>Page navigation</strong>
+        </div>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <NavigationDetailsList
+        items={navigation.navLinks}
+        label="Sidebar Menu"
+        listKey="navLinks"
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+      />
+      <NavigationDetailsList
+        items={navigation.sidebarUtilityLinks}
+        label="Sidebar Quick Links"
+        listKey="sidebarUtilityLinks"
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+      />
+      <NavigationDetailsList
+        items={navigation.mobileQuickLinks}
+        label="Mobile Quick Links"
+        listKey="mobileQuickLinks"
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+      />
+      <NavigationDetailsList
+        items={navigation.dailyAccessLinks}
+        label="Daily Access Strip"
+        listKey="dailyAccessLinks"
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+      />
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveNavigation}>
+          {isSaving ? "Saving" : "Save Navigation"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NavigationDetailsList({ items, label, listKey, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
+  return (
+    <div className="visual-editor-course-list">
+      <div className="visual-editor-repeat-header">
+        <span>{label}</span>
+        <button type="button" onClick={() => onAddLink(listKey)}>Add Link</button>
+      </div>
+      {items.map((link, index) => (
+        <details className="visual-editor-course" key={`${link.href}-${link.label}-${index}`}>
+          <summary>
+            <span>{link.label || `Link ${index + 1}`}</span>
+            <strong>{link.external ? "External" : link.download ? "Download" : "Internal"}</strong>
+          </summary>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveLink(listKey, index, -1)}>Up</button>
+            <button type="button" disabled={index === items.length - 1} onClick={() => onMoveLink(listKey, index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveLink(listKey, index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={link.label || ""} onChange={(event) => onUpdateLink(listKey, index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={link.href || ""} onChange={(event) => onUpdateLink(listKey, index, "href", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Button Style</span>
+            <select value={link.button || ""} onChange={(event) => onUpdateLink(listKey, index, "button", event.target.value)}>
+              <option value="">Menu link</option>
+              <option value="secondary">Secondary button</option>
+              <option value="primary">Primary button</option>
+            </select>
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={Boolean(link.page)} onChange={(event) => onUpdateLink(listKey, index, "page", event.target.checked)} />
+              Page link
+            </label>
+            <label>
+              <input type="checkbox" checked={Boolean(link.primary)} onChange={(event) => onUpdateLink(listKey, index, "primary", event.target.checked)} />
+              Highlight
+            </label>
+            <label>
+              <input type="checkbox" checked={Boolean(link.external)} onChange={(event) => onUpdateLink(listKey, index, "external", event.target.checked)} />
+              Opens externally
+            </label>
+            <label>
+              <input type="checkbox" checked={Boolean(link.download)} onChange={(event) => onUpdateLink(listKey, index, "download", event.target.checked)} />
+              Download
+            </label>
+          </div>
+        </details>
       ))}
     </div>
   );

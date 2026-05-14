@@ -3999,6 +3999,9 @@ body.has-handbook-modal .page-content {
 .visual-editor-mode .asset-source-card,
 .visual-editor-mode .support-card,
 .visual-editor-mode .tech-overview-aside,
+.visual-editor-mode .section-nav-link,
+.visual-editor-mode .sidebar-button,
+.visual-editor-mode .content-strip-link,
 .visual-editor-mode .leadership-card {
   outline: 2px dashed rgba(180, 1, 1, 0.28);
   outline-offset: 5px;
@@ -4014,6 +4017,9 @@ body.has-handbook-modal .page-content {
 .visual-editor-mode .asset-source-card:hover,
 .visual-editor-mode .support-card:hover,
 .visual-editor-mode .tech-overview-aside:hover,
+.visual-editor-mode .section-nav-link:hover,
+.visual-editor-mode .sidebar-button:hover,
+.visual-editor-mode .content-strip-link:hover,
 .visual-editor-mode .leadership-card:hover {
   outline-color: rgba(180, 1, 1, 0.68);
 }
