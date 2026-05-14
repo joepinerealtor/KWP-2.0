@@ -14,6 +14,7 @@ import { getTechConnectContent } from "@/lib/tech-connect-content";
 import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
 import { getCustomSectionsForPage } from "@/lib/custom-sections";
+import { getOverviewContent } from "@/lib/overview-content";
 import { getPortalPageWithContent } from "@/lib/portal-navigation";
 
 function readLegacyHtml(source) {
@@ -81,7 +82,7 @@ function getLegacyPortalFragments(source) {
 
 function hydrateLegacyMainHtml(source, mainHtml) {
   if (source === "index.html") {
-    return appendCustomSections("home", replaceLegacyCourseGrid(replaceLegacyTrainingResourceGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml))))));
+    return appendCustomSections("home", replaceLegacyCourseGrid(replaceLegacyTrainingResourceGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(replaceLegacyOverview(mainHtml)))))));
   }
 
   if (source === "brand-assets.html") {
@@ -93,6 +94,63 @@ function hydrateLegacyMainHtml(source, mainHtml) {
   }
 
   return mainHtml;
+}
+
+function replaceLegacyOverview(mainHtml) {
+  const overview = getOverviewContent(portalContent);
+  const legacyTitlePattern = /(<div class="dashboard-title-block">\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h1>[\s\S]*?<\/h1>\s*<p class="dashboard-summary">[\s\S]*?<\/p>/;
+  const legacyDailyAccessPattern = /<article class="dashboard-status-card dashboard-status-card--actions">[\s\S]*?<\/article>/;
+  const legacyAgendaPattern = /<article class="dashboard-status-card dashboard-status-card--agenda">[\s\S]*?<\/article>/;
+  const legacyRatesHeadPattern = /<span class="dashboard-head-market-kicker">Interest Rates<\/span>\s*<strong class="dashboard-head-market-title">Mortgage Interest Rates<\/strong>/;
+  const legacyMarketHeadPattern = /<span class="dashboard-head-market-kicker">RI Market Trends<\/span>\s*<strong class="dashboard-head-market-title">Rhode Island Market<\/strong>/;
+  const titleHtml = `<p class="eyebrow small" data-editable-type="overview-heading" data-editable-id="eyebrow">${escapeHtml(overview.eyebrow)}</p><h1 data-editable-type="overview-heading" data-editable-id="title">${escapeHtml(overview.title)}</h1><p class="dashboard-summary" data-editable-type="overview-heading" data-editable-id="summary">${escapeHtml(overview.summary)}</p>`;
+  const dailyAccessHtml = `<article class="dashboard-status-card dashboard-status-card--actions" data-editable-type="overview-card" data-editable-id="dailyAccess">
+                  <span class="card-tag">${escapeHtml(overview.dailyAccess.tag)}</span>
+                  <strong>${escapeHtml(overview.dailyAccess.title)}</strong>
+                  <div class="dashboard-quick-grid">
+                    ${createOverviewMiniLinksHtml(overview.dailyAccess.links, "dailyAccess")}
+                  </div>
+                </article>`;
+  const agendaHtml = `<article class="dashboard-status-card dashboard-status-card--agenda" data-editable-type="overview-card" data-editable-id="agenda">
+                <span class="card-tag">${escapeHtml(overview.agenda.tag)}</span>
+                <strong>${escapeHtml(overview.agenda.title)}</strong>
+                <div class="dashboard-agenda-shell">
+                  <div
+                    class="dashboard-agenda-feed"
+                    data-tockify-calendar="leading.edge"
+                    data-tockify-component="mini"
+                    data-tockify-view="agenda"
+                    data-tockify-maxevents="3"
+                    data-tockify-shownavbar="false"
+                    aria-label="Upcoming office training and events"
+                  ></div>
+                </div>
+                <div class="dashboard-agenda-links">
+                  ${createOverviewMiniLinksHtml(overview.agenda.links, "agenda")}
+                </div>
+              </article>`;
+  const ratesHeadHtml = `<span class="dashboard-head-market-kicker" data-editable-type="overview-market" data-editable-id="rates">${escapeHtml(overview.rates.eyebrow)}</span><strong class="dashboard-head-market-title" data-editable-type="overview-market" data-editable-id="rates">${escapeHtml(overview.rates.title)}</strong>`;
+  const marketHeadHtml = `<span class="dashboard-head-market-kicker" data-editable-type="overview-market" data-editable-id="market">${escapeHtml(overview.market.eyebrow)}</span><strong class="dashboard-head-market-title" data-editable-type="overview-market" data-editable-id="market">${escapeHtml(overview.market.title)}</strong>`;
+
+  return mainHtml
+    .replace(legacyTitlePattern, `$1${titleHtml}`)
+    .replace(legacyDailyAccessPattern, dailyAccessHtml)
+    .replace(legacyAgendaPattern, agendaHtml)
+    .replace(legacyRatesHeadPattern, ratesHeadHtml)
+    .replace(legacyMarketHeadPattern, marketHeadHtml);
+}
+
+function createOverviewMiniLinksHtml(links = [], cardKey) {
+  return links
+    .filter((link) => link.active !== false)
+    .map((link, index) => {
+      const externalAttributes = link.external ? ' target="_blank" rel="noreferrer"' : "";
+      const calendarAttributes = link.calendarModal ? ' data-calendar-modal-trigger aria-haspopup="dialog" aria-controls="fullCalendarModal"' : "";
+      const downloadAttribute = link.download ? " download" : "";
+
+      return `<a class="dashboard-mini-link" data-editable-type="overview-link" data-editable-id="${escapeHtmlAttribute(`${cardKey}:${index}`)}" href="${escapeHtmlAttribute(link.href || "#")}"${externalAttributes}${downloadAttribute}${calendarAttributes}>${escapeHtml(link.label || "")}</a>`;
+    })
+    .join("\n                    ");
 }
 
 function appendCustomSections(pageKey, mainHtml) {

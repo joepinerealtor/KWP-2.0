@@ -144,7 +144,13 @@ export function MobileSidebarMenus({ page }) {
 
 function JoeAvailabilityCompact({ statusSrc }) {
   return (
-    <div className="content-strip-tech-support" data-joe-availability-card data-joe-availability-src={statusSrc}>
+    <div
+      className="content-strip-tech-support"
+      data-editable-type="joe-availability-card"
+      data-editable-id="joeAvailability"
+      data-joe-availability-card
+      data-joe-availability-src={statusSrc}
+    >
       <div className="joe-availability-panel joe-availability-panel--compact" data-status="unavailable" aria-live="polite">
         <div className="joe-availability-compact-copy">
           <span className="joe-availability-compact-kicker">Tech Help with Joe</span>

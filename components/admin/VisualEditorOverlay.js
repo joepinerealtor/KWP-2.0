@@ -24,13 +24,14 @@ import {
 } from "./contentDrafts";
 import { portalPages } from "@/lib/portal-config";
 import { createCustomSectionCardId, createCustomSectionId, getCustomSectionsForPage } from "@/lib/custom-sections";
+import { getOverviewContent } from "@/lib/overview-content";
 import { getNavigationContent } from "@/lib/portal-navigation";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
   { id: "navigation", label: "Navigation", target: "", status: "Page menu" },
   { id: "customSections", label: "Custom Sections", target: "", status: "Section builder" },
-  { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
+  { id: "overview", label: "Overview", target: "#overview", status: "Homepage intro" },
   { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Training cards" },
   { id: "office", label: "Office", target: "#office", status: "Office module" },
   { id: "rooms", label: "Rooms", target: "#conference-rooms", status: "Calendar module" },
@@ -183,6 +184,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const pageDefaults = portalPages[currentEditorPage] || portalPages.home;
   const navigation = getNavigationContent(content, currentEditorPage, pageDefaults);
   const navigationErrors = useMemo(() => validateNavigationDraft(navigation), [navigation]);
+  const overview = getOverviewContent(content);
+  const overviewErrors = useMemo(() => validateOverviewDraft(overview), [overview]);
   const customSections = getCustomSectionsForPage(content, currentEditorPage);
   const customSectionErrors = useMemo(() => validateCustomSectionsDraft(customSections), [customSections]);
   const courses = content?.courses || [];
@@ -278,6 +281,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedNavigationItems = selectedNavigationListKey ? navigation[selectedNavigationListKey] || [] : [];
   const selectedNavigationIndex = selectedNavigationListKey ? Number.parseInt(selectedItem?.editableId || "-1", 10) : -1;
   const selectedNavigationLink = selectedNavigationIndex >= 0 ? selectedNavigationItems[selectedNavigationIndex] : null;
+  const selectedOverviewItem = getOverviewSelectionFromItem(selectedItem);
   const selectedCustomSectionId = getCustomSectionIdFromItem(selectedItem);
   const selectedCustomSectionIndex = selectedCustomSectionId ? customSections.findIndex((section) => section.id === selectedCustomSectionId) : -1;
   const selectedCustomSection = selectedCustomSectionIndex >= 0 ? customSections[selectedCustomSectionIndex] : null;
@@ -471,6 +475,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       return;
     }
 
+    if (getOverviewSelectionFromItem(selectedItem)) {
+      setActiveSectionId("overview");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this overview content." } : currentItem);
+      return;
+    }
+
     if (getCustomSectionIdFromItem(selectedItem)) {
       setActiveSectionId("customSections");
       setEditingItemId(selectedItem.visualId);
@@ -570,6 +581,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       setActiveSectionId("techConnect");
       setEditingItemId(selectedItem.visualId);
       setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the Tech Connect Joe support block." } : currentItem);
+      return;
+    }
+
+    if (selectedItem.type === "joe-availability-card") {
+      setActiveSectionId("techConnect");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the shared Joe availability status." } : currentItem);
       return;
     }
 
@@ -796,6 +814,85 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
     [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
     setNavigationList(listKey, nextItems);
+  }
+
+  function setOverview(nextOverview) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        overview: nextOverview
+      }
+    }));
+    syncOverviewPreview(nextOverview);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateOverviewField(field, value) {
+    setOverview({
+      ...overview,
+      [field]: value
+    });
+  }
+
+  function updateOverviewGroup(groupKey, field, value) {
+    setOverview({
+      ...overview,
+      [groupKey]: {
+        ...(overview[groupKey] || {}),
+        [field]: value
+      }
+    });
+  }
+
+  function updateOverviewLink(groupKey, index, field, value) {
+    const group = overview[groupKey] || {};
+    const nextLinks = (group.links || []).map((link, linkIndex) => (
+      linkIndex === index
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    updateOverviewGroup(groupKey, "links", nextLinks);
+  }
+
+  function addOverviewLink(groupKey) {
+    const group = overview[groupKey] || {};
+    const nextLinks = [
+      ...(group.links || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: false,
+        active: true
+      }
+    ];
+
+    updateOverviewGroup(groupKey, "links", nextLinks);
+  }
+
+  function removeOverviewLink(groupKey, index) {
+    const group = overview[groupKey] || {};
+    const nextLinks = (group.links || []).filter((_, linkIndex) => linkIndex !== index);
+
+    updateOverviewGroup(groupKey, "links", nextLinks);
+  }
+
+  function moveOverviewLink(groupKey, index, direction) {
+    const group = overview[groupKey] || {};
+    const nextIndex = index + direction;
+    const nextLinks = [...(group.links || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[index], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[index]];
+    updateOverviewGroup(groupKey, "links", nextLinks);
   }
 
   function setCustomSections(nextSections) {
@@ -2543,6 +2640,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent(navigationErrors, "Navigation");
   }
 
+  async function saveOverview() {
+    await saveContent(overviewErrors, "Overview");
+  }
+
   async function saveCustomSections() {
     await saveContent(customSectionErrors, "Custom sections");
   }
@@ -2904,6 +3005,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           navigationListKey={selectedNavigationListKey}
           navigationLink={selectedNavigationLink}
           navigationLinkIndex={selectedNavigationIndex}
+          overview={overview}
+          overviewErrors={overviewErrors}
+          overviewSelection={selectedOverviewItem}
           customSection={selectedCustomSection}
           customSectionCard={selectedCustomSectionCard}
           customSectionCardIndex={selectedCustomSectionCardIndex}
@@ -2960,6 +3064,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onAddTechLink={addTechLink}
           onAddTechQuickLink={addTechQuickLink}
           onAddNavigationLink={addNavigationLink}
+          onAddOverviewLink={addOverviewLink}
           onAddCustomSectionCard={addCustomSectionCard}
           onAddCustomSectionCardLink={addCustomSectionCardLink}
           onAddOfficeChip={addOfficeChip}
@@ -2980,6 +3085,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onMoveTechPaperCut={moveTechPaperCut}
           onMoveTechQuickLink={moveTechQuickLink}
           onMoveNavigationLink={moveNavigationLink}
+          onMoveOverviewLink={moveOverviewLink}
           onMoveCustomSection={moveCustomSection}
           onMoveCustomSectionCard={moveCustomSectionCard}
           onMoveCustomSectionCardLink={moveCustomSectionCardLink}
@@ -2995,6 +3101,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onRemoveTechPaperCut={removeTechPaperCut}
           onRemoveTechQuickLink={removeTechQuickLink}
           onRemoveNavigationLink={removeNavigationLink}
+          onRemoveOverviewLink={removeOverviewLink}
           onRemoveCustomSection={removeCustomSection}
           onRemoveCustomSectionCard={removeCustomSectionCard}
           onRemoveCustomSectionCardLink={removeCustomSectionCardLink}
@@ -3008,6 +3115,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onSaveTechConnectSection={saveTechConnectSection}
           onSaveTechJoeSupport={saveTechJoeSupport}
           onSaveNavigation={saveNavigation}
+          onSaveOverview={saveOverview}
           onSaveCustomSections={saveCustomSections}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
@@ -3028,6 +3136,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechQuickLink={updateTechQuickLink}
           onUpdateTechSection={updateTechSection}
           onUpdateNavigationLink={updateNavigationLink}
+          onUpdateOverviewField={updateOverviewField}
+          onUpdateOverviewGroup={updateOverviewGroup}
+          onUpdateOverviewLink={updateOverviewLink}
           onUpdateCustomSection={updateCustomSection}
           onUpdateCustomSectionCard={updateCustomSectionCard}
           onUpdateCustomSectionCardLink={updateCustomSectionCardLink}
@@ -3199,6 +3310,106 @@ function getNavigationListKeyFromItem(item) {
   }
 
   return "";
+}
+
+function getOverviewSelectionFromItem(item) {
+  if (!item) {
+    return null;
+  }
+
+  if (
+    item.type === "section" && item.sectionId === "overview" ||
+    item.type === "overview-heading"
+  ) {
+    return { type: "heading" };
+  }
+
+  if (item.type === "overview-market") {
+    return {
+      type: "market",
+      groupKey: item.editableId === "market" ? "market" : "rates"
+    };
+  }
+
+  if (item.type === "overview-card") {
+    return {
+      type: "card",
+      groupKey: item.editableId || "dailyAccess"
+    };
+  }
+
+  if (item.type === "overview-link") {
+    const [groupKey, linkIndex] = String(item.editableId || "").split(":");
+
+    return {
+      type: "card",
+      groupKey: groupKey || "dailyAccess",
+      linkIndex: Number.parseInt(linkIndex || "-1", 10)
+    };
+  }
+
+  return null;
+}
+
+function validateOverviewDraft(overview) {
+  const errors = [];
+
+  [
+    ["eyebrow", "Overview eyebrow"],
+    ["title", "Overview title"],
+    ["summary", "Overview description"]
+  ].forEach(([field, label]) => {
+    if (!String(overview[field] || "").trim()) {
+      errors.push(`${label} is required.`);
+    }
+  });
+
+  [
+    ["dailyAccess", "Daily Access"],
+    ["agenda", "Office Agenda"]
+  ].forEach(([groupKey, label]) => {
+    const group = overview[groupKey] || {};
+
+    if (!String(group.tag || "").trim()) {
+      errors.push(`${label}: tag is required.`);
+    }
+
+    if (!String(group.title || "").trim()) {
+      errors.push(`${label}: title is required.`);
+    }
+
+    if (!Array.isArray(group.links)) {
+      errors.push(`${label}: links must be a list.`);
+      return;
+    }
+
+    group.links.forEach((link, index) => {
+      if (!String(link.label || "").trim()) {
+        errors.push(`${label} link ${index + 1}: label is required.`);
+      }
+
+      if (!String(link.href || "").trim()) {
+        errors.push(`${label} link ${index + 1}: link is required.`);
+      }
+    });
+  });
+
+  [
+    ["rates", "Interest Rates"],
+    ["market", "Market Trends"]
+  ].forEach(([groupKey, label]) => {
+    const group = overview[groupKey] || {};
+
+    if (!String(group.eyebrow || "").trim()) {
+      errors.push(`${label}: eyebrow is required.`);
+    }
+
+    if (!String(group.title || "").trim()) {
+      errors.push(`${label}: title is required.`);
+    }
+  });
+
+  return errors;
 }
 
 function getCustomSectionIdFromItem(item) {
@@ -4301,6 +4512,91 @@ function createBrandAssetLinkPreviewElement(link) {
   return element;
 }
 
+function syncOverviewPreview(overview) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  setText('[data-editable-type="overview-heading"][data-editable-id="eyebrow"]', overview.eyebrow);
+  setText('[data-editable-type="overview-heading"][data-editable-id="title"]', overview.title);
+  setText('[data-editable-type="overview-heading"][data-editable-id="summary"]', overview.summary);
+  syncOverviewCardPreview("dailyAccess", overview.dailyAccess);
+  syncOverviewCardPreview("agenda", overview.agenda);
+  syncOverviewMarketPreview("rates", overview.rates);
+  syncOverviewMarketPreview("market", overview.market);
+}
+
+function syncOverviewCardPreview(groupKey, group) {
+  const safeGroupKey = String(groupKey).replace(/"/g, '\\"');
+  const card = document.querySelector(`[data-editable-type="overview-card"][data-editable-id="${safeGroupKey}"]`);
+
+  if (!card) {
+    return;
+  }
+
+  const tag = card.querySelector(".card-tag");
+  const title = card.querySelector("strong");
+  const links = card.querySelector(groupKey === "agenda" ? ".dashboard-agenda-links" : ".dashboard-quick-grid");
+
+  if (tag) {
+    tag.textContent = group?.tag || "";
+  }
+
+  if (title) {
+    title.textContent = group?.title || "";
+  }
+
+  links?.replaceChildren(...(group?.links || []).filter((link) => link.active !== false).map((link, index) => createOverviewLinkPreviewElement(link, groupKey, index)));
+}
+
+function syncOverviewMarketPreview(groupKey, group) {
+  const safeGroupKey = String(groupKey).replace(/"/g, '\\"');
+  const elements = document.querySelectorAll(`[data-editable-type="overview-market"][data-editable-id="${safeGroupKey}"]`);
+
+  if (elements[0]) {
+    elements[0].textContent = group?.eyebrow || "";
+  }
+
+  if (elements[1]) {
+    elements[1].textContent = group?.title || "";
+  }
+}
+
+function createOverviewLinkPreviewElement(link, groupKey, index) {
+  const element = document.createElement("a");
+
+  element.className = "dashboard-mini-link";
+  element.dataset.editableType = "overview-link";
+  element.dataset.editableId = `${groupKey}:${index}`;
+  element.textContent = link.label || "";
+  element.href = link.href || "#";
+
+  if (link.external) {
+    element.target = "_blank";
+    element.rel = "noreferrer";
+  }
+
+  if (link.download) {
+    element.setAttribute("download", "");
+  }
+
+  if (link.calendarModal) {
+    element.dataset.calendarModalTrigger = "";
+    element.setAttribute("aria-haspopup", "dialog");
+    element.setAttribute("aria-controls", "fullCalendarModal");
+  }
+
+  return element;
+}
+
+function setText(selector, value) {
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value || "";
+  }
+}
+
 function syncTechSectionPreview(sectionKey, field, value) {
   if (typeof document === "undefined") {
     return;
@@ -4906,6 +5202,9 @@ function FloatingItemEditor({
   navigationListKey,
   navigationLink,
   navigationLinkIndex,
+  overview,
+  overviewErrors,
+  overviewSelection,
   customSection,
   customSectionCard,
   customSectionCardIndex,
@@ -4962,6 +5261,7 @@ function FloatingItemEditor({
   onAddTechLink,
   onAddTechQuickLink,
   onAddNavigationLink,
+  onAddOverviewLink,
   onClose,
   onMoveLeader,
   onMoveVendor,
@@ -4978,6 +5278,7 @@ function FloatingItemEditor({
   onMoveTechPaperCut,
   onMoveTechQuickLink,
   onMoveNavigationLink,
+  onMoveOverviewLink,
   onRemoveOfficeChip,
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
@@ -4991,6 +5292,7 @@ function FloatingItemEditor({
   onRemoveTechPaperCut,
   onRemoveTechQuickLink,
   onRemoveNavigationLink,
+  onRemoveOverviewLink,
   onRemoveCard,
   onRemoveLeader,
   onRemoveVendor,
@@ -5008,6 +5310,7 @@ function FloatingItemEditor({
   onSaveTechConnectSection,
   onSaveTechJoeSupport,
   onSaveNavigation,
+  onSaveOverview,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
@@ -5032,6 +5335,9 @@ function FloatingItemEditor({
   onUpdateTechQuickLink,
   onUpdateTechSection,
   onUpdateNavigationLink,
+  onUpdateOverviewField,
+  onUpdateOverviewGroup,
+  onUpdateOverviewLink,
   onUpdateDigitalLogo,
   onUpdateMarketingTool,
   onUpdateSourceFile,
@@ -5066,6 +5372,7 @@ function FloatingItemEditor({
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
   const isNavigationLinkEditable = Boolean(navigationListKey && navigationLink && navigationLinkIndex >= 0);
+  const isOverviewEditable = Boolean(overviewSelection && overview);
   const isCustomSectionCardEditable = item.type === "custom-section-card" && customSection && customSectionCard && customSectionIndex >= 0 && customSectionCardIndex >= 0;
   const isCustomSectionEditable = !isCustomSectionCardEditable && Boolean(getCustomSectionIdFromItem(item) && customSection && customSectionIndex >= 0);
   const isOfficeCardEditable = (item.type === "office-card" || item.type === "office-chip") && officeCard && officeCardKey;
@@ -5095,6 +5402,7 @@ function FloatingItemEditor({
   const isTechPaperCutEditable = item.type === "tech-papercut-card" && selectedTechPaperCut && selectedTechPaperCutIndex >= 0;
   const isTechAnswerEditable = item.type === "tech-answer-card" && selectedTechAnswer && selectedTechAnswerIndex >= 0;
   const isTechJoeSupportEditable = item.type === "tech-joe-support";
+  const isJoeAvailabilityEditable = item.type === "joe-availability-card";
   const isTechQuickLinksEditable = item.type === "tech-quick-links";
   const techSectionKey = (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary")
     ? getTechSectionKeyFromItem(item)
@@ -5177,6 +5485,20 @@ function FloatingItemEditor({
           onRemoveLink={onRemoveNavigationLink}
           onSave={onSaveNavigation}
           onUpdateLink={onUpdateNavigationLink}
+        />
+      ) : isOverviewEditable ? (
+        <OverviewFloatingEditor
+          errors={overviewErrors}
+          isSaving={isSaving}
+          overview={overview}
+          selection={overviewSelection}
+          onAddLink={onAddOverviewLink}
+          onMoveLink={onMoveOverviewLink}
+          onRemoveLink={onRemoveOverviewLink}
+          onSave={onSaveOverview}
+          onUpdateField={onUpdateOverviewField}
+          onUpdateGroup={onUpdateOverviewGroup}
+          onUpdateLink={onUpdateOverviewLink}
         />
       ) : isCustomSectionEditable ? (
         <CustomSectionFloatingEditor
@@ -5384,57 +5706,14 @@ function FloatingItemEditor({
             <span>Button Link</span>
             <input value={leadershipSupport.buttonHref || ""} onChange={(event) => onUpdateLeadershipSupport("buttonHref", event.target.value)} />
           </label>
-          <div className="visual-editor-repeat-list">
-            <div className="visual-editor-repeat-header">
-              <span>Shared Availability</span>
-            </div>
-            <p className="visual-editor-note">
-              This controls every Joe availability card on the portal.
-            </p>
-            <div className="visual-editor-check-row">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={joeAvailability.trackerEnabled !== false}
-                  onChange={(event) => onUpdateJoeAvailabilityTracker(event.target.checked)}
-                />
-                Show availability tracker
-              </label>
-            </div>
-            {joeAvailability.trackerEnabled !== false ? (
-              <div className="visual-editor-check-row">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={joeAvailability.status === "available"}
-                    onChange={(event) => onUpdateJoeAvailabilityStatus(event.target.checked)}
-                  />
-                  Joe is available
-                </label>
-              </div>
-            ) : null}
-            <label className="visual-editor-field">
-              <span>Available Label</span>
-              <input value={joeAvailability.availableNowLabel || ""} onChange={(event) => onUpdateJoeAvailability("availableNowLabel", event.target.value)} />
-            </label>
-            <label className="visual-editor-field">
-              <span>Available Summary</span>
-              <input value={joeAvailability.availableNowSummary || ""} onChange={(event) => onUpdateJoeAvailability("availableNowSummary", event.target.value)} />
-            </label>
-            <label className="visual-editor-field">
-              <span>Unavailable Label</span>
-              <input value={joeAvailability.unavailableLabel || ""} onChange={(event) => onUpdateJoeAvailability("unavailableLabel", event.target.value)} />
-            </label>
-            <label className="visual-editor-field">
-              <span>Unavailable Summary</span>
-              <input value={joeAvailability.noSlotsSummary || ""} onChange={(event) => onUpdateJoeAvailability("noSlotsSummary", event.target.value)} />
-            </label>
-            <div className="visual-editor-panel-actions">
-              <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={isSaving} onClick={onSaveJoeAvailability}>
-                {isSaving ? "Saving" : "Save Availability"}
-              </button>
-            </div>
-          </div>
+          <JoeAvailabilityEditor
+            isSaving={isSaving}
+            joeAvailability={joeAvailability}
+            onSaveJoeAvailability={onSaveJoeAvailability}
+            onUpdateJoeAvailability={onUpdateJoeAvailability}
+            onUpdateJoeAvailabilityStatus={onUpdateJoeAvailabilityStatus}
+            onUpdateJoeAvailabilityTracker={onUpdateJoeAvailabilityTracker}
+          />
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveLeadershipSupport}>
               {isSaving ? "Saving" : "Save Tech Help Card"}
@@ -5508,6 +5787,14 @@ function FloatingItemEditor({
             <span>Button Link</span>
             <input value={techJoeSupport.buttonHref || ""} onChange={(event) => onUpdateTechJoeSupport("buttonHref", event.target.value)} />
           </label>
+          <JoeAvailabilityEditor
+            isSaving={isSaving}
+            joeAvailability={joeAvailability}
+            onSaveJoeAvailability={onSaveJoeAvailability}
+            onUpdateJoeAvailability={onUpdateJoeAvailability}
+            onUpdateJoeAvailabilityStatus={onUpdateJoeAvailabilityStatus}
+            onUpdateJoeAvailabilityTracker={onUpdateJoeAvailabilityTracker}
+          />
           <div className="visual-editor-panel-actions">
             <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveTechJoeSupport}>
               {isSaving ? "Saving" : "Save Support Card"}
@@ -5515,6 +5802,15 @@ function FloatingItemEditor({
             {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
           </div>
         </>
+      ) : isJoeAvailabilityEditable ? (
+        <JoeAvailabilityEditor
+          isSaving={isSaving}
+          joeAvailability={joeAvailability}
+          onSaveJoeAvailability={onSaveJoeAvailability}
+          onUpdateJoeAvailability={onUpdateJoeAvailability}
+          onUpdateJoeAvailabilityStatus={onUpdateJoeAvailabilityStatus}
+          onUpdateJoeAvailabilityTracker={onUpdateJoeAvailabilityTracker}
+        />
       ) : isTechQuickLinksEditable ? (
         <>
           <p className="visual-editor-note">
@@ -6115,6 +6411,228 @@ function FloatingItemEditor({
       )}
     </div>
   );
+}
+
+function JoeAvailabilityEditor({
+  isSaving,
+  joeAvailability,
+  onSaveJoeAvailability,
+  onUpdateJoeAvailability,
+  onUpdateJoeAvailabilityStatus,
+  onUpdateJoeAvailabilityTracker
+}) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Shared Availability</span>
+      </div>
+      <p className="visual-editor-note">
+        This controls every Joe availability card on the portal.
+      </p>
+      <div className="visual-editor-check-row">
+        <label>
+          <input
+            type="checkbox"
+            checked={joeAvailability.trackerEnabled !== false}
+            onChange={(event) => onUpdateJoeAvailabilityTracker(event.target.checked)}
+          />
+          Show availability tracker
+        </label>
+      </div>
+      {joeAvailability.trackerEnabled !== false ? (
+        <div className="visual-editor-check-row">
+          <label>
+            <input
+              type="checkbox"
+              checked={joeAvailability.status === "available"}
+              onChange={(event) => onUpdateJoeAvailabilityStatus(event.target.checked)}
+            />
+            Joe is available
+          </label>
+        </div>
+      ) : null}
+      <label className="visual-editor-field">
+        <span>Available Label</span>
+        <input value={joeAvailability.availableNowLabel || ""} onChange={(event) => onUpdateJoeAvailability("availableNowLabel", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Available Summary</span>
+        <input value={joeAvailability.availableNowSummary || ""} onChange={(event) => onUpdateJoeAvailability("availableNowSummary", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Unavailable Label</span>
+        <input value={joeAvailability.unavailableLabel || ""} onChange={(event) => onUpdateJoeAvailability("unavailableLabel", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Unavailable Summary</span>
+        <input value={joeAvailability.noSlotsSummary || ""} onChange={(event) => onUpdateJoeAvailability("noSlotsSummary", event.target.value)} />
+      </label>
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={isSaving} onClick={onSaveJoeAvailability}>
+          {isSaving ? "Saving" : "Save Availability"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OverviewFloatingEditor({
+  errors,
+  isSaving,
+  overview,
+  selection,
+  onAddLink,
+  onMoveLink,
+  onRemoveLink,
+  onSave,
+  onUpdateField,
+  onUpdateGroup,
+  onUpdateLink
+}) {
+  if (selection.type === "market") {
+    const group = overview[selection.groupKey] || {};
+    const label = selection.groupKey === "rates" ? "Interest Rates" : "Market Trends";
+
+    return (
+      <>
+        <p className="visual-editor-note">
+          Changes update this overview market heading as you type. Save when it looks right.
+        </p>
+        <label className="visual-editor-field">
+          <span>Eyebrow</span>
+          <input value={group.eyebrow || ""} onChange={(event) => onUpdateGroup(selection.groupKey, "eyebrow", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Title</span>
+          <input value={group.title || ""} onChange={(event) => onUpdateGroup(selection.groupKey, "title", event.target.value)} />
+        </label>
+        <OverviewValidation errors={errors} />
+        <div className="visual-editor-panel-actions">
+          <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+            {isSaving ? "Saving" : `Save ${label}`}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (selection.type === "card") {
+    const groupKey = selection.groupKey === "agenda" ? "agenda" : "dailyAccess";
+    const group = overview[groupKey] || {};
+    const label = groupKey === "agenda" ? "Office Agenda" : "Daily Access";
+
+    return (
+      <>
+        <p className="visual-editor-note">
+          Changes update this overview card preview as you type. Save when it looks right.
+        </p>
+        <label className="visual-editor-field">
+          <span>Tag</span>
+          <input value={group.tag || ""} onChange={(event) => onUpdateGroup(groupKey, "tag", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Title</span>
+          <input value={group.title || ""} onChange={(event) => onUpdateGroup(groupKey, "title", event.target.value)} />
+        </label>
+        <OverviewLinksEditor
+          groupKey={groupKey}
+          links={group.links || []}
+          onAddLink={onAddLink}
+          onMoveLink={onMoveLink}
+          onRemoveLink={onRemoveLink}
+          onUpdateLink={onUpdateLink}
+        />
+        <OverviewValidation errors={errors} />
+        <div className="visual-editor-panel-actions">
+          <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+            {isSaving ? "Saving" : `Save ${label}`}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update the home overview headline as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>Eyebrow</span>
+        <input value={overview.eyebrow || ""} onChange={(event) => onUpdateField("eyebrow", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Title</span>
+        <input value={overview.title || ""} onChange={(event) => onUpdateField("title", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Description</span>
+        <textarea value={overview.summary || ""} rows={4} onChange={(event) => onUpdateField("summary", event.target.value)} />
+      </label>
+      <OverviewValidation errors={errors} />
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Overview"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function OverviewLinksEditor({ groupKey, links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Buttons</span>
+        <button type="button" onClick={() => onAddLink(groupKey)}>Add Button</button>
+      </div>
+      {links.map((link, index) => (
+        <div className="visual-editor-repeat-item" key={`${link.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveLink(groupKey, index, -1)}>Up</button>
+            <button type="button" disabled={index === links.length - 1} onClick={() => onMoveLink(groupKey, index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveLink(groupKey, index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={link.label || ""} onChange={(event) => onUpdateLink(groupKey, index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={link.href || ""} onChange={(event) => onUpdateLink(groupKey, index, "href", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={link.active !== false} onChange={(event) => onUpdateLink(groupKey, index, "active", event.target.checked)} />
+              Visible
+            </label>
+            <label>
+              <input type="checkbox" checked={Boolean(link.external)} onChange={(event) => onUpdateLink(groupKey, index, "external", event.target.checked)} />
+              Opens externally
+            </label>
+            <label>
+              <input type="checkbox" checked={Boolean(link.download)} onChange={(event) => onUpdateLink(groupKey, index, "download", event.target.checked)} />
+              Download
+            </label>
+            {groupKey === "agenda" ? (
+              <label>
+                <input type="checkbox" checked={Boolean(link.calendarModal)} onChange={(event) => onUpdateLink(groupKey, index, "calendarModal", event.target.checked)} />
+                Calendar modal
+              </label>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OverviewValidation({ errors }) {
+  return errors.length ? (
+    <div className="visual-editor-validation" role="status">
+      {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+    </div>
+  ) : null;
 }
 
 function CustomSectionFloatingEditor({
