@@ -271,6 +271,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedTechPaperCut = selectedTechPaperCutIndex >= 0 ? techPaperCutCards[selectedTechPaperCutIndex] : null;
   const selectedTechAnswer = selectedTechAnswerIndex >= 0 ? techAnswerCards[selectedTechAnswerIndex] : null;
   const selectedNavigationListKey = getNavigationListKeyFromItem(selectedItem);
+  const selectedNavigationLabelKey = getNavigationLabelKeyFromItem(selectedItem);
   const selectedNavigationItems = selectedNavigationListKey ? navigation[selectedNavigationListKey] || [] : [];
   const selectedNavigationIndex = selectedNavigationListKey ? Number.parseInt(selectedItem?.editableId || "-1", 10) : -1;
   const selectedNavigationLink = selectedNavigationIndex >= 0 ? selectedNavigationItems[selectedNavigationIndex] : null;
@@ -462,10 +463,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       return;
     }
 
-    if (getNavigationListKeyFromItem(selectedItem)) {
+    if (getNavigationListKeyFromItem(selectedItem) || getNavigationLabelKeyFromItem(selectedItem)) {
       setActiveSectionId("navigation");
       setEditingItemId(selectedItem.visualId);
-      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this navigation link." } : currentItem);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this navigation item." } : currentItem);
       return;
     }
 
@@ -815,6 +816,36 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
     [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
     setNavigationList(listKey, nextItems);
+  }
+
+  function updateNavigationLabel(field, value) {
+    if (field === "dailyAccessKicker" || field === "dailyAccessTitle") {
+      setContent((currentContent) => ({
+        ...currentContent,
+        navigation: {
+          ...(currentContent.navigation || {}),
+          [field]: value
+        }
+      }));
+      syncNavigationLabelPreview(field, value);
+      setStatusMessage("");
+      setError("");
+      return;
+    }
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      navigation: {
+        ...(currentContent.navigation || {}),
+        [currentEditorPage]: {
+          ...((currentContent.navigation || {})[currentEditorPage] || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncNavigationLabelPreview(field, value);
+    setStatusMessage("");
+    setError("");
   }
 
   function setSiteChrome(nextSiteChrome) {
@@ -2991,6 +3022,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                     onMoveLink={moveNavigationLink}
                     onRemoveLink={removeNavigationLink}
                     onSaveNavigation={saveNavigation}
+                    onUpdateLabel={updateNavigationLabel}
                     onUpdateLink={updateNavigationLink}
                   />
                 ) : activeSectionId === "siteChrome" ? (
@@ -3096,6 +3128,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           navigation={navigation}
           navigationErrors={navigationErrors}
           navigationListKey={selectedNavigationListKey}
+          navigationLabelKey={selectedNavigationLabelKey}
           navigationLink={selectedNavigationLink}
           navigationLinkIndex={selectedNavigationIndex}
           siteChrome={siteChrome}
@@ -3237,6 +3270,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechQuickLink={updateTechQuickLink}
           onUpdateTechSection={updateTechSection}
           onUpdateNavigationLink={updateNavigationLink}
+          onUpdateNavigationLabel={updateNavigationLabel}
           onUpdateSiteBrand={updateSiteBrand}
           onUpdateSiteFooter={updateSiteFooter}
           onUpdateOverviewField={updateOverviewField}
@@ -3413,6 +3447,22 @@ function getNavigationListKeyFromItem(item) {
   }
 
   return "";
+}
+
+function getNavigationLabelKeyFromItem(item) {
+  if (!item || item.type !== "navigation-label") {
+    return "";
+  }
+
+  const allowedFields = new Set([
+    "sidebarUtilityTitle",
+    "mobileMenuLabel",
+    "mobileQuickLinksLabel",
+    "dailyAccessKicker",
+    "dailyAccessTitle"
+  ]);
+
+  return allowedFields.has(item.editableId) ? item.editableId : "";
 }
 
 function getSiteChromeSelectionFromItem(item) {
@@ -5198,6 +5248,16 @@ function syncNavigationListPreview(listKey, links) {
   }
 }
 
+function syncNavigationLabelPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.querySelectorAll(`[data-editable-type="navigation-label"][data-editable-id="${field}"]`).forEach((element) => {
+    element.textContent = value || "";
+  });
+}
+
 function createNavigationLinkPreviewElement(link, index, editableType, className) {
   const element = document.createElement("a");
 
@@ -5431,6 +5491,7 @@ function FloatingItemEditor({
   navigation,
   navigationErrors,
   navigationListKey,
+  navigationLabelKey,
   navigationLink,
   navigationLinkIndex,
   siteChrome,
@@ -5573,6 +5634,7 @@ function FloatingItemEditor({
   onUpdateTechPaperCut,
   onUpdateTechQuickLink,
   onUpdateTechSection,
+  onUpdateNavigationLabel,
   onUpdateNavigationLink,
   onUpdateSiteBrand,
   onUpdateSiteFooter,
@@ -5613,6 +5675,7 @@ function FloatingItemEditor({
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
   const isNavigationLinkEditable = Boolean(navigationListKey && navigationLink && navigationLinkIndex >= 0);
+  const isNavigationLabelEditable = Boolean(navigationLabelKey);
   const isSiteChromeEditable = Boolean(siteChromeSelection && siteChrome);
   const isOverviewEditable = Boolean(overviewSelection && overview);
   const isCustomSectionCardEditable = item.type === "custom-section-card" && customSection && customSectionCard && customSectionIndex >= 0 && customSectionCardIndex >= 0;
@@ -5727,6 +5790,14 @@ function FloatingItemEditor({
           onRemoveLink={onRemoveNavigationLink}
           onSave={onSaveNavigation}
           onUpdateLink={onUpdateNavigationLink}
+        />
+      ) : isNavigationLabelEditable ? (
+        <NavigationLabelEditor
+          field={navigationLabelKey}
+          isSaving={isSaving}
+          navigation={navigation}
+          onSave={onSaveNavigation}
+          onUpdateLabel={onUpdateNavigationLabel}
         />
       ) : isSiteChromeEditable ? (
         <SiteChromeFloatingEditor
@@ -7186,6 +7257,33 @@ function NavigationLinkEditor({
   );
 }
 
+function NavigationLabelEditor({ field, isSaving, navigation, onSave, onUpdateLabel }) {
+  const labelNames = {
+    sidebarUtilityTitle: "Sidebar quick-link title",
+    mobileMenuLabel: "Mobile menu title",
+    mobileQuickLinksLabel: "Mobile quick-link title",
+    dailyAccessKicker: "Daily access kicker",
+    dailyAccessTitle: "Daily access title"
+  };
+
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update this navigation label as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>{labelNames[field] || "Navigation label"}</span>
+        <input value={navigation[field] || ""} onChange={(event) => onUpdateLabel(field, event.target.value)} />
+      </label>
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={isSaving || !String(navigation[field] || "").trim()} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Navigation"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function SiteChromeFloatingEditor({
   errors,
   isSaving,
@@ -7889,6 +7987,7 @@ function NavigationVisualPanel({
   onMoveLink,
   onRemoveLink,
   onSaveNavigation,
+  onUpdateLabel,
   onUpdateLink
 }) {
   return (
@@ -7909,6 +8008,32 @@ function NavigationVisualPanel({
           ))}
         </div>
       ) : null}
+
+      <div className="visual-editor-repeat-list">
+        <div className="visual-editor-repeat-header">
+          <span>Navigation Labels</span>
+        </div>
+        <label className="visual-editor-field">
+          <span>Daily Access Kicker</span>
+          <input value={navigation.dailyAccessKicker || ""} onChange={(event) => onUpdateLabel("dailyAccessKicker", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Daily Access Title</span>
+          <input value={navigation.dailyAccessTitle || ""} onChange={(event) => onUpdateLabel("dailyAccessTitle", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Sidebar Quick-Link Title</span>
+          <input value={navigation.sidebarUtilityTitle || ""} onChange={(event) => onUpdateLabel("sidebarUtilityTitle", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Mobile Menu Title</span>
+          <input value={navigation.mobileMenuLabel || ""} onChange={(event) => onUpdateLabel("mobileMenuLabel", event.target.value)} />
+        </label>
+        <label className="visual-editor-field">
+          <span>Mobile Quick-Link Title</span>
+          <input value={navigation.mobileQuickLinksLabel || ""} onChange={(event) => onUpdateLabel("mobileQuickLinksLabel", event.target.value)} />
+        </label>
+      </div>
 
       <NavigationDetailsList
         items={navigation.navLinks}

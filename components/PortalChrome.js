@@ -98,7 +98,7 @@ function SidebarUtility({ utility }) {
 
   return (
     <section className="panel sidebar-utility">
-      <p className="eyebrow small">{utility.title}</p>
+      <p className="eyebrow small" data-editable-type="navigation-label" data-editable-id="sidebarUtilityTitle">{utility.title}</p>
       <div className="sidebar-link-stack">
         {utility.links.map((link, index) => (
           <SidebarButtonLink editableType="navigation-utility-link" editableId={String(index)} key={link.label} link={link} />
@@ -128,7 +128,7 @@ export function MobileSidebarMenus({ page }) {
   return (
     <div className="mobile-sidebar-menus" aria-label={page.mobileMenusLabel}>
       <details className="mobile-menu-panel">
-        <summary className="mobile-menu-summary">Menu</summary>
+        <summary className="mobile-menu-summary" data-editable-type="navigation-label" data-editable-id="mobileMenuLabel">{page.mobileMenuLabel || "Menu"}</summary>
         <div className="mobile-menu-links">
           {page.navLinks.map((link, index) => (
             <SectionNavLink editableType="navigation-link" editableId={String(index)} key={`${link.href}-${link.label}`} link={link} />
@@ -137,7 +137,7 @@ export function MobileSidebarMenus({ page }) {
       </details>
 
       <details className="mobile-menu-panel">
-        <summary className="mobile-menu-summary">Quick Links</summary>
+        <summary className="mobile-menu-summary" data-editable-type="navigation-label" data-editable-id="mobileQuickLinksLabel">{page.mobileQuickLinksLabel || "Quick Links"}</summary>
         <div className="mobile-menu-links">
           {page.mobileQuickLinks.map((link, index) => (
             <SidebarButtonLink editableType="navigation-mobile-link" editableId={String(index)} key={link.label} link={link} />
@@ -191,8 +191,8 @@ export function QuickLinksStrip({ page }) {
     <section className="content-strip content-strip--sticky panel" aria-label="Daily tools">
       <div className="content-strip-row content-strip-row--links">
         <div className="content-strip-heading content-strip-heading--links">
-          <span className="content-strip-kicker">Quick Links</span>
-          <strong>Daily Access</strong>
+          <span className="content-strip-kicker" data-editable-type="navigation-label" data-editable-id="dailyAccessKicker">{page.dailyAccessKicker || "Quick Links"}</span>
+          <strong data-editable-type="navigation-label" data-editable-id="dailyAccessTitle">{page.dailyAccessTitle || "Daily Access"}</strong>
         </div>
         <div className="content-strip-links">
           {links.map((link, index) => (
