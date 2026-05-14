@@ -4120,6 +4120,10 @@ body.has-handbook-modal .page-content {
   gap: 10px;
 }
 
+.visual-editor-floating-editor .visual-editor-panel-actions {
+  flex-wrap: wrap;
+}
+
 .visual-editor-button {
   display: inline-flex;
   align-items: center;

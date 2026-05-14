@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createAssetGridHtml, createMarketingToolGridHtml, createSourceFileGridHtml } from "@/components/AssetCards";
 import { createCourseGridHtml } from "@/components/CourseCards";
+import { createCustomSectionsHtml } from "@/components/CustomSections";
 import { createAlcPosterGridHtml, createLeadershipGridHtml } from "@/components/LeadershipCards";
 import { createOfficeGridHtml, createRoomBookingCardHtml } from "@/components/OfficeCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
@@ -12,6 +13,7 @@ import portalContent from "@/data/portal-content.json";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
+import { getCustomSectionsForPage } from "@/lib/custom-sections";
 import { getPortalPageWithContent } from "@/lib/portal-navigation";
 
 function readLegacyHtml(source) {
@@ -79,18 +81,24 @@ function getLegacyPortalFragments(source) {
 
 function hydrateLegacyMainHtml(source, mainHtml) {
   if (source === "index.html") {
-    return replaceLegacyCourseGrid(replaceLegacyTrainingResourceGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml)))));
+    return appendCustomSections("home", replaceLegacyCourseGrid(replaceLegacyTrainingResourceGrid(replaceLegacyVendorGrids(replaceLegacyLeadershipGrids(replaceLegacyOfficeCards(mainHtml))))));
   }
 
   if (source === "brand-assets.html") {
-    return replaceLegacyBrandAssetGrids(mainHtml);
+    return appendCustomSections("brandAssets", replaceLegacyBrandAssetGrids(mainHtml));
   }
 
   if (source === "tech/index.html") {
-    return replaceLegacyTechConnect(mainHtml);
+    return appendCustomSections("tech", replaceLegacyTechConnect(mainHtml));
   }
 
   return mainHtml;
+}
+
+function appendCustomSections(pageKey, mainHtml) {
+  const customSectionsHtml = createCustomSectionsHtml(getCustomSectionsForPage(portalContent, pageKey));
+
+  return customSectionsHtml ? `${mainHtml}\n${customSectionsHtml}` : mainHtml;
 }
 
 function replaceLegacyTechConnect(mainHtml) {

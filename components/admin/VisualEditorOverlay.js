@@ -23,11 +23,13 @@ import {
   validateVendorDrafts
 } from "./contentDrafts";
 import { portalPages } from "@/lib/portal-config";
+import { createCustomSectionCardId, createCustomSectionId, getCustomSectionsForPage } from "@/lib/custom-sections";
 import { getNavigationContent } from "@/lib/portal-navigation";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
   { id: "navigation", label: "Navigation", target: "", status: "Page menu" },
+  { id: "customSections", label: "Custom Sections", target: "", status: "Section builder" },
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
   { id: "trainingResources", label: "Training Resources", target: "#training-resources", status: "Training cards" },
   { id: "office", label: "Office", target: "#office", status: "Office module" },
@@ -52,6 +54,7 @@ const SELECTABLE_CANVAS_SELECTOR = [
   ".marketing-tool-card",
   ".asset-card",
   ".asset-source-card",
+  ".custom-section-card",
   ".leadership-card",
   ".portal-action-card",
   ".launch-card",
@@ -180,6 +183,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const pageDefaults = portalPages[currentEditorPage] || portalPages.home;
   const navigation = getNavigationContent(content, currentEditorPage, pageDefaults);
   const navigationErrors = useMemo(() => validateNavigationDraft(navigation), [navigation]);
+  const customSections = getCustomSectionsForPage(content, currentEditorPage);
+  const customSectionErrors = useMemo(() => validateCustomSectionsDraft(customSections), [customSections]);
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
   const leadership = content?.leadership || [];
@@ -273,6 +278,14 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedNavigationItems = selectedNavigationListKey ? navigation[selectedNavigationListKey] || [] : [];
   const selectedNavigationIndex = selectedNavigationListKey ? Number.parseInt(selectedItem?.editableId || "-1", 10) : -1;
   const selectedNavigationLink = selectedNavigationIndex >= 0 ? selectedNavigationItems[selectedNavigationIndex] : null;
+  const selectedCustomSectionId = getCustomSectionIdFromItem(selectedItem);
+  const selectedCustomSectionIndex = selectedCustomSectionId ? customSections.findIndex((section) => section.id === selectedCustomSectionId) : -1;
+  const selectedCustomSection = selectedCustomSectionIndex >= 0 ? customSections[selectedCustomSectionIndex] : null;
+  const selectedCustomSectionCardId = selectedItem?.type === "custom-section-card" ? String(selectedItem.editableId || "").split(":")[1] || "" : "";
+  const selectedCustomSectionCardIndex = selectedCustomSection && selectedCustomSectionCardId
+    ? (selectedCustomSection.cards || []).findIndex((card) => card.id === selectedCustomSectionCardId)
+    : -1;
+  const selectedCustomSectionCard = selectedCustomSectionCardIndex >= 0 ? selectedCustomSection.cards[selectedCustomSectionCardIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -286,7 +299,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
   const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
   const shouldShowPanel = true;
-  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors" || activeSectionId === "brandAssets" || activeSectionId === "techConnect";
+  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors" || activeSectionId === "brandAssets" || activeSectionId === "techConnect" || activeSectionId === "customSections";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -458,6 +471,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       return;
     }
 
+    if (getCustomSectionIdFromItem(selectedItem)) {
+      setActiveSectionId("customSections");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: selectedItem.type === "custom-section-card" ? "Editing this custom section card." : "Editing this custom section." } : currentItem);
+      return;
+    }
+
     if (selectedItem.type === "course-card" && selectedItem.editableId) {
       setActiveSectionId("productivityCourses");
       setEditingItemId(selectedItem.visualId);
@@ -612,6 +632,20 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   }
 
   function moveSelectedSection(direction) {
+    const offset = direction === "up" ? -1 : 1;
+
+    if (selectedCustomSectionCardIndex >= 0) {
+      moveCustomSectionCard(selectedCustomSectionIndex, selectedCustomSectionCardIndex, offset);
+      setStatusMessage("Custom section card moved. Save when ready.");
+      return;
+    }
+
+    if (selectedCustomSectionIndex >= 0) {
+      moveCustomSection(selectedCustomSectionIndex, offset);
+      setStatusMessage("Custom section moved. Save when ready.");
+      return;
+    }
+
     setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: `${direction === "up" ? "Move up" : "Move down"} will be enabled when section ordering is data-backed.` } : currentItem);
   }
 
@@ -626,6 +660,14 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     setSelectedItem(null);
     setError("");
     setStatusMessage("Navigation tools are open for this page.");
+  }
+
+  function openAddSectionTools() {
+    setActiveSectionId("customSections");
+    setEditingItemId("");
+    setSelectedItem(null);
+    setError("");
+    setStatusMessage("Custom section tools are open for this page.");
   }
 
   function addCardFromToolbar() {
@@ -662,6 +704,12 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     if (activeSectionId === "techConnect") {
       addTechHelpPath();
       setStatusMessage("Tech help-path card added. Edit the new card, then save when ready.");
+      return;
+    }
+
+    if (activeSectionId === "customSections") {
+      addCustomSectionCard();
+      setStatusMessage("Custom section card added. Edit the new card, then save when ready.");
       return;
     }
 
@@ -748,6 +796,196 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
     [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
     setNavigationList(listKey, nextItems);
+  }
+
+  function setCustomSections(nextSections) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      customSections: {
+        ...(currentContent.customSections || {}),
+        [currentEditorPage]: nextSections
+      }
+    }));
+    syncCustomSectionsPreview(nextSections);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function addCustomSection() {
+    const nextSection = {
+      id: createCustomSectionId(customSections),
+      type: "linkGrid",
+      eyebrow: "New Section",
+      title: "New Portal Section",
+      summary: "Add a short section description.",
+      cards: [
+        {
+          id: "custom-card-1",
+          kicker: "New",
+          title: "New Card",
+          summary: "Add a short description.",
+          links: [
+            {
+              label: "Open Link",
+              href: "#",
+              external: false
+            }
+          ],
+          active: true
+        }
+      ],
+      active: true
+    };
+
+    setCustomSections([...customSections, nextSection]);
+    setActiveSectionId("customSections");
+    setStatusMessage("Custom section added. Edit it, then save when ready.");
+  }
+
+  function updateCustomSection(index, field, value) {
+    const nextSections = customSections.map((section, sectionIndex) => (
+      sectionIndex === index
+        ? {
+            ...section,
+            [field]: value
+          }
+        : section
+    ));
+
+    setCustomSections(nextSections);
+  }
+
+  function removeCustomSection(index) {
+    const sectionId = customSections[index]?.id;
+    setCustomSections(customSections.filter((_, sectionIndex) => sectionIndex !== index));
+    if (selectedCustomSectionId === sectionId) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+  }
+
+  function moveCustomSection(index, direction) {
+    const nextIndex = index + direction;
+    const nextSections = [...customSections];
+
+    if (nextIndex < 0 || nextIndex >= nextSections.length) {
+      return;
+    }
+
+    [nextSections[index], nextSections[nextIndex]] = [nextSections[nextIndex], nextSections[index]];
+    setCustomSections(nextSections);
+  }
+
+  function addCustomSectionCard(sectionIndex = Math.max(0, customSections.length - 1)) {
+    if (!customSections.length) {
+      addCustomSection();
+      return;
+    }
+
+    const section = customSections[sectionIndex] || customSections[0];
+    const nextCard = {
+      id: createCustomSectionCardId(section.cards || []),
+      kicker: "New",
+      title: "New Card",
+      summary: "Add a short description.",
+      links: [
+        {
+          label: "Open Link",
+          href: "#",
+          external: false
+        }
+      ],
+      active: true
+    };
+
+    updateCustomSection(sectionIndex, "cards", [...(section.cards || []), nextCard]);
+  }
+
+  function updateCustomSectionCard(sectionIndex, cardIndex, field, value) {
+    const section = customSections[sectionIndex] || {};
+    const nextCards = (section.cards || []).map((card, currentCardIndex) => (
+      currentCardIndex === cardIndex
+        ? {
+            ...card,
+            [field]: value
+          }
+        : card
+    ));
+
+    updateCustomSection(sectionIndex, "cards", nextCards);
+  }
+
+  function removeCustomSectionCard(sectionIndex, cardIndex) {
+    const section = customSections[sectionIndex] || {};
+    const cardId = section.cards?.[cardIndex]?.id;
+    const nextCards = (section.cards || []).filter((_, currentCardIndex) => currentCardIndex !== cardIndex);
+
+    updateCustomSection(sectionIndex, "cards", nextCards);
+    if (selectedCustomSectionCardId === cardId) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+  }
+
+  function moveCustomSectionCard(sectionIndex, cardIndex, direction) {
+    const section = customSections[sectionIndex] || {};
+    const nextIndex = cardIndex + direction;
+    const nextCards = [...(section.cards || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextCards.length) {
+      return;
+    }
+
+    [nextCards[cardIndex], nextCards[nextIndex]] = [nextCards[nextIndex], nextCards[cardIndex]];
+    updateCustomSection(sectionIndex, "cards", nextCards);
+  }
+
+  function updateCustomSectionCardLink(sectionIndex, cardIndex, linkIndex, field, value) {
+    const card = customSections[sectionIndex]?.cards?.[cardIndex] || {};
+    const nextLinks = (card.links || []).map((link, currentLinkIndex) => (
+      currentLinkIndex === linkIndex
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    updateCustomSectionCard(sectionIndex, cardIndex, "links", nextLinks);
+  }
+
+  function addCustomSectionCardLink(sectionIndex, cardIndex) {
+    const card = customSections[sectionIndex]?.cards?.[cardIndex] || {};
+    const nextLinks = [
+      ...(card.links || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: false
+      }
+    ];
+
+    updateCustomSectionCard(sectionIndex, cardIndex, "links", nextLinks);
+  }
+
+  function removeCustomSectionCardLink(sectionIndex, cardIndex, linkIndex) {
+    const card = customSections[sectionIndex]?.cards?.[cardIndex] || {};
+    const nextLinks = (card.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex);
+
+    updateCustomSectionCard(sectionIndex, cardIndex, "links", nextLinks);
+  }
+
+  function moveCustomSectionCardLink(sectionIndex, cardIndex, linkIndex, direction) {
+    const card = customSections[sectionIndex]?.cards?.[cardIndex] || {};
+    const nextIndex = linkIndex + direction;
+    const nextLinks = [...(card.links || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[linkIndex], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[linkIndex]];
+    updateCustomSectionCard(sectionIndex, cardIndex, "links", nextLinks);
   }
 
   function updateTrainingResourceSection(field, value) {
@@ -2305,6 +2543,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent(navigationErrors, "Navigation");
   }
 
+  async function saveCustomSections() {
+    await saveContent(customSectionErrors, "Custom sections");
+  }
+
   async function saveBrandAssetSection(sectionLabel = "Brand assets heading") {
     await saveContent([], sectionLabel);
   }
@@ -2399,6 +2641,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={openNavigationEditor}>
             Edit Navigation
           </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={openAddSectionTools}>
+            Add Section
+          </button>
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Undo")}>
             Undo
           </button>
@@ -2453,7 +2698,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                 activeSection={activeSection}
                 canAddCard={canAddCard}
                 onAddCard={addCardFromToolbar}
-                onAddSection={() => setToolbarStatus("Add Section")}
+                onAddSection={addCustomSection}
                 onBackToPageTools={() => {
                   setEditingItemId("");
                   setSelectedItem(null);
@@ -2563,6 +2808,25 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                     onSaveNavigation={saveNavigation}
                     onUpdateLink={updateNavigationLink}
                   />
+                ) : activeSectionId === "customSections" ? (
+                  <CustomSectionsVisualPanel
+                    errors={customSectionErrors}
+                    isSaving={isSaving}
+                    onAddCard={addCustomSectionCard}
+                    onAddCardLink={addCustomSectionCardLink}
+                    onAddSection={addCustomSection}
+                    onMoveCardLink={moveCustomSectionCardLink}
+                    onMoveCard={moveCustomSectionCard}
+                    onMoveSection={moveCustomSection}
+                    onRemoveCardLink={removeCustomSectionCardLink}
+                    onRemoveCard={removeCustomSectionCard}
+                    onRemoveSection={removeCustomSection}
+                    onSaveCustomSections={saveCustomSections}
+                    onUpdateCard={updateCustomSectionCard}
+                    onUpdateCardLink={updateCustomSectionCardLink}
+                    onUpdateSection={updateCustomSection}
+                    sections={customSections}
+                  />
                 ) : activeSectionId === "techConnect" ? (
                   <TechConnectVisualPanel
                     answerCards={techAnswerCards}
@@ -2640,6 +2904,12 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           navigationListKey={selectedNavigationListKey}
           navigationLink={selectedNavigationLink}
           navigationLinkIndex={selectedNavigationIndex}
+          customSection={selectedCustomSection}
+          customSectionCard={selectedCustomSectionCard}
+          customSectionCardIndex={selectedCustomSectionCardIndex}
+          customSectionErrors={customSectionErrors}
+          customSectionIndex={selectedCustomSectionIndex}
+          customSections={customSections}
           vendor={selectedVendor}
           brandOverviewSectionSettings={brandOverviewSection}
           digitalLogo={selectedDigitalLogo}
@@ -2690,6 +2960,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onAddTechLink={addTechLink}
           onAddTechQuickLink={addTechQuickLink}
           onAddNavigationLink={addNavigationLink}
+          onAddCustomSectionCard={addCustomSectionCard}
+          onAddCustomSectionCardLink={addCustomSectionCardLink}
           onAddOfficeChip={addOfficeChip}
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
@@ -2708,6 +2980,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onMoveTechPaperCut={moveTechPaperCut}
           onMoveTechQuickLink={moveTechQuickLink}
           onMoveNavigationLink={moveNavigationLink}
+          onMoveCustomSection={moveCustomSection}
+          onMoveCustomSectionCard={moveCustomSectionCard}
+          onMoveCustomSectionCardLink={moveCustomSectionCardLink}
           onRemoveOfficeChip={removeOfficeChip}
           onRemoveOfficeHoliday={removeOfficeHoliday}
           onRemoveOfficeHour={removeOfficeHour}
@@ -2720,6 +2995,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onRemoveTechPaperCut={removeTechPaperCut}
           onRemoveTechQuickLink={removeTechQuickLink}
           onRemoveNavigationLink={removeNavigationLink}
+          onRemoveCustomSection={removeCustomSection}
+          onRemoveCustomSectionCard={removeCustomSectionCard}
+          onRemoveCustomSectionCardLink={removeCustomSectionCardLink}
           onSaveOfficeCard={saveOfficeCard}
           onSaveOfficeSection={saveOfficeSection}
           onSaveRooms={saveRooms}
@@ -2730,6 +3008,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onSaveTechConnectSection={saveTechConnectSection}
           onSaveTechJoeSupport={saveTechJoeSupport}
           onSaveNavigation={saveNavigation}
+          onSaveCustomSections={saveCustomSections}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
           onUpdateOfficeHour={updateOfficeHour}
@@ -2749,6 +3028,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechQuickLink={updateTechQuickLink}
           onUpdateTechSection={updateTechSection}
           onUpdateNavigationLink={updateNavigationLink}
+          onUpdateCustomSection={updateCustomSection}
+          onUpdateCustomSectionCard={updateCustomSectionCard}
+          onUpdateCustomSectionCardLink={updateCustomSectionCardLink}
           onUpdateDigitalLogo={updateDigitalLogo}
           onUpdateMarketingTool={updateMarketingTool}
           onUpdateSourceFile={updateSourceFile}
@@ -2919,6 +3201,92 @@ function getNavigationListKeyFromItem(item) {
   return "";
 }
 
+function getCustomSectionIdFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (
+    item.type === "custom-section" ||
+    item.type === "custom-section-eyebrow" ||
+    item.type === "custom-section-heading" ||
+    item.type === "custom-section-summary"
+  ) {
+    return item.editableId || item.sectionId || "";
+  }
+
+  if (item.type === "custom-section-card") {
+    return String(item.editableId || "").split(":")[0] || "";
+  }
+
+  return "";
+}
+
+function validateCustomSectionsDraft(sections) {
+  const errors = [];
+  const sectionIds = new Set();
+
+  (sections || []).forEach((section, sectionIndex) => {
+    const sectionLabel = `Custom section ${sectionIndex + 1}`;
+    const sectionId = String(section.id || "").trim();
+
+    if (!sectionId) {
+      errors.push(`${sectionLabel}: id is required.`);
+    } else if (sectionIds.has(sectionId)) {
+      errors.push(`${sectionLabel}: id must be unique.`);
+    } else {
+      sectionIds.add(sectionId);
+    }
+
+    if (!String(section.title || "").trim()) {
+      errors.push(`${sectionLabel}: title is required.`);
+    }
+
+    if (section.cards && !Array.isArray(section.cards)) {
+      errors.push(`${sectionLabel}: cards must be a list.`);
+      return;
+    }
+
+    const cardIds = new Set();
+
+    (section.cards || []).forEach((card, cardIndex) => {
+      const cardLabel = `${sectionLabel} card ${cardIndex + 1}`;
+      const cardId = String(card.id || "").trim();
+
+      if (!cardId) {
+        errors.push(`${cardLabel}: id is required.`);
+      } else if (cardIds.has(cardId)) {
+        errors.push(`${cardLabel}: id must be unique inside the section.`);
+      } else {
+        cardIds.add(cardId);
+      }
+
+      if (!String(card.title || "").trim()) {
+        errors.push(`${cardLabel}: title is required.`);
+      }
+
+      if (card.links && !Array.isArray(card.links)) {
+        errors.push(`${cardLabel}: buttons must be a list.`);
+        return;
+      }
+
+      (card.links || []).forEach((link, linkIndex) => {
+        const linkLabel = `${cardLabel} button ${linkIndex + 1}`;
+
+        if (!String(link.label || "").trim()) {
+          errors.push(`${linkLabel}: label is required.`);
+        }
+
+        if (!String(link.href || "").trim()) {
+          errors.push(`${linkLabel}: link is required.`);
+        }
+      });
+    });
+  });
+
+  return errors;
+}
+
 function validateNavigationDraft(navigation) {
   const errors = [];
 
@@ -3056,6 +3424,10 @@ function updateNestedBrandAssetField(item, field, value) {
 }
 
 function findSectionForSelectedItem(item) {
+  if (getCustomSectionIdFromItem(item)) {
+    return EDITABLE_SECTIONS.find((section) => section.id === "customSections") || null;
+  }
+
   const target = item.href?.startsWith("#") ? item.href : item.sectionId ? `#${item.sectionId}` : "";
 
   if (!target) {
@@ -4146,6 +4518,121 @@ function removeTechItemPreview(editableType, itemId) {
   element?.remove();
 }
 
+function syncCustomSectionsPreview(sections) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const main = document.querySelector(".page-content");
+
+  if (!main) {
+    return;
+  }
+
+  main.querySelectorAll('section[data-editable-type="custom-section"]').forEach((section) => {
+    section.remove();
+  });
+
+  (sections || [])
+    .filter(isCustomSectionPreviewVisible)
+    .forEach((section) => {
+      main.append(createCustomSectionPreviewElement(section));
+    });
+}
+
+function createCustomSectionPreviewElement(section) {
+  const element = document.createElement("section");
+  const head = document.createElement("div");
+  const headCopy = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  const title = document.createElement("h2");
+  const grid = document.createElement("div");
+
+  element.className = "panel";
+  element.id = section.id || "";
+  element.dataset.editableType = "custom-section";
+  element.dataset.editableId = section.id || "";
+  head.className = "section-head";
+  eyebrow.className = "eyebrow small";
+  eyebrow.dataset.editableType = "custom-section-eyebrow";
+  eyebrow.dataset.editableId = section.id || "";
+  eyebrow.textContent = section.eyebrow || "";
+  title.dataset.editableType = "custom-section-heading";
+  title.dataset.editableId = section.id || "";
+  title.textContent = section.title || "";
+  headCopy.append(eyebrow, title);
+
+  const sectionSummary = section.summary || section.description || "";
+
+  if (sectionSummary) {
+    const summary = document.createElement("p");
+
+    summary.className = "dashboard-summary";
+    summary.dataset.editableType = "custom-section-summary";
+    summary.dataset.editableId = section.id || "";
+    summary.textContent = sectionSummary;
+    headCopy.append(summary);
+  }
+
+  head.append(headCopy);
+  grid.className = "asset-source-grid";
+  grid.dataset.customSectionGrid = section.id || "";
+  (section.cards || [])
+    .filter(isCustomSectionPreviewVisible)
+    .forEach((card) => {
+      grid.append(createCustomSectionCardPreviewElement(section.id, card));
+    });
+  element.append(head, grid);
+
+  return element;
+}
+
+function createCustomSectionCardPreviewElement(sectionId, card) {
+  const element = document.createElement("article");
+  const kicker = document.createElement("p");
+  const title = document.createElement("h3");
+  const summary = document.createElement("p");
+  const links = document.createElement("div");
+  const cardSummary = card.summary || card.description || "";
+  const kickerText = card.kicker || card.tag || "";
+
+  element.className = "asset-source-card custom-section-card";
+  element.dataset.editableType = "custom-section-card";
+  element.dataset.editableId = `${sectionId || ""}:${card.id || ""}`;
+  kicker.className = "eyebrow small";
+  kicker.textContent = kickerText;
+  title.textContent = card.title || "";
+  summary.textContent = cardSummary;
+  links.className = "chip-row asset-downloads";
+  links.replaceChildren(...getCustomSectionPreviewLinks(card).map(createBrandAssetLinkPreviewElement));
+  element.append(kicker, title, summary, links);
+
+  return element;
+}
+
+function getCustomSectionPreviewLinks(card) {
+  if (Array.isArray(card.links) && card.links.length) {
+    return card.links;
+  }
+
+  if (card.href || card.link || card.buttonHref) {
+    return [
+      {
+        label: card.buttonLabel || card.linkLabel || "Open Link",
+        href: card.href || card.link || card.buttonHref,
+        external: Boolean(card.external),
+        download: Boolean(card.download)
+      }
+    ];
+  }
+
+  return [];
+}
+
+function isCustomSectionPreviewVisible(item) {
+  return item?.active !== false && item?.visible !== false;
+}
+
 function syncNavigationListPreview(listKey, links) {
   if (typeof document === "undefined") {
     return;
@@ -4419,6 +4906,12 @@ function FloatingItemEditor({
   navigationListKey,
   navigationLink,
   navigationLinkIndex,
+  customSection,
+  customSectionCard,
+  customSectionCardIndex,
+  customSectionErrors,
+  customSectionIndex,
+  customSections,
   vendor,
   brandOverviewSectionSettings,
   digitalLogo,
@@ -4464,6 +4957,8 @@ function FloatingItemEditor({
   onAddOfficeHoliday,
   onAddOfficeHour,
   onAddBrandAssetLink,
+  onAddCustomSectionCard,
+  onAddCustomSectionCardLink,
   onAddTechLink,
   onAddTechQuickLink,
   onAddNavigationLink,
@@ -4474,6 +4969,9 @@ function FloatingItemEditor({
   onMoveOfficeHoliday,
   onMoveOfficeHour,
   onMoveBrandAssetLink,
+  onMoveCustomSection,
+  onMoveCustomSectionCard,
+  onMoveCustomSectionCardLink,
   onMoveTechAnswer,
   onMoveTechHelpPath,
   onMoveTechLink,
@@ -4484,6 +4982,9 @@ function FloatingItemEditor({
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
   onRemoveBrandAssetLink,
+  onRemoveCustomSection,
+  onRemoveCustomSectionCard,
+  onRemoveCustomSectionCardLink,
   onRemoveTechAnswer,
   onRemoveTechHelpPath,
   onRemoveTechLink,
@@ -4502,6 +5003,7 @@ function FloatingItemEditor({
   onSaveVendors,
   onSaveBrandAssets,
   onSaveBrandAssetSection,
+  onSaveCustomSections,
   onSaveTechConnect,
   onSaveTechConnectSection,
   onSaveTechJoeSupport,
@@ -4519,6 +5021,9 @@ function FloatingItemEditor({
   onUpdateVendorSection,
   onUpdateBrandAssetLink,
   onUpdateBrandAssetSection,
+  onUpdateCustomSection,
+  onUpdateCustomSectionCard,
+  onUpdateCustomSectionCardLink,
   onUpdateTechAnswer,
   onUpdateTechHelpPath,
   onUpdateTechJoeSupport,
@@ -4561,6 +5066,8 @@ function FloatingItemEditor({
 }) {
   const isCardEditable = item.type === editableType && card && cardIndex >= 0;
   const isNavigationLinkEditable = Boolean(navigationListKey && navigationLink && navigationLinkIndex >= 0);
+  const isCustomSectionCardEditable = item.type === "custom-section-card" && customSection && customSectionCard && customSectionIndex >= 0 && customSectionCardIndex >= 0;
+  const isCustomSectionEditable = !isCustomSectionCardEditable && Boolean(getCustomSectionIdFromItem(item) && customSection && customSectionIndex >= 0);
   const isOfficeCardEditable = (item.type === "office-card" || item.type === "office-chip") && officeCard && officeCardKey;
   const isTrainingResourceSectionEditable = (
     (item.type === "section" && item.sectionId === "training-resources") ||
@@ -4634,7 +5141,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length, leaderErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey, techHelpPathErrors.length, techPaperCutErrors.length, techAnswerErrors.length]);
+  }, [item, cardIndex, cardErrors.length, customSectionErrors.length, leaderErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey, techHelpPathErrors.length, techPaperCutErrors.length, techAnswerErrors.length]);
 
   return (
     <div
@@ -4670,6 +5177,36 @@ function FloatingItemEditor({
           onRemoveLink={onRemoveNavigationLink}
           onSave={onSaveNavigation}
           onUpdateLink={onUpdateNavigationLink}
+        />
+      ) : isCustomSectionEditable ? (
+        <CustomSectionFloatingEditor
+          errors={customSectionErrors}
+          isSaving={isSaving}
+          section={customSection}
+          sectionIndex={customSectionIndex}
+          sections={customSections}
+          onAddCard={onAddCustomSectionCard}
+          onMoveSection={onMoveCustomSection}
+          onRemoveSection={onRemoveCustomSection}
+          onSave={onSaveCustomSections}
+          onUpdateSection={onUpdateCustomSection}
+        />
+      ) : isCustomSectionCardEditable ? (
+        <CustomSectionCardFloatingEditor
+          card={customSectionCard}
+          cardIndex={customSectionCardIndex}
+          errors={customSectionErrors}
+          isSaving={isSaving}
+          section={customSection}
+          sectionIndex={customSectionIndex}
+          onAddLink={onAddCustomSectionCardLink}
+          onMoveCard={onMoveCustomSectionCard}
+          onMoveLink={onMoveCustomSectionCardLink}
+          onRemoveCard={onRemoveCustomSectionCard}
+          onRemoveLink={onRemoveCustomSectionCardLink}
+          onSave={onSaveCustomSections}
+          onUpdateCard={onUpdateCustomSectionCard}
+          onUpdateLink={onUpdateCustomSectionCardLink}
         />
       ) : isTrainingResourceSectionEditable ? (
         <>
@@ -5580,6 +6117,138 @@ function FloatingItemEditor({
   );
 }
 
+function CustomSectionFloatingEditor({
+  errors,
+  isSaving,
+  section,
+  sectionIndex,
+  sections,
+  onAddCard,
+  onMoveSection,
+  onRemoveSection,
+  onSave,
+  onUpdateSection
+}) {
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update this custom section preview as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>Eyebrow</span>
+        <input value={section.eyebrow || ""} onChange={(event) => onUpdateSection(sectionIndex, "eyebrow", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Title</span>
+        <input value={section.title || ""} onChange={(event) => onUpdateSection(sectionIndex, "title", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Description</span>
+        <textarea value={section.summary || ""} rows={3} onChange={(event) => onUpdateSection(sectionIndex, "summary", event.target.value)} />
+      </label>
+      <div className="visual-editor-check-row">
+        <label>
+          <input type="checkbox" checked={section.active !== false} onChange={(event) => onUpdateSection(sectionIndex, "active", event.target.checked)} />
+          Visible
+        </label>
+      </div>
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+        </div>
+      ) : null}
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Section"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={sectionIndex === 0} onClick={() => onMoveSection(sectionIndex, -1)}>
+          Up
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={sectionIndex === sections.length - 1} onClick={() => onMoveSection(sectionIndex, 1)}>
+          Down
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onAddCard(sectionIndex)}>
+          Add Card
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveSection(sectionIndex)}>
+          Delete
+        </button>
+      </div>
+    </>
+  );
+}
+
+function CustomSectionCardFloatingEditor({
+  card,
+  cardIndex,
+  errors,
+  isSaving,
+  section,
+  sectionIndex,
+  onAddLink,
+  onMoveCard,
+  onMoveLink,
+  onRemoveCard,
+  onRemoveLink,
+  onSave,
+  onUpdateCard,
+  onUpdateLink
+}) {
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update only this custom section card preview as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>Tag</span>
+        <input value={card.kicker || ""} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "kicker", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Title</span>
+        <input value={card.title || ""} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "title", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Description</span>
+        <textarea value={card.summary || ""} rows={3} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "summary", event.target.value)} />
+      </label>
+      <CustomSectionLinksEditor
+        cardIndex={cardIndex}
+        links={card.links || []}
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+        sectionIndex={sectionIndex}
+      />
+      <div className="visual-editor-check-row">
+        <label>
+          <input type="checkbox" checked={card.active !== false} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "active", event.target.checked)} />
+          Visible
+        </label>
+      </div>
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+        </div>
+      ) : null}
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Card"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={cardIndex === 0} onClick={() => onMoveCard(sectionIndex, cardIndex, -1)}>
+          Up
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={cardIndex === (section.cards || []).length - 1} onClick={() => onMoveCard(sectionIndex, cardIndex, 1)}>
+          Down
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveCard(sectionIndex, cardIndex)}>
+          Delete
+        </button>
+      </div>
+    </>
+  );
+}
+
 function TechCardEditor({
   card,
   cardErrors,
@@ -6078,6 +6747,52 @@ function OfficeChipsEditor({ cardKey, chips, onAddChip, onMoveChip, onRemoveChip
   );
 }
 
+function CustomSectionLinksEditor({ cardIndex, links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink, sectionIndex }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Buttons</span>
+        <button type="button" onClick={() => onAddLink(sectionIndex, cardIndex)}>Add Button</button>
+      </div>
+      {links.map((link, index) => (
+        <div className="visual-editor-repeat-item" key={`${link.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveLink(sectionIndex, cardIndex, index, -1)}>Up</button>
+            <button type="button" disabled={index === links.length - 1} onClick={() => onMoveLink(sectionIndex, cardIndex, index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveLink(sectionIndex, cardIndex, index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={link.label || ""} onChange={(event) => onUpdateLink(sectionIndex, cardIndex, index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={link.href || ""} onChange={(event) => onUpdateLink(sectionIndex, cardIndex, index, "href", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.external)}
+                onChange={(event) => onUpdateLink(sectionIndex, cardIndex, index, "external", event.target.checked)}
+              />
+              Opens externally
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.download)}
+                onChange={(event) => onUpdateLink(sectionIndex, cardIndex, index, "download", event.target.checked)}
+              />
+              Download
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AssetLinksEditor({ collectionKey, editableType, itemIndex, items, links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
   return (
     <div className="visual-editor-repeat-list">
@@ -6119,6 +6834,155 @@ function AssetLinksEditor({ collectionKey, editableType, itemIndex, items, links
             </label>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function CustomSectionsVisualPanel({
+  errors,
+  isSaving,
+  onAddCard,
+  onAddCardLink,
+  onAddSection,
+  onMoveCard,
+  onMoveCardLink,
+  onMoveSection,
+  onRemoveCard,
+  onRemoveCardLink,
+  onRemoveSection,
+  onSaveCustomSections,
+  onUpdateCard,
+  onUpdateCardLink,
+  onUpdateSection,
+  sections
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{sections.length} custom section{sections.length === 1 ? "" : "s"}</strong>
+        </div>
+      </div>
+      <div className="visual-editor-add-grid">
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddSection}>Add Section</button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!sections.length} onClick={() => onAddCard(Math.max(0, sections.length - 1))}>Add Card</button>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="visual-editor-course-list">
+        {sections.map((section, sectionIndex) => (
+          <details className="visual-editor-course" key={section.id || sectionIndex} open={sectionIndex === sections.length - 1}>
+            <summary>
+              <span>{section.title || `Custom Section ${sectionIndex + 1}`}</span>
+              <strong>{section.active === false ? "Hidden" : `${(section.cards || []).length} card${(section.cards || []).length === 1 ? "" : "s"}`}</strong>
+            </summary>
+            <div className="visual-editor-course-controls">
+              <button type="button" disabled={sectionIndex === 0} onClick={() => onMoveSection(sectionIndex, -1)}>Up</button>
+              <button type="button" disabled={sectionIndex === sections.length - 1} onClick={() => onMoveSection(sectionIndex, 1)}>Down</button>
+              <button type="button" onClick={() => onAddCard(sectionIndex)}>Add Card</button>
+              <button type="button" onClick={() => onRemoveSection(sectionIndex)}>Remove</button>
+            </div>
+            <label className="visual-editor-field">
+              <span>Eyebrow</span>
+              <input value={section.eyebrow || ""} onChange={(event) => onUpdateSection(sectionIndex, "eyebrow", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Title</span>
+              <input value={section.title || ""} onChange={(event) => onUpdateSection(sectionIndex, "title", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={section.summary || ""} rows={3} onChange={(event) => onUpdateSection(sectionIndex, "summary", event.target.value)} />
+            </label>
+            <div className="visual-editor-check-row">
+              <label>
+                <input type="checkbox" checked={section.active !== false} onChange={(event) => onUpdateSection(sectionIndex, "active", event.target.checked)} />
+                Visible
+              </label>
+            </div>
+            <CustomSectionCardDetailsList
+              cards={section.cards || []}
+              onAddCardLink={onAddCardLink}
+              onMoveCardLink={onMoveCardLink}
+              onMoveCard={onMoveCard}
+              onRemoveCardLink={onRemoveCardLink}
+              onRemoveCard={onRemoveCard}
+              onUpdateCard={onUpdateCard}
+              onUpdateCardLink={onUpdateCardLink}
+              sectionIndex={sectionIndex}
+            />
+          </details>
+        ))}
+      </div>
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveCustomSections}>
+          {isSaving ? "Saving" : "Save Custom Sections"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CustomSectionCardDetailsList({ cards, onAddCardLink, onMoveCard, onMoveCardLink, onRemoveCard, onRemoveCardLink, onUpdateCard, onUpdateCardLink, sectionIndex }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Cards</span>
+      </div>
+      {cards.map((card, cardIndex) => (
+        <details className="visual-editor-course" key={card.id || cardIndex}>
+          <summary>
+            <span>{card.title || `Card ${cardIndex + 1}`}</span>
+            <strong>{card.active === false ? "Hidden" : "Visible"}</strong>
+          </summary>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={cardIndex === 0} onClick={() => onMoveCard(sectionIndex, cardIndex, -1)}>Up</button>
+            <button type="button" disabled={cardIndex === cards.length - 1} onClick={() => onMoveCard(sectionIndex, cardIndex, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveCard(sectionIndex, cardIndex)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={card.kicker || ""} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={card.title || ""} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={card.summary || ""} rows={3} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "summary", event.target.value)} />
+          </label>
+          <CustomSectionLinksEditor
+            cardIndex={cardIndex}
+            links={card.links || []}
+            onAddLink={onAddCardLink}
+            onMoveLink={onMoveCardLink}
+            onRemoveLink={onRemoveCardLink}
+            onUpdateLink={onUpdateCardLink}
+            sectionIndex={sectionIndex}
+          />
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={card.active !== false} onChange={(event) => onUpdateCard(sectionIndex, cardIndex, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+        </details>
       ))}
     </div>
   );
