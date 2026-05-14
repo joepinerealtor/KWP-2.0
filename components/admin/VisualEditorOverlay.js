@@ -56,6 +56,11 @@ const SELECTABLE_CANVAS_SELECTOR = [
 
 let nextVisualEditorId = 1;
 const EDITOR_SESSION_PASSCODE_KEY = "kwpVisualEditorPasscode";
+const EDITOR_PAGE_LINKS = [
+  { id: "home", label: "Home", href: "/admin/visual/" },
+  { id: "brandAssets", label: "Brand Assets", href: "/admin/visual/brand-assets/" },
+  { id: "tech", label: "Tech Connect", href: "/admin/visual/tech/" }
+];
 const OFFICE_SECTION_DEFAULT = {
   eyebrow: "Office Hub",
   title: "Resources, office information, and internal support"
@@ -149,7 +154,7 @@ const JOE_AVAILABILITY_DEFAULT = {
   noSlotsSummary: "No open tech-help slots are listed right now."
 };
 
-export function VisualEditorOverlay({ initialContent, initialSectionId = "productivityCourses", previewHref = "/" }) {
+export function VisualEditorOverlay({ currentEditorPage = "home", initialContent, initialSectionId = "productivityCourses", previewHref = "/" }) {
   const [activeSectionId, setActiveSectionId] = useState(initialSectionId);
   const [content, setContent] = useState(initialContent);
   const [joeAvailability, setJoeAvailability] = useState(JOE_AVAILABILITY_DEFAULT);
@@ -1811,6 +1816,17 @@ export function VisualEditorOverlay({ initialContent, initialSectionId = "produc
           <span className="visual-editor-kicker">Edit Mode</span>
           <strong>KWP Visual Editor</strong>
         </div>
+        <nav className="visual-editor-page-switcher" aria-label="Editor pages">
+          {EDITOR_PAGE_LINKS.map((pageLink) => (
+            <a
+              className={`visual-editor-page-link${pageLink.id === currentEditorPage ? " is-active" : ""}`}
+              href={pageLink.href}
+              key={pageLink.id}
+            >
+              {pageLink.label}
+            </a>
+          ))}
+        </nav>
         <div className="visual-editor-toolbar-actions">
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Edit Sections")}>
             Edit Sections

@@ -4045,6 +4045,39 @@ body.has-handbook-modal .page-content {
   padding-bottom: 2px;
 }
 
+.visual-editor-page-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 0 22px;
+}
+
+.visual-editor-page-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(77, 77, 77, 0.18);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--kw-black);
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.visual-editor-page-link.is-active,
+.visual-editor-page-link:hover,
+.visual-editor-page-link:focus-visible {
+  border-color: var(--kw-red);
+  background: var(--kw-red);
+  color: #fff;
+}
+
 .visual-editor-toolbar .visual-editor-button {
   flex: 0 0 auto;
   min-height: 34px;

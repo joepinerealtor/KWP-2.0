@@ -20,6 +20,7 @@ export default function BrandAssetsVisualAdminPage() {
     <div className="visual-editor-mode">
       <LegacyPortalPage source="brand-assets.html" pageKey="brandAssets" />
       <VisualEditorOverlay
+        currentEditorPage="brandAssets"
         initialContent={portalContent}
         initialSectionId="brandAssets"
         previewHref="/brand-assets.html"

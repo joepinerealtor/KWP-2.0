@@ -8,19 +8,24 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "KWP Visual Editor"
+  title: "KWP Visual Editor - Tech Connect"
 };
 
-export default function VisualAdminPage() {
+export default function TechVisualAdminPage() {
   if (process.env.KWP_ADMIN_ENABLED !== "true") {
     notFound();
   }
 
   return (
     <div className="visual-editor-mode">
-      <LegacyPortalPage source="index.html" pageKey="home" />
-      <VisualEditorOverlay currentEditorPage="home" initialContent={portalContent} previewHref="/" />
-      <PortalScripts includeTockify />
+      <LegacyPortalPage source="tech/index.html" pageKey="tech" />
+      <VisualEditorOverlay
+        currentEditorPage="tech"
+        initialContent={portalContent}
+        initialSectionId="overview"
+        previewHref="/tech/"
+      />
+      <PortalScripts />
     </div>
   );
 }
