@@ -148,7 +148,7 @@ export function MobileSidebarMenus({ page }) {
   );
 }
 
-function JoeAvailabilityCompact({ statusSrc }) {
+function JoeAvailabilityCompact({ statusSrc, joeSupport }) {
   return (
     <div
       className="content-strip-tech-support"
@@ -159,7 +159,7 @@ function JoeAvailabilityCompact({ statusSrc }) {
     >
       <div className="joe-availability-panel joe-availability-panel--compact" data-status="unavailable" aria-live="polite">
         <div className="joe-availability-compact-copy">
-          <span className="joe-availability-compact-kicker">Tech Help with Joe</span>
+          <span className="joe-availability-compact-kicker">{joeSupport.eyebrow || "Tech Help with Joe"}</span>
           <div className="joe-availability-compact-status">
             <span className="joe-availability-light" data-joe-availability-light aria-hidden="true" />
             <div className="joe-availability-copy">
@@ -171,12 +171,12 @@ function JoeAvailabilityCompact({ statusSrc }) {
         <div className="joe-availability-actions joe-availability-actions--compact">
           <a
             className="content-strip-tech-button"
-            href="https://calendly.com/joepinerealtor/tech-meeting-with-joe"
+            href={joeSupport.buttonHref}
             target="_blank"
             rel="noreferrer"
             data-joe-primary-action
           >
-            Schedule an appointment
+            {joeSupport.buttonLabel}
           </a>
         </div>
       </div>
@@ -207,7 +207,7 @@ export function QuickLinksStrip({ page }) {
             </a>
           ))}
         </div>
-        {page.showJoeInQuickStrip ? <JoeAvailabilityCompact statusSrc={page.joeStatusSrc} /> : null}
+        {page.showJoeInQuickStrip ? <JoeAvailabilityCompact joeSupport={page.leadershipSupport || {}} statusSrc={page.joeStatusSrc} /> : null}
       </div>
     </section>
   );

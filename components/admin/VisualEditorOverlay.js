@@ -24,6 +24,7 @@ import {
 } from "./contentDrafts";
 import { portalPages } from "@/lib/portal-config";
 import { createCustomSectionCardId, createCustomSectionId, getCustomSectionsForPage } from "@/lib/custom-sections";
+import { LEADERSHIP_SUPPORT_DEFAULT, getLeadershipSupportContent } from "@/lib/leadership-support";
 import { getOverviewContent } from "@/lib/overview-content";
 import { getNavigationContent } from "@/lib/portal-navigation";
 import { getSiteChromeContent } from "@/lib/portal-site-chrome";
@@ -122,15 +123,6 @@ const ALC_SECTION_DEFAULT = {
   title: "2026 ALC Board of Directors",
   summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
 };
-const LEADERSHIP_SUPPORT_DEFAULT = {
-  eyebrow: "Tech Help with Joe",
-  title: "Schedule a one-on-one with Joe",
-  summary: "Use Joe's calendar for live help with KW Command, DocuSign, Canva, social media, and day-to-day real estate tech tools.",
-  photo: "team/joe-pine-chair.jpg",
-  photoAlt: "Joe Pine sitting in a chair",
-  buttonLabel: "Schedule an appointment",
-  buttonHref: "https://calendly.com/joepinerealtor/tech-meeting-with-joe"
-};
 const JOE_AVAILABILITY_DEFAULT = {
   status: "unavailable",
   trackerEnabled: true,
@@ -220,10 +212,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const digitalLogosSection = content?.sections?.digitalLogos || DIGITAL_LOGOS_SECTION_DEFAULT;
   const sourceFilesSection = content?.sections?.sourceFiles || SOURCE_FILES_SECTION_DEFAULT;
   const alcSection = content?.sections?.alc || ALC_SECTION_DEFAULT;
-  const leadershipSupport = {
-    ...LEADERSHIP_SUPPORT_DEFAULT,
-    ...(content?.sections?.leadershipSupport || {})
-  };
+  const leadershipSupport = getLeadershipSupportContent(content);
   const trainingResourceSection = content?.sections?.trainingResources || {
     eyebrow: "Self-Paced Support",
     title: "Training Resources"
@@ -589,7 +578,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
       return;
     }
 
-    if (selectedItem.type === "tech-joe-support") {
+    if (selectedItem.type === "tech-joe-support" || selectedItem.type === "tech-joe-link") {
       setActiveSectionId("techConnect");
       setEditingItemId(selectedItem.visualId);
       setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the Tech Connect Joe support block." } : currentItem);
@@ -1321,6 +1310,47 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     syncTechJoeSupportPreview(field, value);
     setStatusMessage("");
     setError("");
+  }
+
+  function updateTechJoeSupportLink(index, field, value) {
+    const nextLinks = (techJoeSupport.secondaryLinks || []).map((link, linkIndex) => (
+      linkIndex === index
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    updateTechJoeSupport("secondaryLinks", nextLinks);
+  }
+
+  function addTechJoeSupportLink() {
+    updateTechJoeSupport("secondaryLinks", [
+      ...(techJoeSupport.secondaryLinks || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: false,
+        active: true
+      }
+    ]);
+  }
+
+  function removeTechJoeSupportLink(index) {
+    updateTechJoeSupport("secondaryLinks", (techJoeSupport.secondaryLinks || []).filter((_, linkIndex) => linkIndex !== index));
+  }
+
+  function moveTechJoeSupportLink(index, direction) {
+    const nextIndex = index + direction;
+    const nextLinks = [...(techJoeSupport.secondaryLinks || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[index], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[index]];
+    updateTechJoeSupport("secondaryLinks", nextLinks);
   }
 
   function updateTechQuickLink(index, field, value) {
@@ -3128,6 +3158,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onAddRoomCalendar={addRoomCalendar}
           onAddBrandAssetLink={addBrandAssetLink}
           onAddTechLink={addTechLink}
+          onAddTechJoeSupportLink={addTechJoeSupportLink}
           onAddTechQuickLink={addTechQuickLink}
           onAddNavigationLink={addNavigationLink}
           onAddOverviewLink={addOverviewLink}
@@ -3148,6 +3179,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onMoveTechAnswer={moveTechAnswer}
           onMoveTechHelpPath={moveTechHelpPath}
           onMoveTechLink={moveTechLink}
+          onMoveTechJoeSupportLink={moveTechJoeSupportLink}
           onMoveTechPaperCut={moveTechPaperCut}
           onMoveTechQuickLink={moveTechQuickLink}
           onMoveNavigationLink={moveNavigationLink}
@@ -3164,6 +3196,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onRemoveTechAnswer={removeTechAnswer}
           onRemoveTechHelpPath={removeTechHelpPath}
           onRemoveTechLink={removeTechLink}
+          onRemoveTechJoeSupportLink={removeTechJoeSupportLink}
           onRemoveTechPaperCut={removeTechPaperCut}
           onRemoveTechQuickLink={removeTechQuickLink}
           onRemoveNavigationLink={removeNavigationLink}
@@ -3198,6 +3231,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateTechAnswer={updateTechAnswer}
           onUpdateTechHelpPath={updateTechHelpPath}
           onUpdateTechJoeSupport={updateTechJoeSupport}
+          onUpdateTechJoeSupportLink={updateTechJoeSupportLink}
           onUpdateTechLink={updateTechLink}
           onUpdateTechPaperCut={updateTechPaperCut}
           onUpdateTechQuickLink={updateTechQuickLink}
@@ -4344,6 +4378,10 @@ function syncLeadershipSupportPreview(field, value) {
     if (image) {
       image.src = value || LEADERSHIP_SUPPORT_DEFAULT.photo;
     }
+
+    document.querySelectorAll(".mobile-tech-help-avatar img").forEach((mobileImage) => {
+      mobileImage.src = value || LEADERSHIP_SUPPORT_DEFAULT.photo;
+    });
   }
 
   if (field === "photoAlt") {
@@ -4351,20 +4389,22 @@ function syncLeadershipSupportPreview(field, value) {
     if (image) {
       image.alt = value || LEADERSHIP_SUPPORT_DEFAULT.photoAlt;
     }
+
+    document.querySelectorAll(".mobile-tech-help-avatar img").forEach((mobileImage) => {
+      mobileImage.alt = value || LEADERSHIP_SUPPORT_DEFAULT.photoAlt;
+    });
   }
 
   if (field === "buttonLabel") {
-    const button = element.querySelector("[data-joe-primary-action]");
-    if (button) {
+    document.querySelectorAll("[data-joe-primary-action]").forEach((button) => {
       button.textContent = value;
-    }
+    });
   }
 
   if (field === "buttonHref") {
-    const button = element.querySelector("[data-joe-primary-action]");
-    if (button) {
+    document.querySelectorAll("[data-joe-primary-action]").forEach((button) => {
       button.setAttribute("href", value);
-    }
+    });
   }
 }
 
@@ -4840,6 +4880,40 @@ function syncTechJoeSupportPreview(field, value) {
       button.href = value || "#";
     }
   }
+
+  if (field === "secondaryLinks") {
+    const actions = element.querySelector(".tech-overview-actions");
+    const primary = actions?.querySelector(".button.primary");
+
+    if (actions && primary) {
+      actions.replaceChildren(primary, ...createTechJoeSecondaryLinkPreviewElements(value || []));
+    }
+  }
+}
+
+function createTechJoeSecondaryLinkPreviewElements(links = []) {
+  return links
+    .filter((link) => link.active !== false)
+    .map((link, index) => {
+      const element = document.createElement("a");
+
+      element.className = "button secondary compact";
+      element.dataset.editableType = "tech-joe-link";
+      element.dataset.editableId = String(index);
+      element.textContent = link.label || "";
+      element.href = link.href || "#";
+
+      if (link.external) {
+        element.target = "_blank";
+        element.rel = "noreferrer";
+      }
+
+      if (link.download) {
+        element.setAttribute("download", "");
+      }
+
+      return element;
+    });
 }
 
 function syncTechItemPreview(editableType, itemId, field, value) {
@@ -5419,6 +5493,7 @@ function FloatingItemEditor({
   onAddCustomSectionCard,
   onAddCustomSectionCardLink,
   onAddTechLink,
+  onAddTechJoeSupportLink,
   onAddTechQuickLink,
   onAddNavigationLink,
   onAddOverviewLink,
@@ -5435,6 +5510,7 @@ function FloatingItemEditor({
   onMoveTechAnswer,
   onMoveTechHelpPath,
   onMoveTechLink,
+  onMoveTechJoeSupportLink,
   onMoveTechPaperCut,
   onMoveTechQuickLink,
   onMoveNavigationLink,
@@ -5449,6 +5525,7 @@ function FloatingItemEditor({
   onRemoveTechAnswer,
   onRemoveTechHelpPath,
   onRemoveTechLink,
+  onRemoveTechJoeSupportLink,
   onRemoveTechPaperCut,
   onRemoveTechQuickLink,
   onRemoveNavigationLink,
@@ -5491,6 +5568,7 @@ function FloatingItemEditor({
   onUpdateTechAnswer,
   onUpdateTechHelpPath,
   onUpdateTechJoeSupport,
+  onUpdateTechJoeSupportLink,
   onUpdateTechLink,
   onUpdateTechPaperCut,
   onUpdateTechQuickLink,
@@ -5961,6 +6039,13 @@ function FloatingItemEditor({
             <span>Button Link</span>
             <input value={techJoeSupport.buttonHref || ""} onChange={(event) => onUpdateTechJoeSupport("buttonHref", event.target.value)} />
           </label>
+          <SimpleLinksEditor
+            links={techJoeSupport.secondaryLinks || []}
+            onAddLink={onAddTechJoeSupportLink}
+            onMoveLink={onMoveTechJoeSupportLink}
+            onRemoveLink={onRemoveTechJoeSupportLink}
+            onUpdateLink={onUpdateTechJoeSupportLink}
+          />
           <JoeAvailabilityEditor
             isSaving={isSaving}
             joeAvailability={joeAvailability}

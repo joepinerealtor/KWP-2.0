@@ -6,6 +6,13 @@ function createChipLinksHtml(links = []) {
     .join("");
 }
 
+function createTechJoeSecondaryLinksHtml(links = []) {
+  return links
+    .filter((link) => link.active !== false)
+    .map((link, index) => `<a class="button secondary compact" data-editable-type="tech-joe-link" data-editable-id="${index}" ${createLinkAttributes(link)}>${escapeHtml(link.label)}</a>`)
+    .join("");
+}
+
 export function createTechQuickLinksHtml(links = []) {
   return `<div class="asset-utility-row" data-editable-type="tech-quick-links" data-editable-id="techQuickLinks">${createChipLinksHtml(links)}</div>`;
 }
@@ -35,9 +42,7 @@ export function createTechJoeSupportHtml(joeSupport = {}) {
                 </div>
                 <div class="directory-actions tech-overview-actions">
                   <a class="button primary compact" href="${escapeHtmlAttribute(joeSupport.buttonHref)}" target="_blank" rel="noreferrer">${escapeHtml(joeSupport.buttonLabel)}</a>
-                  <a class="button secondary compact" href="#help-paths">Get Help</a>
-                  <a class="button secondary compact" href="#papercut-hive">PaperCut Hive</a>
-                  <a class="button secondary compact" href="#kw-answers">KW Answers</a>
+                  ${createTechJoeSecondaryLinksHtml(joeSupport.secondaryLinks)}
                 </div>
               </div>`;
 }

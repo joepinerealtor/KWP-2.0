@@ -14,6 +14,7 @@ import { getTechConnectContent } from "@/lib/tech-connect-content";
 import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
 import { getCustomSectionsForPage } from "@/lib/custom-sections";
+import { getLeadershipSupportContent } from "@/lib/leadership-support";
 import { getOverviewContent } from "@/lib/overview-content";
 import { getPortalPageWithContent } from "@/lib/portal-navigation";
 
@@ -94,6 +95,29 @@ function hydrateLegacyMainHtml(source, mainHtml) {
   }
 
   return mainHtml;
+}
+
+function hydrateLegacyOverlaysHtml(source, overlaysHtml) {
+  if (source !== "index.html") {
+    return overlaysHtml;
+  }
+
+  const leadershipSupport = getLeadershipSupportContent(portalContent);
+  const mobileBubblePattern = /<a class="mobile-tech-help-bubble"[\s\S]*?<\/a>/;
+  const mobileBubbleHtml = `<a class="mobile-tech-help-bubble" href="${escapeHtmlAttribute(leadershipSupport.buttonHref)}" target="_blank" rel="noreferrer" data-editable-type="joe-availability-card" data-editable-id="joeAvailability" data-joe-availability-card data-joe-availability-src="data/joe-tech-status.json" data-joe-primary-action aria-label="Open tech help with Joe">
+    <span class="joe-availability-panel joe-availability-panel--mobile-bubble" data-status="unavailable" aria-live="polite">
+      <span class="mobile-tech-help-avatar" data-joe-availability-light aria-hidden="true">
+        <img src="${escapeHtmlAttribute(leadershipSupport.photo)}" alt="${escapeHtmlAttribute(leadershipSupport.photoAlt || leadershipSupport.title || "Tech Help with Joe")}">
+      </span>
+      <span class="joe-availability-copy">
+        <span class="mobile-tech-help-kicker">${escapeHtml(leadershipSupport.eyebrow || "Tech Help with Joe")}</span>
+        <span class="joe-availability-label" data-joe-availability-label>${escapeHtml(leadershipSupport.buttonLabel)}</span>
+        <span class="joe-availability-summary" data-joe-availability-summary>${escapeHtml(leadershipSupport.mobileSummary || "Tap to schedule an appointment")}</span>
+      </span>
+    </span>
+  </a>`;
+
+  return overlaysHtml.replace(mobileBubblePattern, mobileBubbleHtml);
 }
 
 function replaceLegacyOverview(mainHtml) {
@@ -280,15 +304,7 @@ function replaceLegacyLeadershipGrids(mainHtml) {
     title: "2026 ALC Board of Directors",
     summary: "Poster set for the ALC board members and committees posted throughout the brokerage."
   };
-  const leadershipSupport = portalContent.sections?.leadershipSupport || {
-    eyebrow: "Tech Help with Joe",
-    title: "Schedule a one-on-one with Joe",
-    summary: "Use Joe's calendar for live help with KW Command, DocuSign, Canva, social media, and day-to-day real estate tech tools.",
-    photo: "team/joe-pine-chair.jpg",
-    photoAlt: "Joe Pine sitting in a chair",
-    buttonLabel: "Schedule an appointment",
-    buttonHref: "https://calendly.com/joepinerealtor/tech-meeting-with-joe"
-  };
+  const leadershipSupport = getLeadershipSupportContent(portalContent);
   const legacyLeadershipHeadPattern = /(<section class="panel" id="leadership">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
   const legacyAlcHeadPattern = /(<article class="alc-card" id="alc-board">\s*<div class="alc-card-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h3>[\s\S]*?<\/h3>\s*<p class="alc-card-summary">[\s\S]*?<\/p>/;
   const legacyLeadershipSupportPattern = /<article class="leadership-support-card" id="leadership-support"[\s\S]*?<\/article>/;
@@ -405,11 +421,12 @@ function replaceLegacyOfficeCards(mainHtml) {
 export function LegacyPortalPage({ pageKey, source }) {
   const page = getPortalPageWithContent(pageKey, portalPages[pageKey], portalContent);
   const { mainHtml, overlaysHtml } = getLegacyPortalFragments(source);
+  const hydratedOverlaysHtml = hydrateLegacyOverlaysHtml(source, overlaysHtml);
 
   return (
     <>
       <PortalBodyState lockLabel={page.lockLabel} />
-      <PortalShell mainHtml={mainHtml} overlaysHtml={overlaysHtml} page={page} />
+      <PortalShell mainHtml={mainHtml} overlaysHtml={hydratedOverlaysHtml} page={page} />
     </>
   );
 }
