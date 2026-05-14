@@ -111,7 +111,30 @@ function replaceLegacyCourseGrid(mainHtml) {
 }
 
 function replaceLegacyVendorGrids(mainHtml) {
+  const vendorDirectorySection = portalContent.sections?.vendorDirectory || {
+    eyebrow: "Vendor Directory",
+    title: "Preferred office vendors",
+    summary: "A fast referral directory for lender, title, insurance, inspection, media, construction, cleaning, moving, and remediation contacts."
+  };
+  const vendorCoreSection = portalContent.sections?.vendorCore || {
+    eyebrow: "Core Partners",
+    title: "Vendors agents reach for constantly"
+  };
+  const vendorServicesSection = portalContent.sections?.vendorServices || {
+    eyebrow: "Service Vendors",
+    title: "The rest of the vendor directory"
+  };
+  const legacyVendorDirectoryHeadPattern = /(<section class="panel directory-panel" id="vendor-row">\s*<div class="directory-head">\s*<div class="directory-title-block">\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>\s*<p class="dashboard-summary">[\s\S]*?<\/p>/;
+  const legacyVendorCoreHeadPattern = /(<section class="panel" id="vendor-core-partners">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const legacyVendorServicesHeadPattern = /(<section class="panel" id="vendor-services">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const vendorDirectoryHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="vendorDirectory">${escapeHtml(vendorDirectorySection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="vendorDirectory">${escapeHtml(vendorDirectorySection.title)}</h2><p class="dashboard-summary" data-editable-type="section-summary" data-editable-id="vendorDirectory">${escapeHtml(vendorDirectorySection.summary)}</p>`;
+  const vendorCoreHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="vendorCore">${escapeHtml(vendorCoreSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="vendorCore">${escapeHtml(vendorCoreSection.title)}</h2>`;
+  const vendorServicesHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="vendorServices">${escapeHtml(vendorServicesSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="vendorServices">${escapeHtml(vendorServicesSection.title)}</h2>`;
+
   return mainHtml
+    .replace(legacyVendorDirectoryHeadPattern, `$1${vendorDirectoryHeadHtml}`)
+    .replace(legacyVendorCoreHeadPattern, `$1${vendorCoreHeadHtml}`)
+    .replace(legacyVendorServicesHeadPattern, `$1${vendorServicesHeadHtml}`)
     .replace(
       '<div class="vendor-grid vendor-grid-featured" data-vendor-grid="core" aria-live="polite"></div>',
       createVendorGridHtml(portalContent.vendors, "core", { featured: true })

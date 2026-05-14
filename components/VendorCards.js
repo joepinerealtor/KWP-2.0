@@ -25,7 +25,7 @@ function VendorCard({ vendor }) {
   const phoneHref = toPhoneHref(vendor.phone);
 
   return (
-    <article className={`vendor-card${vendor.section === "core" ? " vendor-card-featured" : ""}`}>
+    <article className={`vendor-card${vendor.section === "core" ? " vendor-card-featured" : ""}`} data-editable-type="vendor-card" data-editable-id={vendor.id}>
       <div className="vendor-brand">
         <img className="vendor-logo" src={vendor.logo} alt={`${vendor.business || vendor.name} logo`} />
       </div>
@@ -64,5 +64,5 @@ function createVendorCardHtml(vendor) {
     : "";
   const featuredClass = vendor.section === "core" ? " vendor-card-featured" : "";
 
-  return `<article class="vendor-card${featuredClass}"><div class="vendor-brand"><img class="vendor-logo" src="${escapeHtmlAttribute(vendor.logo)}" alt="${escapeHtmlAttribute(vendor.business || vendor.name)} logo"></div><dl class="vendor-details"><div><dt>Business</dt><dd>${escapeHtml(vendor.business || "")}</dd></div><div><dt>Name</dt><dd>${escapeHtml(vendor.name || "")}</dd></div><div><dt>Phone</dt><dd>${phone}</dd></div><div><dt>E-mail</dt><dd>${email}</dd></div><div><dt>Notes</dt><dd>${escapeHtml(vendor.notes || "")}</dd></div></dl></article>`;
+  return `<article class="vendor-card${featuredClass}" data-editable-type="vendor-card" data-editable-id="${escapeHtmlAttribute(vendor.id)}"><div class="vendor-brand"><img class="vendor-logo" src="${escapeHtmlAttribute(vendor.logo)}" alt="${escapeHtmlAttribute(vendor.business || vendor.name)} logo"></div><dl class="vendor-details"><div><dt>Business</dt><dd>${escapeHtml(vendor.business || "")}</dd></div><div><dt>Name</dt><dd>${escapeHtml(vendor.name || "")}</dd></div><div><dt>Phone</dt><dd>${phone}</dd></div><div><dt>E-mail</dt><dd>${email}</dd></div><div><dt>Notes</dt><dd>${escapeHtml(vendor.notes || "")}</dd></div></dl></article>`;
 }

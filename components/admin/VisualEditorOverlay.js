@@ -5,11 +5,13 @@ import {
   createCourseId,
   createLeadershipId,
   createTrainingResourceId,
+  createVendorId,
   validateCourseDrafts,
   validateLeadershipDrafts,
   validateOfficeCardDraft,
   validateOfficeOperationsDraft,
-  validateRoomsDraft
+  validateRoomsDraft,
+  validateVendorDrafts
 } from "./contentDrafts";
 
 const EDITABLE_SECTIONS = [
@@ -55,6 +57,19 @@ const ROOMS_SECTION_DEFAULT = {
 const LEADERSHIP_SECTION_DEFAULT = {
   eyebrow: "Leadership Directory",
   title: "Office leadership team"
+};
+const VENDOR_DIRECTORY_SECTION_DEFAULT = {
+  eyebrow: "Vendor Directory",
+  title: "Preferred office vendors",
+  summary: "A fast referral directory for lender, title, insurance, inspection, media, construction, cleaning, moving, and remediation contacts."
+};
+const VENDOR_CORE_SECTION_DEFAULT = {
+  eyebrow: "Core Partners",
+  title: "Vendors agents reach for constantly"
+};
+const VENDOR_SERVICES_SECTION_DEFAULT = {
+  eyebrow: "Service Vendors",
+  title: "The rest of the vendor directory"
 };
 const ALC_SECTION_DEFAULT = {
   eyebrow: "Associate Leadership Council",
@@ -125,11 +140,15 @@ export function VisualEditorOverlay({ initialContent }) {
   const courses = content?.courses || [];
   const trainingResources = content?.trainingResources || [];
   const leadership = content?.leadership || [];
+  const vendors = content?.vendors || [];
   const office = content?.office || {};
   const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
   const rooms = office.rooms || {};
   const roomsSection = content?.sections?.rooms || ROOMS_SECTION_DEFAULT;
   const leadershipSection = content?.sections?.leadership || LEADERSHIP_SECTION_DEFAULT;
+  const vendorDirectorySection = content?.sections?.vendorDirectory || VENDOR_DIRECTORY_SECTION_DEFAULT;
+  const vendorCoreSection = content?.sections?.vendorCore || VENDOR_CORE_SECTION_DEFAULT;
+  const vendorServicesSection = content?.sections?.vendorServices || VENDOR_SERVICES_SECTION_DEFAULT;
   const alcSection = content?.sections?.alc || ALC_SECTION_DEFAULT;
   const leadershipSupport = {
     ...LEADERSHIP_SUPPORT_DEFAULT,
@@ -142,6 +161,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const courseErrors = useMemo(() => validateCourseDrafts(courses), [courses]);
   const trainingResourceErrors = useMemo(() => validateCourseDrafts(trainingResources), [trainingResources]);
   const leadershipErrors = useMemo(() => validateLeadershipDrafts(leadership), [leadership]);
+  const vendorErrors = useMemo(() => validateVendorDrafts(vendors), [vendors]);
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
   const selectedCourseIndex = selectedItem?.type === "course-card"
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
@@ -152,9 +172,13 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedLeaderIndex = selectedItem?.type === "leader-card" || selectedItem?.type === "alc-poster-card"
     ? leadership.findIndex((person) => person.id === selectedItem.editableId)
     : -1;
+  const selectedVendorIndex = selectedItem?.type === "vendor-card"
+    ? vendors.findIndex((vendor) => vendor.id === selectedItem.editableId)
+    : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
   const selectedLeader = selectedLeaderIndex >= 0 ? leadership[selectedLeaderIndex] : null;
+  const selectedVendor = selectedVendorIndex >= 0 ? vendors[selectedVendorIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -168,7 +192,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
   const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
   const shouldShowPanel = true;
-  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership";
+  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -394,6 +418,23 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (selectedItem.type === "vendor-card" && selectedItem.editableId) {
+      setActiveSectionId("vendors");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this vendor card." } : currentItem);
+      return;
+    }
+
+    if (
+      (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
+      (selectedItem.sectionId === "vendor-row" || selectedItem.sectionId === "vendor-core-partners" || selectedItem.sectionId === "vendor-services" || selectedItem.editableId === "vendorDirectory" || selectedItem.editableId === "vendorCore" || selectedItem.editableId === "vendorServices")
+    ) {
+      setActiveSectionId("vendors");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this vendor section heading." } : currentItem);
+      return;
+    }
+
     if (
       (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
       (selectedItem.sectionId === "leadership" || selectedItem.editableId === "leadership" || selectedItem.editableId === "alc")
@@ -443,6 +484,12 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (activeSectionId === "vendors") {
+      addVendor();
+      setStatusMessage("Vendor card added. Edit the new card, then save when ready.");
+      return;
+    }
+
     setToolbarStatus("Add Card");
   }
 
@@ -468,6 +515,61 @@ export function VisualEditorOverlay({ initialContent }) {
 
   function updateTrainingResource(index, field, value) {
     updateEditableCard("trainingResources", trainingResources, index, field, value, "training-resource-card");
+  }
+
+  function updateVendor(index, field, value) {
+    const vendorId = vendors[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      vendors: (currentContent.vendors || []).map((vendor, vendorIndex) => (
+        vendorIndex === index
+          ? {
+              ...vendor,
+              [field]: value
+            }
+          : vendor
+      ))
+    }));
+    syncVendorPreview(vendorId, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  async function uploadVendorLogo(index, file) {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "vendors");
+
+      const response = await fetch("/api/admin/upload/", {
+        method: "POST",
+        headers: {
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to upload logo.");
+      }
+
+      updateVendor(index, "logo", payload.path);
+      setStatusMessage("Vendor logo uploaded. Save vendors when it looks right.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function updateLeader(index, field, value) {
@@ -663,6 +765,29 @@ export function VisualEditorOverlay({ initialContent }) {
       }
     }));
     syncLeadershipSectionPreview(sectionKey, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateVendorSection(sectionKey, field, value) {
+    const defaults = sectionKey === "vendorDirectory"
+      ? VENDOR_DIRECTORY_SECTION_DEFAULT
+      : sectionKey === "vendorCore"
+      ? VENDOR_CORE_SECTION_DEFAULT
+      : VENDOR_SERVICES_SECTION_DEFAULT;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        [sectionKey]: {
+          ...defaults,
+          ...((currentContent.sections || {})[sectionKey] || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncVendorSectionPreview(sectionKey, field, value);
     setStatusMessage("");
     setError("");
   }
@@ -1045,6 +1170,33 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function addVendor() {
+    const nextVendor = {
+      id: createVendorId(vendors),
+      section: "services",
+      business: "New Vendor",
+      logo: "brand/kw-leading-edge-logo.png",
+      name: "New Contact",
+      phone: "",
+      email: "",
+      notes: "Vendor category",
+      active: true
+    };
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      vendors: [
+        ...(currentContent.vendors || []),
+        nextVendor
+      ]
+    }));
+    appendVendorPreview(nextVendor);
+    setEditingItemId("");
+    setSelectedItem(null);
+    setStatusMessage("");
+    setError("");
+  }
+
   function addEditableCard(collectionKey, items, id, editableType) {
     const nextCard = {
       id,
@@ -1098,6 +1250,22 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function removeVendor(index) {
+    const vendorId = vendors[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      vendors: (currentContent.vendors || []).filter((_, vendorIndex) => vendorIndex !== index)
+    }));
+    removeVendorPreview(vendorId);
+    if (selectedItem?.editableId === vendorId) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+    setStatusMessage("");
+    setError("");
+  }
+
   function removeEditableCard(collectionKey, items, index, editableType) {
     const itemId = items[index]?.id;
 
@@ -1143,6 +1311,27 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function moveVendor(index, direction) {
+    setContent((currentContent) => {
+      const currentItems = currentContent.vendors || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= currentItems.length) {
+        return currentContent;
+      }
+
+      const nextItems = [...currentItems];
+      [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
+
+      return {
+        ...currentContent,
+        vendors: nextItems
+      };
+    });
+    setStatusMessage("");
+    setError("");
+  }
+
   function moveEditableCard(collectionKey, index, direction) {
     setContent((currentContent) => {
       const currentItems = currentContent[collectionKey] || [];
@@ -1176,7 +1365,15 @@ export function VisualEditorOverlay({ initialContent }) {
     await saveContent(leadershipErrors, "Leadership");
   }
 
+  async function saveVendors() {
+    await saveContent(vendorErrors, "Vendors");
+  }
+
   async function saveLeadershipSection(sectionLabel = "Leadership heading") {
+    await saveContent([], sectionLabel);
+  }
+
+  async function saveVendorSection(sectionLabel = "Vendor heading") {
     await saveContent([], sectionLabel);
   }
 
@@ -1366,6 +1563,19 @@ export function VisualEditorOverlay({ initialContent }) {
                     onUploadLeaderPhoto={uploadLeaderPhoto}
                     onUpdateLeader={updateLeader}
                   />
+                ) : activeSectionId === "vendors" ? (
+                  <VendorVisualPanel
+                    errors={vendorErrors}
+                    isSaving={isSaving}
+                    isUploading={isUploading}
+                    vendors={vendors}
+                    onAddVendor={addVendor}
+                    onMoveVendor={moveVendor}
+                    onRemoveVendor={removeVendor}
+                    onSaveVendors={saveVendors}
+                    onUploadVendorLogo={uploadVendorLogo}
+                    onUpdateVendor={updateVendor}
+                  />
                 ) : (
                   <div className="visual-editor-empty-state">
                     <strong>{activeSection.label}</strong>
@@ -1417,6 +1627,12 @@ export function VisualEditorOverlay({ initialContent }) {
           leadershipSupport={leadershipSupport}
           leadershipSectionSettings={leadershipSection}
           alcSectionSettings={alcSection}
+          vendor={selectedVendor}
+          vendorDirectorySectionSettings={vendorDirectorySection}
+          vendorCoreSectionSettings={vendorCoreSection}
+          vendorErrors={vendorErrors}
+          vendorIndex={selectedVendorIndex}
+          vendorServicesSectionSettings={vendorServicesSection}
           officeCard={selectedOfficeCard}
           officeCardErrors={selectedOfficeCardErrors}
           officeCardKey={selectedOfficeCardKey}
@@ -1431,6 +1647,7 @@ export function VisualEditorOverlay({ initialContent }) {
           onAddOfficeHour={addOfficeHour}
           onClose={() => setEditingItemId("")}
           onMoveLeader={moveLeader}
+          onMoveVendor={moveVendor}
           onMoveOfficeChip={moveOfficeChip}
           onMoveOfficeHoliday={moveOfficeHoliday}
           onMoveOfficeHour={moveOfficeHour}
@@ -1456,14 +1673,20 @@ export function VisualEditorOverlay({ initialContent }) {
           onUpdateRoomsSection={updateRoomsSection}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
           onRemoveLeader={removeLeader}
+          onRemoveVendor={removeVendor}
           onSaveLeadership={saveLeadership}
           onSaveLeadershipSection={saveLeadershipSection}
           onSaveLeadershipSupport={saveLeadershipSupport}
+          onSaveVendorSection={saveVendorSection}
+          onSaveVendors={saveVendors}
           onUpdateLeader={updateLeader}
           onUpdateLeadershipSection={updateLeadershipSection}
           onUpdateLeadershipSupport={updateLeadershipSupport}
+          onUpdateVendor={updateVendor}
+          onUpdateVendorSection={updateVendorSection}
           onUploadLeaderPhoto={uploadLeaderPhoto}
           onUploadLeadershipSupportPhoto={uploadLeadershipSupportPhoto}
+          onUploadVendorLogo={uploadVendorLogo}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onSaveJoeAvailability={saveJoeAvailability}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -1577,6 +1800,26 @@ function getOfficeCardKeyFromItem(item) {
   return "";
 }
 
+function getVendorSectionKeyFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (item.editableId === "vendorDirectory" || item.sectionId === "vendor-row") {
+    return "vendorDirectory";
+  }
+
+  if (item.editableId === "vendorCore" || item.sectionId === "vendor-core-partners") {
+    return "vendorCore";
+  }
+
+  if (item.editableId === "vendorServices" || item.sectionId === "vendor-services") {
+    return "vendorServices";
+  }
+
+  return "";
+}
+
 function findSectionForSelectedItem(item) {
   const target = item.href?.startsWith("#") ? item.href : item.sectionId ? `#${item.sectionId}` : "";
 
@@ -1658,6 +1901,97 @@ function syncEditableCardPreview(editableType, itemId, field, value) {
       element.removeAttribute("rel");
     }
   }
+}
+
+function syncVendorPreview(vendorId, field, value) {
+  if (!vendorId || typeof document === "undefined") {
+    return;
+  }
+
+  const safeVendorId = String(vendorId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="vendor-card"][data-editable-id="${safeVendorId}"]`);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "section") {
+    const grid = document.querySelector(`[data-vendor-grid="${String(value).replace(/"/g, '\\"')}"]`);
+    element.classList.toggle("vendor-card-featured", value === "core");
+    grid?.append(element);
+  }
+
+  if (field === "business") {
+    updateVendorDetailPreview(element, "Business", value);
+    const image = element.querySelector(".vendor-logo");
+    if (image) {
+      image.alt = `${value || ""} logo`;
+    }
+  }
+
+  if (field === "logo") {
+    const image = element.querySelector(".vendor-logo");
+    if (image) {
+      image.src = value;
+    }
+  }
+
+  if (field === "name") {
+    updateVendorDetailPreview(element, "Name", value);
+  }
+
+  if (field === "phone") {
+    updateVendorDetailPreview(element, "Phone", value, createPhoneLinkPreview);
+  }
+
+  if (field === "email") {
+    updateVendorDetailPreview(element, "E-mail", value, createEmailLinkPreview);
+  }
+
+  if (field === "notes") {
+    updateVendorDetailPreview(element, "Notes", value);
+  }
+
+  if (field === "active") {
+    element.hidden = value === false;
+  }
+}
+
+function updateVendorDetailPreview(element, label, value, createContent) {
+  const rows = [...element.querySelectorAll(".vendor-details > div")];
+  const row = rows.find((detailRow) => detailRow.querySelector("dt")?.textContent === label);
+  const valueElement = row?.querySelector("dd");
+
+  if (!valueElement) {
+    return;
+  }
+
+  valueElement.replaceChildren();
+
+  if (createContent && value) {
+    valueElement.append(createContent(value));
+  } else {
+    valueElement.textContent = value || "";
+  }
+}
+
+function createPhoneLinkPreview(value) {
+  const link = document.createElement("a");
+  const digits = String(value || "").replace(/\D/g, "");
+
+  link.textContent = value || "";
+  link.href = digits ? `tel:+1${digits.length === 10 ? digits : digits.replace(/^1/, "")}` : "";
+
+  return link;
+}
+
+function createEmailLinkPreview(value) {
+  const link = document.createElement("a");
+
+  link.textContent = value || "";
+  link.href = `mailto:${value || ""}`;
+
+  return link;
 }
 
 function syncOfficeCardPreview(cardKey, field, value) {
@@ -2224,6 +2558,85 @@ function removeEditableCardPreview(editableType, itemId) {
   element?.remove();
 }
 
+function syncVendorSectionPreview(sectionKey, field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? `[data-editable-type="section-eyebrow"][data-editable-id="${sectionKey}"]`
+    : field === "summary"
+    ? `[data-editable-type="section-summary"][data-editable-id="${sectionKey}"]`
+    : `[data-editable-type="section-heading"][data-editable-id="${sectionKey}"]`;
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function appendVendorPreview(vendor) {
+  if (!vendor || typeof document === "undefined") {
+    return;
+  }
+
+  const grid = document.querySelector(`[data-vendor-grid="${vendor.section || "services"}"]`);
+
+  if (!grid) {
+    return;
+  }
+
+  const element = document.createElement("article");
+  const brand = document.createElement("div");
+  const image = document.createElement("img");
+  const details = document.createElement("dl");
+
+  element.className = `vendor-card${vendor.section === "core" ? " vendor-card-featured" : ""}`;
+  element.dataset.editableType = "vendor-card";
+  element.dataset.editableId = vendor.id;
+  brand.className = "vendor-brand";
+  image.className = "vendor-logo";
+  image.src = vendor.logo || "";
+  image.alt = `${vendor.business || vendor.name || ""} logo`;
+  details.className = "vendor-details";
+  brand.append(image);
+  details.append(
+    createVendorDetailRow("Business", vendor.business || ""),
+    createVendorDetailRow("Name", vendor.name || ""),
+    createVendorDetailRow("Phone", vendor.phone || "", createPhoneLinkPreview),
+    createVendorDetailRow("E-mail", vendor.email || "", createEmailLinkPreview),
+    createVendorDetailRow("Notes", vendor.notes || "")
+  );
+  element.append(brand, details);
+  grid.append(element);
+}
+
+function createVendorDetailRow(label, value, createContent) {
+  const row = document.createElement("div");
+  const term = document.createElement("dt");
+  const description = document.createElement("dd");
+
+  term.textContent = label;
+  if (createContent && value) {
+    description.append(createContent(value));
+  } else {
+    description.textContent = value || "";
+  }
+  row.append(term, description);
+
+  return row;
+}
+
+function removeVendorPreview(vendorId) {
+  if (!vendorId || typeof document === "undefined") {
+    return;
+  }
+
+  const safeVendorId = String(vendorId).replace(/"/g, '\\"');
+  const element = document.querySelector(`[data-editable-type="vendor-card"][data-editable-id="${safeVendorId}"]`);
+  element?.remove();
+}
+
 function AddToolsPanel({ activeSection, canAddCard, onAddCard, onAddSection, onBackToPageTools }) {
   return (
     <div className="visual-editor-add-tools">
@@ -2244,7 +2657,7 @@ function AddToolsPanel({ activeSection, canAddCard, onAddCard, onAddSection, onB
       </div>
       {!canAddCard ? (
         <p className="visual-editor-note">
-          Cards can be added in Training Resources, Productivity Coaching, and Leadership right now. More section types are coming as they become data-backed.
+          Cards can be added in Training Resources, Productivity Coaching, Leadership, and Vendor Row right now. More section types are coming as they become data-backed.
         </p>
       ) : null}
     </div>
@@ -2318,6 +2731,12 @@ function FloatingItemEditor({
   leadershipSupport,
   leadershipSectionSettings,
   alcSectionSettings,
+  vendor,
+  vendorDirectorySectionSettings,
+  vendorCoreSectionSettings,
+  vendorErrors,
+  vendorIndex,
+  vendorServicesSectionSettings,
   officeCard,
   officeCardErrors,
   officeCardKey,
@@ -2327,6 +2746,7 @@ function FloatingItemEditor({
   onAddOfficeHour,
   onClose,
   onMoveLeader,
+  onMoveVendor,
   onMoveOfficeChip,
   onMoveOfficeHoliday,
   onMoveOfficeHour,
@@ -2335,11 +2755,14 @@ function FloatingItemEditor({
   onRemoveOfficeHour,
   onRemoveCard,
   onRemoveLeader,
+  onRemoveVendor,
   onSaveCards,
   onSaveJoeAvailability,
   onSaveLeadership,
   onSaveLeadershipSection,
   onSaveLeadershipSupport,
+  onSaveVendorSection,
+  onSaveVendors,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
@@ -2349,8 +2772,11 @@ function FloatingItemEditor({
   onUpdateLeader,
   onUpdateLeadershipSection,
   onUpdateLeadershipSupport,
+  onUpdateVendor,
+  onUpdateVendorSection,
   onUploadLeaderPhoto,
   onUploadLeadershipSupportPhoto,
+  onUploadVendorLogo,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -2395,6 +2821,16 @@ function FloatingItemEditor({
   );
   const isLeadershipCardEditable = (item.type === "leader-card" || item.type === "alc-poster-card") && leader && leaderIndex >= 0;
   const isLeadershipSupportEditable = item.type === "leadership-support-card" || item.type === "leadership-support-field" || item.editableId?.startsWith("leadershipSupport");
+  const isVendorCardEditable = item.type === "vendor-card" && vendor && vendorIndex >= 0;
+  const vendorSectionKey = getVendorSectionKeyFromItem(item);
+  const vendorSectionSettings = vendorSectionKey === "vendorDirectory"
+    ? vendorDirectorySectionSettings
+    : vendorSectionKey === "vendorCore"
+    ? vendorCoreSectionSettings
+    : vendorSectionKey === "vendorServices"
+    ? vendorServicesSectionSettings
+    : null;
+  const isVendorSectionEditable = Boolean(vendorSectionKey && vendorSectionSettings);
   const isRoomsSectionEditable = (
     (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading") &&
     (item.sectionId === "conference-rooms" || item.editableId === "rooms")
@@ -2666,6 +3102,108 @@ function FloatingItemEditor({
               {isSaving ? "Saving" : "Save Tech Help Card"}
             </button>
             {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+          </div>
+        </>
+      ) : isVendorSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this vendor section heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={vendorSectionSettings.eyebrow || ""} onChange={(event) => onUpdateVendorSection(vendorSectionKey, "eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={vendorSectionSettings.title || ""} onChange={(event) => onUpdateVendorSection(vendorSectionKey, "title", event.target.value)} />
+          </label>
+          {"summary" in vendorSectionSettings ? (
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={vendorSectionSettings.summary || ""} rows={3} onChange={(event) => onUpdateVendorSection(vendorSectionKey, "summary", event.target.value)} />
+            </label>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={() => onSaveVendorSection("Vendor heading")}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isVendorCardEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this vendor card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Group</span>
+            <select value={vendor.section || "services"} onChange={(event) => onUpdateVendor(vendorIndex, "section", event.target.value)}>
+              <option value="core">Core Partners</option>
+              <option value="services">Service Vendors</option>
+            </select>
+          </label>
+          <label className="visual-editor-field">
+            <span>Business</span>
+            <input value={vendor.business || ""} onChange={(event) => onUpdateVendor(vendorIndex, "business", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Logo</span>
+            <input value={vendor.logo || ""} onChange={(event) => onUpdateVendor(vendorIndex, "logo", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Upload Logo</span>
+            <input
+              accept="image/gif,image/jpeg,image/png,image/webp"
+              type="file"
+              onChange={(event) => onUploadVendorLogo(vendorIndex, event.target.files?.[0])}
+            />
+          </label>
+          <label className="visual-editor-field">
+            <span>Name</span>
+            <input value={vendor.name || ""} onChange={(event) => onUpdateVendor(vendorIndex, "name", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Phone</span>
+            <input value={vendor.phone || ""} onChange={(event) => onUpdateVendor(vendorIndex, "phone", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Email</span>
+            <input value={vendor.email || ""} onChange={(event) => onUpdateVendor(vendorIndex, "email", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Notes</span>
+            <textarea value={vendor.notes || ""} rows={3} onChange={(event) => onUpdateVendor(vendorIndex, "notes", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={vendor.active !== false}
+                onChange={(event) => onUpdateVendor(vendorIndex, "active", event.target.checked)}
+              />
+              Visible
+            </label>
+          </div>
+          {vendorErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {vendorErrors.map((validationError) => (
+                <p key={validationError}>{validationError}</p>
+              ))}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(vendorErrors.length) || isSaving} onClick={onSaveVendors}>
+              {isSaving ? "Saving" : "Save Vendors"}
+            </button>
+            {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={vendorIndex === 0} onClick={() => onMoveVendor(vendorIndex, -1)}>
+              Up
+            </button>
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onMoveVendor(vendorIndex, 1)}>
+              Down
+            </button>
+            <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveVendor(vendorIndex)}>
+              Delete
+            </button>
           </div>
         </>
       ) : isLeadershipCardEditable ? (
@@ -3331,6 +3869,124 @@ function CourseVisualPanel({
         <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveCourses}>
           {isSaving ? "Saving" : saveLabel}
         </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VendorVisualPanel({
+  errors,
+  isSaving,
+  isUploading,
+  vendors,
+  onAddVendor,
+  onMoveVendor,
+  onRemoveVendor,
+  onSaveVendors,
+  onUploadVendorLogo,
+  onUpdateVendor
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{vendors.length} vendor cards</strong>
+        </div>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddVendor}>
+          Add Card
+        </button>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="visual-editor-course-list">
+        {vendors.map((vendor, index) => (
+          <details className="visual-editor-course" key={vendor.id || index} open={index === 0}>
+            <summary>
+              <span>{vendor.business || `Vendor ${index + 1}`}</span>
+              <strong>{vendor.active === false ? "Hidden" : vendor.section === "core" ? "Core" : "Service"}</strong>
+            </summary>
+            <div className="visual-editor-course-controls">
+              <button type="button" disabled={index === 0} onClick={() => onMoveVendor(index, -1)}>
+                Up
+              </button>
+              <button type="button" disabled={index === vendors.length - 1} onClick={() => onMoveVendor(index, 1)}>
+                Down
+              </button>
+              <button type="button" onClick={() => onRemoveVendor(index)}>
+                Remove
+              </button>
+            </div>
+            <label className="visual-editor-field">
+              <span>Group</span>
+              <select value={vendor.section || "services"} onChange={(event) => onUpdateVendor(index, "section", event.target.value)}>
+                <option value="core">Core Partners</option>
+                <option value="services">Service Vendors</option>
+              </select>
+            </label>
+            <label className="visual-editor-field">
+              <span>Business</span>
+              <input value={vendor.business || ""} onChange={(event) => onUpdateVendor(index, "business", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Logo</span>
+              <input value={vendor.logo || ""} onChange={(event) => onUpdateVendor(index, "logo", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Upload Logo</span>
+              <input
+                accept="image/gif,image/jpeg,image/png,image/webp"
+                type="file"
+                onChange={(event) => onUploadVendorLogo(index, event.target.files?.[0])}
+              />
+            </label>
+            <label className="visual-editor-field">
+              <span>Name</span>
+              <input value={vendor.name || ""} onChange={(event) => onUpdateVendor(index, "name", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Phone</span>
+              <input value={vendor.phone || ""} onChange={(event) => onUpdateVendor(index, "phone", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Email</span>
+              <input value={vendor.email || ""} onChange={(event) => onUpdateVendor(index, "email", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Notes</span>
+              <textarea value={vendor.notes || ""} rows={3} onChange={(event) => onUpdateVendor(index, "notes", event.target.value)} />
+            </label>
+            <div className="visual-editor-check-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={vendor.active !== false}
+                  onChange={(event) => onUpdateVendor(index, "active", event.target.checked)}
+                />
+                Visible
+              </label>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveVendors}>
+          {isSaving ? "Saving" : "Save Vendors"}
+        </button>
+        {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
         <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
           Refresh Preview
         </button>
