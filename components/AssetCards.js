@@ -10,7 +10,7 @@ export function MarketingToolGrid({ tools = [] }) {
   return (
     <div className="marketing-tool-grid">
       {tools.filter((tool) => tool.active !== false).map((tool) => (
-        <article key={tool.id} className="asset-source-card marketing-tool-card">
+        <article key={tool.id} className="asset-source-card marketing-tool-card" data-editable-type="marketing-tool-card" data-editable-id={tool.id}>
           <p className="eyebrow small">{tool.kicker}</p>
           <h3>{tool.title}</h3>
           <p>{tool.summary}</p>
@@ -38,7 +38,7 @@ export function createMarketingToolGridHtml(tools = []) {
   const cards = tools
     .filter((tool) => tool.active !== false)
     .map((tool) => {
-      return `<article class="asset-source-card marketing-tool-card"><p class="eyebrow small">${escapeHtml(tool.kicker)}</p><h3>${escapeHtml(tool.title)}</h3><p>${escapeHtml(tool.summary)}</p><div class="chip-row asset-downloads">${createChipLinksHtml(tool.links)}</div></article>`;
+      return `<article class="asset-source-card marketing-tool-card" data-editable-type="marketing-tool-card" data-editable-id="${escapeHtmlAttribute(tool.id)}"><p class="eyebrow small">${escapeHtml(tool.kicker)}</p><h3>${escapeHtml(tool.title)}</h3><p>${escapeHtml(tool.summary)}</p><div class="chip-row asset-downloads">${createChipLinksHtml(tool.links)}</div></article>`;
     })
     .join("");
 
@@ -49,7 +49,7 @@ export function AssetGrid({ assets = [] }) {
   return (
     <div className="asset-grid">
       {assets.filter((asset) => asset.active !== false).map((asset) => (
-        <article key={asset.id} className="asset-card">
+        <article key={asset.id} className="asset-card" data-editable-type="digital-logo-card" data-editable-id={asset.id}>
           <div className={`asset-preview ${asset.previewClass}`}>
             <img src={asset.image.src} alt={asset.image.alt} />
           </div>
@@ -82,7 +82,7 @@ export function createAssetGridHtml(assets = []) {
   const cards = assets
     .filter((asset) => asset.active !== false)
     .map((asset) => {
-      return `<article class="asset-card"><div class="asset-preview ${escapeHtmlAttribute(asset.previewClass)}"><img src="${escapeHtmlAttribute(asset.image.src)}" alt="${escapeHtmlAttribute(asset.image.alt)}"></div><div class="asset-card-copy"><p class="eyebrow small">${escapeHtml(asset.kicker)}</p><h3>${escapeHtml(asset.title)}</h3><p>${escapeHtml(asset.summary)}</p></div><div class="chip-row asset-downloads">${createChipLinksHtml(asset.links)}</div></article>`;
+      return `<article class="asset-card" data-editable-type="digital-logo-card" data-editable-id="${escapeHtmlAttribute(asset.id)}"><div class="asset-preview ${escapeHtmlAttribute(asset.previewClass)}"><img src="${escapeHtmlAttribute(asset.image.src)}" alt="${escapeHtmlAttribute(asset.image.alt)}"></div><div class="asset-card-copy"><p class="eyebrow small">${escapeHtml(asset.kicker)}</p><h3>${escapeHtml(asset.title)}</h3><p>${escapeHtml(asset.summary)}</p></div><div class="chip-row asset-downloads">${createChipLinksHtml(asset.links)}</div></article>`;
     })
     .join("");
 
@@ -93,7 +93,7 @@ export function SourceFileGrid({ files = [] }) {
   return (
     <div className="asset-source-grid">
       {files.filter((file) => file.active !== false).map((file) => (
-        <article key={file.id} className="asset-source-card">
+        <article key={file.id} className="asset-source-card" data-editable-type="source-file-card" data-editable-id={file.id}>
           <p className="eyebrow small">{file.kicker}</p>
           <h3>{file.title}</h3>
           {file.summary ? <p>{file.summary}</p> : null}
@@ -116,7 +116,7 @@ export function createSourceFileGridHtml(files = []) {
     .map((file) => {
       const summary = file.summary ? `<p>${escapeHtml(file.summary)}</p>` : "";
 
-      return `<article class="asset-source-card"><p class="eyebrow small">${escapeHtml(file.kicker)}</p><h3>${escapeHtml(file.title)}</h3>${summary}<div class="chip-row asset-downloads">${createChipLinksHtml(file.links)}</div></article>`;
+      return `<article class="asset-source-card" data-editable-type="source-file-card" data-editable-id="${escapeHtmlAttribute(file.id)}"><p class="eyebrow small">${escapeHtml(file.kicker)}</p><h3>${escapeHtml(file.title)}</h3>${summary}<div class="chip-row asset-downloads">${createChipLinksHtml(file.links)}</div></article>`;
     })
     .join("");
 

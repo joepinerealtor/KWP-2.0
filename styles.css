@@ -3994,6 +3994,9 @@ body.has-handbook-modal .page-content {
 .visual-editor-mode .office-card,
 .visual-editor-mode .course-card,
 .visual-editor-mode .vendor-card,
+.visual-editor-mode .marketing-tool-card,
+.visual-editor-mode .asset-card,
+.visual-editor-mode .asset-source-card,
 .visual-editor-mode .leadership-card {
   outline: 2px dashed rgba(180, 1, 1, 0.28);
   outline-offset: 5px;
@@ -4004,6 +4007,9 @@ body.has-handbook-modal .page-content {
 .visual-editor-mode .office-card:hover,
 .visual-editor-mode .course-card:hover,
 .visual-editor-mode .vendor-card:hover,
+.visual-editor-mode .marketing-tool-card:hover,
+.visual-editor-mode .asset-card:hover,
+.visual-editor-mode .asset-source-card:hover,
 .visual-editor-mode .leadership-card:hover {
   outline-color: rgba(180, 1, 1, 0.68);
 }

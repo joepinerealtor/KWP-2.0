@@ -205,7 +205,37 @@ function replaceLegacyLeadershipGrids(mainHtml) {
 }
 
 function replaceLegacyBrandAssetGrids(mainHtml) {
+  const brandOverviewSection = portalContent.sections?.brandOverview || {
+    eyebrow: "Marketing + Brand Assets",
+    title: "Marketing tools, logo previews, and downloads",
+    summary: "Open Keller Williams marketing tools, onboarding help, standards, and ordering links first, then jump into logo previews and source files when you need exact artwork."
+  };
+  const marketingToolsSection = portalContent.sections?.marketingTools || {
+    eyebrow: "Marketing Tools",
+    title: "The links agents usually need first"
+  };
+  const digitalLogosSection = portalContent.sections?.digitalLogos || {
+    eyebrow: "Digital Logos",
+    title: "Preview before downloading"
+  };
+  const sourceFilesSection = portalContent.sections?.sourceFiles || {
+    eyebrow: "Source Files",
+    title: "EPS artwork and print-ready files"
+  };
+  const brandOverviewHeadPattern = /(<section class="panel directory-panel" id="brand-overview">\s*<div class="directory-head">\s*<div class="directory-title-block">\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h1>[\s\S]*?<\/h1>\s*<p class="dashboard-summary">[\s\S]*?<\/p>/;
+  const marketingToolsHeadPattern = /(<section class="panel" id="marketing-tools">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const digitalLogosHeadPattern = /(<section class="panel" id="digital-logos">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const sourceFilesHeadPattern = /(<section class="panel" id="source-files">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const brandOverviewHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="brandOverview">${escapeHtml(brandOverviewSection.eyebrow)}</p><h1 data-editable-type="section-heading" data-editable-id="brandOverview">${escapeHtml(brandOverviewSection.title)}</h1><p class="dashboard-summary" data-editable-type="section-summary" data-editable-id="brandOverview">${escapeHtml(brandOverviewSection.summary)}</p>`;
+  const marketingToolsHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="marketingTools">${escapeHtml(marketingToolsSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="marketingTools">${escapeHtml(marketingToolsSection.title)}</h2>`;
+  const digitalLogosHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="digitalLogos">${escapeHtml(digitalLogosSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="digitalLogos">${escapeHtml(digitalLogosSection.title)}</h2>`;
+  const sourceFilesHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="sourceFiles">${escapeHtml(sourceFilesSection.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="sourceFiles">${escapeHtml(sourceFilesSection.title)}</h2>`;
+
   return mainHtml
+    .replace(brandOverviewHeadPattern, `$1${brandOverviewHeadHtml}`)
+    .replace(marketingToolsHeadPattern, `$1${marketingToolsHeadHtml}`)
+    .replace(digitalLogosHeadPattern, `$1${digitalLogosHeadHtml}`)
+    .replace(sourceFilesHeadPattern, `$1${sourceFilesHeadHtml}`)
     .replace(
       /<div class="marketing-tool-grid">\s*(?:<article class="asset-source-card marketing-tool-card">[\s\S]*?<\/article>\s*)+<\/div>/,
       createMarketingToolGridHtml(portalContent.brandAssets.marketingTools)

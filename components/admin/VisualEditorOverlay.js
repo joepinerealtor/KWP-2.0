@@ -3,14 +3,20 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   createCourseId,
+  createDigitalLogoId,
   createLeadershipId,
+  createMarketingToolId,
+  createSourceFileId,
   createTrainingResourceId,
   createVendorId,
   validateCourseDrafts,
+  validateDigitalLogoDrafts,
   validateLeadershipDrafts,
+  validateMarketingToolDrafts,
   validateOfficeCardDraft,
   validateOfficeOperationsDraft,
   validateRoomsDraft,
+  validateSourceFileDrafts,
   validateVendorDrafts
 } from "./contentDrafts";
 
@@ -21,6 +27,7 @@ const EDITABLE_SECTIONS = [
   { id: "rooms", label: "Rooms", target: "#conference-rooms", status: "Calendar module" },
   { id: "leadership", label: "Leadership", target: "#leadership", status: "People module" },
   { id: "vendors", label: "Vendor Row", target: "#vendor-row", status: "Vendor module" },
+  { id: "brandAssets", label: "Marketing + Brand Assets", target: "#brand-overview", status: "Asset module" },
   { id: "productivityCourses", label: "Productivity Coaching", target: "#training", status: "Courses module" }
 ];
 
@@ -34,6 +41,9 @@ const SELECTABLE_CANVAS_SELECTOR = [
   ".alc-card",
   ".leadership-support-card",
   ".vendor-card",
+  ".marketing-tool-card",
+  ".asset-card",
+  ".asset-source-card",
   ".leadership-card",
   ".portal-action-card",
   ".launch-card",
@@ -70,6 +80,23 @@ const VENDOR_CORE_SECTION_DEFAULT = {
 const VENDOR_SERVICES_SECTION_DEFAULT = {
   eyebrow: "Service Vendors",
   title: "The rest of the vendor directory"
+};
+const BRAND_OVERVIEW_SECTION_DEFAULT = {
+  eyebrow: "Marketing + Brand Assets",
+  title: "Marketing tools, logo previews, and downloads",
+  summary: "Open Keller Williams marketing tools, onboarding help, standards, and ordering links first, then jump into logo previews and source files when you need exact artwork."
+};
+const MARKETING_TOOLS_SECTION_DEFAULT = {
+  eyebrow: "Marketing Tools",
+  title: "The links agents usually need first"
+};
+const DIGITAL_LOGOS_SECTION_DEFAULT = {
+  eyebrow: "Digital Logos",
+  title: "Preview before downloading"
+};
+const SOURCE_FILES_SECTION_DEFAULT = {
+  eyebrow: "Source Files",
+  title: "EPS artwork and print-ready files"
 };
 const ALC_SECTION_DEFAULT = {
   eyebrow: "Associate Leadership Council",
@@ -122,8 +149,8 @@ const JOE_AVAILABILITY_DEFAULT = {
   noSlotsSummary: "No open tech-help slots are listed right now."
 };
 
-export function VisualEditorOverlay({ initialContent }) {
-  const [activeSectionId, setActiveSectionId] = useState("productivityCourses");
+export function VisualEditorOverlay({ initialContent, initialSectionId = "productivityCourses", previewHref = "/" }) {
+  const [activeSectionId, setActiveSectionId] = useState(initialSectionId);
   const [content, setContent] = useState(initialContent);
   const [joeAvailability, setJoeAvailability] = useState(JOE_AVAILABILITY_DEFAULT);
   const [passcode, setPasscode] = useState("");
@@ -141,6 +168,10 @@ export function VisualEditorOverlay({ initialContent }) {
   const trainingResources = content?.trainingResources || [];
   const leadership = content?.leadership || [];
   const vendors = content?.vendors || [];
+  const brandAssets = content?.brandAssets || {};
+  const marketingTools = brandAssets.marketingTools || [];
+  const digitalLogos = brandAssets.digitalLogos || [];
+  const sourceFiles = brandAssets.sourceFiles || [];
   const office = content?.office || {};
   const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
   const rooms = office.rooms || {};
@@ -149,6 +180,10 @@ export function VisualEditorOverlay({ initialContent }) {
   const vendorDirectorySection = content?.sections?.vendorDirectory || VENDOR_DIRECTORY_SECTION_DEFAULT;
   const vendorCoreSection = content?.sections?.vendorCore || VENDOR_CORE_SECTION_DEFAULT;
   const vendorServicesSection = content?.sections?.vendorServices || VENDOR_SERVICES_SECTION_DEFAULT;
+  const brandOverviewSection = content?.sections?.brandOverview || BRAND_OVERVIEW_SECTION_DEFAULT;
+  const marketingToolsSection = content?.sections?.marketingTools || MARKETING_TOOLS_SECTION_DEFAULT;
+  const digitalLogosSection = content?.sections?.digitalLogos || DIGITAL_LOGOS_SECTION_DEFAULT;
+  const sourceFilesSection = content?.sections?.sourceFiles || SOURCE_FILES_SECTION_DEFAULT;
   const alcSection = content?.sections?.alc || ALC_SECTION_DEFAULT;
   const leadershipSupport = {
     ...LEADERSHIP_SUPPORT_DEFAULT,
@@ -162,6 +197,10 @@ export function VisualEditorOverlay({ initialContent }) {
   const trainingResourceErrors = useMemo(() => validateCourseDrafts(trainingResources), [trainingResources]);
   const leadershipErrors = useMemo(() => validateLeadershipDrafts(leadership), [leadership]);
   const vendorErrors = useMemo(() => validateVendorDrafts(vendors), [vendors]);
+  const marketingToolErrors = useMemo(() => validateMarketingToolDrafts(marketingTools), [marketingTools]);
+  const digitalLogoErrors = useMemo(() => validateDigitalLogoDrafts(digitalLogos), [digitalLogos]);
+  const sourceFileErrors = useMemo(() => validateSourceFileDrafts(sourceFiles), [sourceFiles]);
+  const brandAssetErrors = [...marketingToolErrors, ...digitalLogoErrors, ...sourceFileErrors];
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
   const selectedCourseIndex = selectedItem?.type === "course-card"
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
@@ -175,10 +214,22 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedVendorIndex = selectedItem?.type === "vendor-card"
     ? vendors.findIndex((vendor) => vendor.id === selectedItem.editableId)
     : -1;
+  const selectedMarketingToolIndex = selectedItem?.type === "marketing-tool-card"
+    ? marketingTools.findIndex((tool) => tool.id === selectedItem.editableId)
+    : -1;
+  const selectedDigitalLogoIndex = selectedItem?.type === "digital-logo-card"
+    ? digitalLogos.findIndex((logo) => logo.id === selectedItem.editableId)
+    : -1;
+  const selectedSourceFileIndex = selectedItem?.type === "source-file-card"
+    ? sourceFiles.findIndex((file) => file.id === selectedItem.editableId)
+    : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
   const selectedLeader = selectedLeaderIndex >= 0 ? leadership[selectedLeaderIndex] : null;
   const selectedVendor = selectedVendorIndex >= 0 ? vendors[selectedVendorIndex] : null;
+  const selectedMarketingTool = selectedMarketingToolIndex >= 0 ? marketingTools[selectedMarketingToolIndex] : null;
+  const selectedDigitalLogo = selectedDigitalLogoIndex >= 0 ? digitalLogos[selectedDigitalLogoIndex] : null;
+  const selectedSourceFile = selectedSourceFileIndex >= 0 ? sourceFiles[selectedSourceFileIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -192,7 +243,7 @@ export function VisualEditorOverlay({ initialContent }) {
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
   const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
   const shouldShowPanel = true;
-  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors";
+  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors" || activeSectionId === "brandAssets";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -426,6 +477,26 @@ export function VisualEditorOverlay({ initialContent }) {
     }
 
     if (
+      (selectedItem.type === "marketing-tool-card" || selectedItem.type === "digital-logo-card" || selectedItem.type === "source-file-card") &&
+      selectedItem.editableId
+    ) {
+      setActiveSectionId("brandAssets");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this brand asset card." } : currentItem);
+      return;
+    }
+
+    if (
+      (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
+      (selectedItem.sectionId === "brand-overview" || selectedItem.sectionId === "marketing-tools" || selectedItem.sectionId === "digital-logos" || selectedItem.sectionId === "source-files" || selectedItem.editableId === "brandOverview" || selectedItem.editableId === "marketingTools" || selectedItem.editableId === "digitalLogos" || selectedItem.editableId === "sourceFiles")
+    ) {
+      setActiveSectionId("brandAssets");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this brand-assets section heading." } : currentItem);
+      return;
+    }
+
+    if (
       (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
       (selectedItem.sectionId === "vendor-row" || selectedItem.sectionId === "vendor-core-partners" || selectedItem.sectionId === "vendor-services" || selectedItem.editableId === "vendorDirectory" || selectedItem.editableId === "vendorCore" || selectedItem.editableId === "vendorServices")
     ) {
@@ -490,6 +561,12 @@ export function VisualEditorOverlay({ initialContent }) {
       return;
     }
 
+    if (activeSectionId === "brandAssets") {
+      addMarketingTool();
+      setStatusMessage("Marketing tool card added. Edit the new card, then save when ready.");
+      return;
+    }
+
     setToolbarStatus("Add Card");
   }
 
@@ -534,6 +611,144 @@ export function VisualEditorOverlay({ initialContent }) {
     syncVendorPreview(vendorId, field, value);
     setStatusMessage("");
     setError("");
+  }
+
+  function updateBrandAssetSection(sectionKey, field, value) {
+    const defaults = getBrandAssetSectionDefault(sectionKey);
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      sections: {
+        ...(currentContent.sections || {}),
+        [sectionKey]: {
+          ...defaults,
+          ...((currentContent.sections || {})[sectionKey] || {}),
+          [field]: value
+        }
+      }
+    }));
+    syncBrandAssetSectionPreview(sectionKey, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateBrandAssetItem(collectionKey, items, index, field, value, editableType) {
+    const itemId = items[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      brandAssets: {
+        ...((currentContent.brandAssets || {})),
+        [collectionKey]: (((currentContent.brandAssets || {})[collectionKey]) || []).map((item, itemIndex) => (
+          itemIndex === index
+            ? updateNestedBrandAssetField(item, field, value)
+            : item
+        ))
+      }
+    }));
+    syncBrandAssetPreview(editableType, itemId, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateMarketingTool(index, field, value) {
+    updateBrandAssetItem("marketingTools", marketingTools, index, field, value, "marketing-tool-card");
+  }
+
+  function updateDigitalLogo(index, field, value) {
+    updateBrandAssetItem("digitalLogos", digitalLogos, index, field, value, "digital-logo-card");
+  }
+
+  function updateSourceFile(index, field, value) {
+    updateBrandAssetItem("sourceFiles", sourceFiles, index, field, value, "source-file-card");
+  }
+
+  function updateBrandAssetLink(collectionKey, items, index, linkIndex, field, value, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = (currentItem.links || []).map((link, currentLinkIndex) => (
+      currentLinkIndex === linkIndex
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    updateBrandAssetItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncBrandAssetLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function addBrandAssetLink(collectionKey, items, index, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = [
+      ...(currentItem.links || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: true
+      }
+    ];
+
+    updateBrandAssetItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncBrandAssetLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function removeBrandAssetLink(collectionKey, items, index, linkIndex, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = (currentItem.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex);
+
+    updateBrandAssetItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncBrandAssetLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function moveBrandAssetLink(collectionKey, items, index, linkIndex, direction, editableType) {
+    const currentItem = items[index] || {};
+    const nextIndex = linkIndex + direction;
+    const nextLinks = [...(currentItem.links || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[linkIndex], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[linkIndex]];
+    updateBrandAssetItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncBrandAssetLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  async function uploadDigitalLogoImage(index, file) {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "brand-assets");
+
+      const response = await fetch("/api/admin/upload/", {
+        method: "POST",
+        headers: {
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to upload logo preview.");
+      }
+
+      updateDigitalLogo(index, "image.src", payload.path);
+      setStatusMessage("Logo image uploaded. Save brand assets when it looks right.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   async function uploadVendorLogo(index, file) {
@@ -1197,6 +1412,86 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function addMarketingTool() {
+    const nextTool = {
+      id: createMarketingToolId(marketingTools),
+      kicker: "New Tool",
+      title: "New Marketing Tool",
+      summary: "Add a short description.",
+      links: [
+        {
+          label: "Open Link",
+          href: "#",
+          external: true
+        }
+      ],
+      active: true
+    };
+
+    addBrandAssetItem("marketingTools", nextTool, "marketing-tool-card");
+  }
+
+  function addDigitalLogo() {
+    const nextLogo = {
+      id: createDigitalLogoId(digitalLogos),
+      kicker: "Logo",
+      title: "New Digital Logo",
+      summary: "Add guidance for when this logo should be used.",
+      previewClass: "asset-preview--light",
+      image: {
+        src: "brand/kw-leading-edge-logo.png",
+        alt: "KW Leading Edge logo"
+      },
+      links: [
+        {
+          label: "Download",
+          href: "#",
+          download: true
+        }
+      ],
+      active: true
+    };
+
+    addBrandAssetItem("digitalLogos", nextLogo, "digital-logo-card");
+  }
+
+  function addSourceFile() {
+    const nextFile = {
+      id: createSourceFileId(sourceFiles),
+      kicker: "Source File",
+      title: "New Source File",
+      summary: "Add a short description.",
+      links: [
+        {
+          label: "Download",
+          href: "#",
+          download: true
+        }
+      ],
+      active: true
+    };
+
+    addBrandAssetItem("sourceFiles", nextFile, "source-file-card");
+  }
+
+  function addBrandAssetItem(collectionKey, item, editableType) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      brandAssets: {
+        ...((currentContent.brandAssets || {})),
+        [collectionKey]: [
+          ...(((currentContent.brandAssets || {})[collectionKey]) || []),
+          item
+        ]
+      }
+    }));
+    appendBrandAssetPreview(editableType, item);
+    setEditingItemId("");
+    setSelectedItem(null);
+    setStatusMessage("");
+    setError("");
+  }
+
   function addEditableCard(collectionKey, items, id, editableType) {
     const nextCard = {
       id,
@@ -1266,6 +1561,37 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function removeBrandAssetItem(collectionKey, items, index, editableType) {
+    const itemId = items[index]?.id;
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      brandAssets: {
+        ...((currentContent.brandAssets || {})),
+        [collectionKey]: (((currentContent.brandAssets || {})[collectionKey]) || []).filter((_, itemIndex) => itemIndex !== index)
+      }
+    }));
+    removeBrandAssetPreview(editableType, itemId);
+    if (selectedItem?.editableId === itemId && selectedItem?.type === editableType) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+    setStatusMessage("");
+    setError("");
+  }
+
+  function removeMarketingTool(index) {
+    removeBrandAssetItem("marketingTools", marketingTools, index, "marketing-tool-card");
+  }
+
+  function removeDigitalLogo(index) {
+    removeBrandAssetItem("digitalLogos", digitalLogos, index, "digital-logo-card");
+  }
+
+  function removeSourceFile(index) {
+    removeBrandAssetItem("sourceFiles", sourceFiles, index, "source-file-card");
+  }
+
   function removeEditableCard(collectionKey, items, index, editableType) {
     const itemId = items[index]?.id;
 
@@ -1332,6 +1658,42 @@ export function VisualEditorOverlay({ initialContent }) {
     setError("");
   }
 
+  function moveBrandAssetItem(collectionKey, index, direction) {
+    setContent((currentContent) => {
+      const currentItems = ((currentContent.brandAssets || {})[collectionKey]) || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= currentItems.length) {
+        return currentContent;
+      }
+
+      const nextItems = [...currentItems];
+      [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
+
+      return {
+        ...currentContent,
+        brandAssets: {
+          ...((currentContent.brandAssets || {})),
+          [collectionKey]: nextItems
+        }
+      };
+    });
+    setStatusMessage("");
+    setError("");
+  }
+
+  function moveMarketingTool(index, direction) {
+    moveBrandAssetItem("marketingTools", index, direction);
+  }
+
+  function moveDigitalLogo(index, direction) {
+    moveBrandAssetItem("digitalLogos", index, direction);
+  }
+
+  function moveSourceFile(index, direction) {
+    moveBrandAssetItem("sourceFiles", index, direction);
+  }
+
   function moveEditableCard(collectionKey, index, direction) {
     setContent((currentContent) => {
       const currentItems = currentContent[collectionKey] || [];
@@ -1367,6 +1729,14 @@ export function VisualEditorOverlay({ initialContent }) {
 
   async function saveVendors() {
     await saveContent(vendorErrors, "Vendors");
+  }
+
+  async function saveBrandAssets() {
+    await saveContent(brandAssetErrors, "Brand assets");
+  }
+
+  async function saveBrandAssetSection(sectionLabel = "Brand assets heading") {
+    await saveContent([], sectionLabel);
   }
 
   async function saveLeadershipSection(sectionLabel = "Leadership heading") {
@@ -1460,7 +1830,7 @@ export function VisualEditorOverlay({ initialContent }) {
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Publish")}>
             Publish
           </button>
-          <a className="visual-editor-button" href="/">
+          <a className="visual-editor-button" href={previewHref}>
             Preview
           </a>
         </div>
@@ -1576,6 +1946,31 @@ export function VisualEditorOverlay({ initialContent }) {
                     onUploadVendorLogo={uploadVendorLogo}
                     onUpdateVendor={updateVendor}
                   />
+                ) : activeSectionId === "brandAssets" ? (
+                  <BrandAssetsVisualPanel
+                    digitalLogoErrors={digitalLogoErrors}
+                    digitalLogos={digitalLogos}
+                    isSaving={isSaving}
+                    isUploading={isUploading}
+                    marketingToolErrors={marketingToolErrors}
+                    marketingTools={marketingTools}
+                    onAddDigitalLogo={addDigitalLogo}
+                    onAddMarketingTool={addMarketingTool}
+                    onAddSourceFile={addSourceFile}
+                    onMoveDigitalLogo={moveDigitalLogo}
+                    onMoveMarketingTool={moveMarketingTool}
+                    onMoveSourceFile={moveSourceFile}
+                    onRemoveDigitalLogo={removeDigitalLogo}
+                    onRemoveMarketingTool={removeMarketingTool}
+                    onRemoveSourceFile={removeSourceFile}
+                    onSaveBrandAssets={saveBrandAssets}
+                    onUpdateDigitalLogo={updateDigitalLogo}
+                    onUpdateMarketingTool={updateMarketingTool}
+                    onUpdateSourceFile={updateSourceFile}
+                    onUploadDigitalLogoImage={uploadDigitalLogoImage}
+                    sourceFileErrors={sourceFileErrors}
+                    sourceFiles={sourceFiles}
+                  />
                 ) : (
                   <div className="visual-editor-empty-state">
                     <strong>{activeSection.label}</strong>
@@ -1628,6 +2023,22 @@ export function VisualEditorOverlay({ initialContent }) {
           leadershipSectionSettings={leadershipSection}
           alcSectionSettings={alcSection}
           vendor={selectedVendor}
+          brandOverviewSectionSettings={brandOverviewSection}
+          digitalLogo={selectedDigitalLogo}
+          digitalLogoErrors={digitalLogoErrors}
+          digitalLogoIndex={selectedDigitalLogoIndex}
+          digitalLogos={digitalLogos}
+          digitalLogosSectionSettings={digitalLogosSection}
+          marketingTool={selectedMarketingTool}
+          marketingToolErrors={marketingToolErrors}
+          marketingToolIndex={selectedMarketingToolIndex}
+          marketingTools={marketingTools}
+          marketingToolsSectionSettings={marketingToolsSection}
+          sourceFile={selectedSourceFile}
+          sourceFileErrors={sourceFileErrors}
+          sourceFileIndex={selectedSourceFileIndex}
+          sourceFiles={sourceFiles}
+          sourceFilesSectionSettings={sourceFilesSection}
           vendorDirectorySectionSettings={vendorDirectorySection}
           vendorCoreSectionSettings={vendorCoreSection}
           vendorErrors={vendorErrors}
@@ -1642,6 +2053,7 @@ export function VisualEditorOverlay({ initialContent }) {
           roomsSectionSettings={roomsSection}
           onAddRoomAction={addRoomAction}
           onAddRoomCalendar={addRoomCalendar}
+          onAddBrandAssetLink={addBrandAssetLink}
           onAddOfficeChip={addOfficeChip}
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
@@ -1653,15 +2065,19 @@ export function VisualEditorOverlay({ initialContent }) {
           onMoveOfficeHour={moveOfficeHour}
           onMoveRoomAction={moveRoomAction}
           onMoveRoomCalendar={moveRoomCalendar}
+          onMoveBrandAssetLink={moveBrandAssetLink}
           onRemoveOfficeChip={removeOfficeChip}
           onRemoveOfficeHoliday={removeOfficeHoliday}
           onRemoveOfficeHour={removeOfficeHour}
           onRemoveRoomAction={removeRoomAction}
           onRemoveRoomCalendar={removeRoomCalendar}
+          onRemoveBrandAssetLink={removeBrandAssetLink}
           onSaveOfficeCard={saveOfficeCard}
           onSaveOfficeSection={saveOfficeSection}
           onSaveRooms={saveRooms}
           onSaveRoomsSection={saveRoomsSection}
+          onSaveBrandAssets={saveBrandAssets}
+          onSaveBrandAssetSection={saveBrandAssetSection}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
           onUpdateOfficeHour={updateOfficeHour}
@@ -1671,6 +2087,11 @@ export function VisualEditorOverlay({ initialContent }) {
           onUpdateRoomCalendar={updateRoomCalendar}
           onUpdateRoomsField={updateRoomsField}
           onUpdateRoomsSection={updateRoomsSection}
+          onUpdateBrandAssetLink={updateBrandAssetLink}
+          onUpdateBrandAssetSection={updateBrandAssetSection}
+          onUpdateDigitalLogo={updateDigitalLogo}
+          onUpdateMarketingTool={updateMarketingTool}
+          onUpdateSourceFile={updateSourceFile}
           onRemoveCard={selectedTrainingResource ? removeTrainingResource : removeCourse}
           onRemoveLeader={removeLeader}
           onRemoveVendor={removeVendor}
@@ -1687,6 +2108,7 @@ export function VisualEditorOverlay({ initialContent }) {
           onUploadLeaderPhoto={uploadLeaderPhoto}
           onUploadLeadershipSupportPhoto={uploadLeadershipSupportPhoto}
           onUploadVendorLogo={uploadVendorLogo}
+          onUploadDigitalLogoImage={uploadDigitalLogoImage}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onSaveJoeAvailability={saveJoeAvailability}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -1769,6 +2191,18 @@ function inferElementType(element) {
     return "vendor-card";
   }
 
+  if (element.matches(".marketing-tool-card")) {
+    return "marketing-tool-card";
+  }
+
+  if (element.matches(".asset-card")) {
+    return "digital-logo-card";
+  }
+
+  if (element.matches(".asset-source-card")) {
+    return "source-file-card";
+  }
+
   if (element.matches(".leadership-card")) {
     return "leadership-card";
   }
@@ -1818,6 +2252,73 @@ function getVendorSectionKeyFromItem(item) {
   }
 
   return "";
+}
+
+function getBrandAssetSectionKeyFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (item.editableId === "brandOverview" || item.sectionId === "brand-overview") {
+    return "brandOverview";
+  }
+
+  if (item.editableId === "marketingTools" || item.sectionId === "marketing-tools") {
+    return "marketingTools";
+  }
+
+  if (item.editableId === "digitalLogos" || item.sectionId === "digital-logos") {
+    return "digitalLogos";
+  }
+
+  if (item.editableId === "sourceFiles" || item.sectionId === "source-files") {
+    return "sourceFiles";
+  }
+
+  return "";
+}
+
+function getBrandAssetSectionDefault(sectionKey) {
+  if (sectionKey === "brandOverview") {
+    return BRAND_OVERVIEW_SECTION_DEFAULT;
+  }
+
+  if (sectionKey === "marketingTools") {
+    return MARKETING_TOOLS_SECTION_DEFAULT;
+  }
+
+  if (sectionKey === "digitalLogos") {
+    return DIGITAL_LOGOS_SECTION_DEFAULT;
+  }
+
+  return SOURCE_FILES_SECTION_DEFAULT;
+}
+
+function updateNestedBrandAssetField(item, field, value) {
+  if (field === "image.src") {
+    return {
+      ...item,
+      image: {
+        ...(item.image || {}),
+        src: value
+      }
+    };
+  }
+
+  if (field === "image.alt") {
+    return {
+      ...item,
+      image: {
+        ...(item.image || {}),
+        alt: value
+      }
+    };
+  }
+
+  return {
+    ...item,
+    [field]: value
+  };
 }
 
 function findSectionForSelectedItem(item) {
@@ -2575,6 +3076,165 @@ function syncVendorSectionPreview(sectionKey, field, value) {
   }
 }
 
+function syncBrandAssetSectionPreview(sectionKey, field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? `[data-editable-type="section-eyebrow"][data-editable-id="${sectionKey}"]`
+    : field === "summary"
+    ? `[data-editable-type="section-summary"][data-editable-id="${sectionKey}"]`
+    : `[data-editable-type="section-heading"][data-editable-id="${sectionKey}"]`;
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function syncBrandAssetPreview(editableType, itemId, field, value) {
+  if (!editableType || !itemId || typeof document === "undefined") {
+    return;
+  }
+
+  const element = getBrandAssetElement(editableType, itemId);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "kicker") {
+    const tag = element.querySelector(".eyebrow");
+    if (tag) {
+      tag.textContent = value;
+    }
+  }
+
+  if (field === "title") {
+    const title = element.querySelector("h3");
+    if (title) {
+      title.textContent = value;
+    }
+  }
+
+  if (field === "summary") {
+    const summary = editableType === "digital-logo-card"
+      ? element.querySelector(".asset-card-copy p:not(.eyebrow)")
+      : [...element.querySelectorAll(":scope > p")].find((paragraph) => !paragraph.classList.contains("eyebrow"));
+
+    if (summary) {
+      summary.textContent = value;
+    }
+  }
+
+  if (field === "previewClass") {
+    const preview = element.querySelector(".asset-preview");
+    if (preview) {
+      preview.className = `asset-preview ${value || ""}`.trim();
+    }
+  }
+
+  if (field === "image.src") {
+    const image = element.querySelector("img");
+    if (image) {
+      image.src = value || "";
+    }
+  }
+
+  if (field === "image.alt") {
+    const image = element.querySelector("img");
+    if (image) {
+      image.alt = value || "";
+    }
+  }
+
+  if (field === "active") {
+    element.hidden = value === false;
+  }
+}
+
+function syncBrandAssetLinksPreview(editableType, itemId, links) {
+  const element = getBrandAssetElement(editableType, itemId);
+  const row = element?.querySelector(".chip-row");
+
+  if (!row) {
+    return;
+  }
+
+  row.replaceChildren(...(links || []).map(createBrandAssetLinkPreviewElement));
+}
+
+function getBrandAssetElement(editableType, itemId) {
+  if (!editableType || !itemId || typeof document === "undefined") {
+    return null;
+  }
+
+  const safeEditableType = String(editableType).replace(/"/g, '\\"');
+  const safeItemId = String(itemId).replace(/"/g, '\\"');
+
+  return document.querySelector(`[data-editable-type="${safeEditableType}"][data-editable-id="${safeItemId}"]`);
+}
+
+function createBrandAssetLinkPreviewElement(link) {
+  const element = document.createElement("a");
+
+  element.className = "chip chip-link";
+  element.textContent = link.label || "";
+  element.href = link.href || "#";
+
+  if (link.external) {
+    element.target = "_blank";
+    element.rel = "noreferrer";
+  }
+
+  if (link.download) {
+    element.setAttribute("download", "");
+  }
+
+  return element;
+}
+
+function appendBrandAssetPreview(editableType, item) {
+  if (!editableType || !item || typeof document === "undefined") {
+    return;
+  }
+
+  const gridSelector = editableType === "marketing-tool-card"
+    ? ".marketing-tool-grid"
+    : editableType === "digital-logo-card"
+    ? ".asset-grid"
+    : ".asset-source-grid";
+  const grid = document.querySelector(gridSelector);
+
+  if (!grid) {
+    return;
+  }
+
+  const element = document.createElement("article");
+  element.dataset.editableType = editableType;
+  element.dataset.editableId = item.id;
+
+  if (editableType === "digital-logo-card") {
+    element.className = "asset-card";
+    element.innerHTML = `<div class="asset-preview ${item.previewClass || ""}"><img src="${item.image?.src || ""}" alt="${item.image?.alt || ""}"></div><div class="asset-card-copy"><p class="eyebrow small"></p><h3></h3><p></p></div><div class="chip-row asset-downloads"></div>`;
+  } else {
+    element.className = editableType === "marketing-tool-card" ? "asset-source-card marketing-tool-card" : "asset-source-card";
+    element.innerHTML = `<p class="eyebrow small"></p><h3></h3><p></p><div class="chip-row asset-downloads"></div>`;
+  }
+
+  grid.append(element);
+  syncBrandAssetPreview(editableType, item.id, "kicker", item.kicker || "");
+  syncBrandAssetPreview(editableType, item.id, "title", item.title || "");
+  syncBrandAssetPreview(editableType, item.id, "summary", item.summary || "");
+  syncBrandAssetLinksPreview(editableType, item.id, item.links || []);
+}
+
+function removeBrandAssetPreview(editableType, itemId) {
+  const element = getBrandAssetElement(editableType, itemId);
+  element?.remove();
+}
+
 function appendVendorPreview(vendor) {
   if (!vendor || typeof document === "undefined") {
     return;
@@ -2732,6 +3392,22 @@ function FloatingItemEditor({
   leadershipSectionSettings,
   alcSectionSettings,
   vendor,
+  brandOverviewSectionSettings,
+  digitalLogo,
+  digitalLogoErrors,
+  digitalLogoIndex,
+  digitalLogos,
+  digitalLogosSectionSettings,
+  marketingTool,
+  marketingToolErrors,
+  marketingToolIndex,
+  marketingTools,
+  marketingToolsSectionSettings,
+  sourceFile,
+  sourceFileErrors,
+  sourceFileIndex,
+  sourceFiles,
+  sourceFilesSectionSettings,
   vendorDirectorySectionSettings,
   vendorCoreSectionSettings,
   vendorErrors,
@@ -2744,15 +3420,18 @@ function FloatingItemEditor({
   onAddOfficeChip,
   onAddOfficeHoliday,
   onAddOfficeHour,
+  onAddBrandAssetLink,
   onClose,
   onMoveLeader,
   onMoveVendor,
   onMoveOfficeChip,
   onMoveOfficeHoliday,
   onMoveOfficeHour,
+  onMoveBrandAssetLink,
   onRemoveOfficeChip,
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
+  onRemoveBrandAssetLink,
   onRemoveCard,
   onRemoveLeader,
   onRemoveVendor,
@@ -2763,6 +3442,8 @@ function FloatingItemEditor({
   onSaveLeadershipSupport,
   onSaveVendorSection,
   onSaveVendors,
+  onSaveBrandAssets,
+  onSaveBrandAssetSection,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
@@ -2774,9 +3455,15 @@ function FloatingItemEditor({
   onUpdateLeadershipSupport,
   onUpdateVendor,
   onUpdateVendorSection,
+  onUpdateBrandAssetLink,
+  onUpdateBrandAssetSection,
+  onUpdateDigitalLogo,
+  onUpdateMarketingTool,
+  onUpdateSourceFile,
   onUploadLeaderPhoto,
   onUploadLeadershipSupportPhoto,
   onUploadVendorLogo,
+  onUploadDigitalLogoImage,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -2822,7 +3509,25 @@ function FloatingItemEditor({
   const isLeadershipCardEditable = (item.type === "leader-card" || item.type === "alc-poster-card") && leader && leaderIndex >= 0;
   const isLeadershipSupportEditable = item.type === "leadership-support-card" || item.type === "leadership-support-field" || item.editableId?.startsWith("leadershipSupport");
   const isVendorCardEditable = item.type === "vendor-card" && vendor && vendorIndex >= 0;
-  const vendorSectionKey = getVendorSectionKeyFromItem(item);
+  const isMarketingToolEditable = item.type === "marketing-tool-card" && marketingTool && marketingToolIndex >= 0;
+  const isDigitalLogoEditable = item.type === "digital-logo-card" && digitalLogo && digitalLogoIndex >= 0;
+  const isSourceFileEditable = item.type === "source-file-card" && sourceFile && sourceFileIndex >= 0;
+  const brandAssetSectionKey = (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary")
+    ? getBrandAssetSectionKeyFromItem(item)
+    : "";
+  const brandAssetSectionSettings = brandAssetSectionKey === "brandOverview"
+    ? brandOverviewSectionSettings
+    : brandAssetSectionKey === "marketingTools"
+    ? marketingToolsSectionSettings
+    : brandAssetSectionKey === "digitalLogos"
+    ? digitalLogosSectionSettings
+    : brandAssetSectionKey === "sourceFiles"
+    ? sourceFilesSectionSettings
+    : null;
+  const isBrandAssetSectionEditable = Boolean(brandAssetSectionKey && brandAssetSectionSettings);
+  const vendorSectionKey = (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary")
+    ? getVendorSectionKeyFromItem(item)
+    : "";
   const vendorSectionSettings = vendorSectionKey === "vendorDirectory"
     ? vendorDirectorySectionSettings
     : vendorSectionKey === "vendorCore"
@@ -3102,6 +3807,190 @@ function FloatingItemEditor({
               {isSaving ? "Saving" : "Save Tech Help Card"}
             </button>
             {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+          </div>
+        </>
+      ) : isBrandAssetSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this brand-assets heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={brandAssetSectionSettings.eyebrow || ""} onChange={(event) => onUpdateBrandAssetSection(brandAssetSectionKey, "eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={brandAssetSectionSettings.title || ""} onChange={(event) => onUpdateBrandAssetSection(brandAssetSectionKey, "title", event.target.value)} />
+          </label>
+          {"summary" in brandAssetSectionSettings ? (
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={brandAssetSectionSettings.summary || ""} rows={3} onChange={(event) => onUpdateBrandAssetSection(brandAssetSectionKey, "summary", event.target.value)} />
+            </label>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={() => onSaveBrandAssetSection("Brand assets heading")}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isMarketingToolEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this marketing tool preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={marketingTool.kicker || ""} onChange={(event) => onUpdateMarketingTool(marketingToolIndex, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={marketingTool.title || ""} onChange={(event) => onUpdateMarketingTool(marketingToolIndex, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={marketingTool.summary || ""} rows={3} onChange={(event) => onUpdateMarketingTool(marketingToolIndex, "summary", event.target.value)} />
+          </label>
+          <AssetLinksEditor
+            collectionKey="marketingTools"
+            editableType="marketing-tool-card"
+            item={marketingTool}
+            itemIndex={marketingToolIndex}
+            items={marketingTools}
+            links={marketingTool.links || []}
+            onAddLink={onAddBrandAssetLink}
+            onMoveLink={onMoveBrandAssetLink}
+            onRemoveLink={onRemoveBrandAssetLink}
+            onUpdateLink={onUpdateBrandAssetLink}
+          />
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={marketingTool.active !== false} onChange={(event) => onUpdateMarketingTool(marketingToolIndex, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+          {marketingToolErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {marketingToolErrors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(marketingToolErrors.length) || isSaving} onClick={onSaveBrandAssets}>
+              {isSaving ? "Saving" : "Save Brand Assets"}
+            </button>
+          </div>
+        </>
+      ) : isDigitalLogoEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this logo card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={digitalLogo.kicker || ""} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={digitalLogo.title || ""} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={digitalLogo.summary || ""} rows={3} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "summary", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Preview Style</span>
+            <select value={digitalLogo.previewClass || "asset-preview--light"} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "previewClass", event.target.value)}>
+              <option value="asset-preview--light">Light</option>
+              <option value="asset-preview--dark">Dark</option>
+              <option value="asset-preview--red">Red</option>
+            </select>
+          </label>
+          <label className="visual-editor-field">
+            <span>Image</span>
+            <input value={digitalLogo.image?.src || ""} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "image.src", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Upload Image</span>
+            <input accept="image/gif,image/jpeg,image/png,image/webp" type="file" onChange={(event) => onUploadDigitalLogoImage(digitalLogoIndex, event.target.files?.[0])} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Alt Text</span>
+            <input value={digitalLogo.image?.alt || ""} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "image.alt", event.target.value)} />
+          </label>
+          <AssetLinksEditor
+            collectionKey="digitalLogos"
+            editableType="digital-logo-card"
+            item={digitalLogo}
+            itemIndex={digitalLogoIndex}
+            items={digitalLogos}
+            links={digitalLogo.links || []}
+            onAddLink={onAddBrandAssetLink}
+            onMoveLink={onMoveBrandAssetLink}
+            onRemoveLink={onRemoveBrandAssetLink}
+            onUpdateLink={onUpdateBrandAssetLink}
+          />
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={digitalLogo.active !== false} onChange={(event) => onUpdateDigitalLogo(digitalLogoIndex, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+          {digitalLogoErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {digitalLogoErrors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(digitalLogoErrors.length) || isSaving} onClick={onSaveBrandAssets}>
+              {isSaving ? "Saving" : "Save Brand Assets"}
+            </button>
+            {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+          </div>
+        </>
+      ) : isSourceFileEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this source file card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={sourceFile.kicker || ""} onChange={(event) => onUpdateSourceFile(sourceFileIndex, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={sourceFile.title || ""} onChange={(event) => onUpdateSourceFile(sourceFileIndex, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={sourceFile.summary || ""} rows={3} onChange={(event) => onUpdateSourceFile(sourceFileIndex, "summary", event.target.value)} />
+          </label>
+          <AssetLinksEditor
+            collectionKey="sourceFiles"
+            editableType="source-file-card"
+            item={sourceFile}
+            itemIndex={sourceFileIndex}
+            items={sourceFiles}
+            links={sourceFile.links || []}
+            onAddLink={onAddBrandAssetLink}
+            onMoveLink={onMoveBrandAssetLink}
+            onRemoveLink={onRemoveBrandAssetLink}
+            onUpdateLink={onUpdateBrandAssetLink}
+          />
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={sourceFile.active !== false} onChange={(event) => onUpdateSourceFile(sourceFileIndex, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+          {sourceFileErrors.length ? (
+            <div className="visual-editor-validation" role="status">
+              {sourceFileErrors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+            </div>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={Boolean(sourceFileErrors.length) || isSaving} onClick={onSaveBrandAssets}>
+              {isSaving ? "Saving" : "Save Brand Assets"}
+            </button>
           </div>
         </>
       ) : isVendorSectionEditable ? (
@@ -3736,6 +4625,209 @@ function OfficeChipsEditor({ cardKey, chips, onAddChip, onMoveChip, onRemoveChip
             </label>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function AssetLinksEditor({ collectionKey, editableType, itemIndex, items, links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Buttons</span>
+        <button type="button" onClick={() => onAddLink(collectionKey, items, itemIndex, editableType)}>Add Button</button>
+      </div>
+      {links.map((link, index) => (
+        <div className="visual-editor-repeat-item" key={`${link.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveLink(collectionKey, items, itemIndex, index, -1, editableType)}>Up</button>
+            <button type="button" disabled={index === links.length - 1} onClick={() => onMoveLink(collectionKey, items, itemIndex, index, 1, editableType)}>Down</button>
+            <button type="button" onClick={() => onRemoveLink(collectionKey, items, itemIndex, index, editableType)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={link.label || ""} onChange={(event) => onUpdateLink(collectionKey, items, itemIndex, index, "label", event.target.value, editableType)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={link.href || ""} onChange={(event) => onUpdateLink(collectionKey, items, itemIndex, index, "href", event.target.value, editableType)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.external)}
+                onChange={(event) => onUpdateLink(collectionKey, items, itemIndex, index, "external", event.target.checked, editableType)}
+              />
+              Opens externally
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.download)}
+                onChange={(event) => onUpdateLink(collectionKey, items, itemIndex, index, "download", event.target.checked, editableType)}
+              />
+              Download
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BrandAssetsVisualPanel({
+  digitalLogoErrors,
+  digitalLogos,
+  isSaving,
+  isUploading,
+  marketingToolErrors,
+  marketingTools,
+  onAddDigitalLogo,
+  onAddMarketingTool,
+  onAddSourceFile,
+  onMoveDigitalLogo,
+  onMoveMarketingTool,
+  onMoveSourceFile,
+  onRemoveDigitalLogo,
+  onRemoveMarketingTool,
+  onRemoveSourceFile,
+  onSaveBrandAssets,
+  onUpdateDigitalLogo,
+  onUpdateMarketingTool,
+  onUpdateSourceFile,
+  onUploadDigitalLogoImage,
+  sourceFileErrors,
+  sourceFiles
+}) {
+  const errors = [...marketingToolErrors, ...digitalLogoErrors, ...sourceFileErrors];
+
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{marketingTools.length + digitalLogos.length + sourceFiles.length} brand asset cards</strong>
+        </div>
+      </div>
+      <div className="visual-editor-add-grid">
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddMarketingTool}>Add Marketing Tool</button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddDigitalLogo}>Add Digital Logo</button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddSourceFile}>Add Source File</button>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <BrandAssetDetailsList
+        label="Marketing Tools"
+        items={marketingTools}
+        onMoveItem={onMoveMarketingTool}
+        onRemoveItem={onRemoveMarketingTool}
+        onUpdateItem={onUpdateMarketingTool}
+        typeLabel="Tool"
+      />
+      <BrandAssetDetailsList
+        includeImage
+        isUploading={isUploading}
+        label="Digital Logos"
+        items={digitalLogos}
+        onMoveItem={onMoveDigitalLogo}
+        onRemoveItem={onRemoveDigitalLogo}
+        onUpdateItem={onUpdateDigitalLogo}
+        onUploadImage={onUploadDigitalLogoImage}
+        typeLabel="Logo"
+      />
+      <BrandAssetDetailsList
+        label="Source Files"
+        items={sourceFiles}
+        onMoveItem={onMoveSourceFile}
+        onRemoveItem={onRemoveSourceFile}
+        onUpdateItem={onUpdateSourceFile}
+        typeLabel="File"
+      />
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveBrandAssets}>
+          {isSaving ? "Saving" : "Save Brand Assets"}
+        </button>
+        {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BrandAssetDetailsList({ includeImage = false, isUploading = false, items, label, onMoveItem, onRemoveItem, onUpdateItem, onUploadImage, typeLabel }) {
+  return (
+    <div className="visual-editor-course-list">
+      <div className="visual-editor-repeat-header">
+        <span>{label}</span>
+      </div>
+      {items.map((item, index) => (
+        <details className="visual-editor-course" key={item.id || index}>
+          <summary>
+            <span>{item.title || `${typeLabel} ${index + 1}`}</span>
+            <strong>{item.active === false ? "Hidden" : "Visible"}</strong>
+          </summary>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveItem(index, -1)}>Up</button>
+            <button type="button" disabled={index === items.length - 1} onClick={() => onMoveItem(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveItem(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={item.kicker || ""} onChange={(event) => onUpdateItem(index, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={item.title || ""} onChange={(event) => onUpdateItem(index, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={item.summary || ""} rows={3} onChange={(event) => onUpdateItem(index, "summary", event.target.value)} />
+          </label>
+          {includeImage ? (
+            <>
+              <label className="visual-editor-field">
+                <span>Image</span>
+                <input value={item.image?.src || ""} onChange={(event) => onUpdateItem(index, "image.src", event.target.value)} />
+              </label>
+              <label className="visual-editor-field">
+                <span>Upload Image</span>
+                <input accept="image/gif,image/jpeg,image/png,image/webp" type="file" onChange={(event) => onUploadImage(index, event.target.files?.[0])} />
+              </label>
+              <label className="visual-editor-field">
+                <span>Alt Text</span>
+                <input value={item.image?.alt || ""} onChange={(event) => onUpdateItem(index, "image.alt", event.target.value)} />
+              </label>
+              <label className="visual-editor-field">
+                <span>Preview Style</span>
+                <select value={item.previewClass || "asset-preview--light"} onChange={(event) => onUpdateItem(index, "previewClass", event.target.value)}>
+                  <option value="asset-preview--light">Light</option>
+                  <option value="asset-preview--dark">Dark</option>
+                  <option value="asset-preview--red">Red</option>
+                </select>
+              </label>
+              {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+            </>
+          ) : null}
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={item.active !== false} onChange={(event) => onUpdateItem(index, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+        </details>
       ))}
     </div>
   );

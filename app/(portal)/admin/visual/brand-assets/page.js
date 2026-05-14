@@ -8,19 +8,23 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "KWP Visual Editor"
+  title: "KWP Visual Editor - Brand Assets"
 };
 
-export default function VisualAdminPage() {
+export default function BrandAssetsVisualAdminPage() {
   if (process.env.KWP_ADMIN_ENABLED !== "true") {
     notFound();
   }
 
   return (
     <div className="visual-editor-mode">
-      <LegacyPortalPage source="index.html" pageKey="home" />
-      <VisualEditorOverlay initialContent={portalContent} previewHref="/" />
-      <PortalScripts includeTockify />
+      <LegacyPortalPage source="brand-assets.html" pageKey="brandAssets" />
+      <VisualEditorOverlay
+        initialContent={portalContent}
+        initialSectionId="brandAssets"
+        previewHref="/brand-assets.html"
+      />
+      <PortalScripts includeTockify={false} />
     </div>
   );
 }
