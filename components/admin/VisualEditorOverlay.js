@@ -7,6 +7,9 @@ import {
   createLeadershipId,
   createMarketingToolId,
   createSourceFileId,
+  createTechAnswerId,
+  createTechHelpPathId,
+  createTechPaperCutId,
   createTrainingResourceId,
   createVendorId,
   validateCourseDrafts,
@@ -19,6 +22,7 @@ import {
   validateSourceFileDrafts,
   validateVendorDrafts
 } from "./contentDrafts";
+import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
   { id: "overview", label: "Overview", target: "#overview", status: "Layout locked" },
@@ -28,6 +32,7 @@ const EDITABLE_SECTIONS = [
   { id: "leadership", label: "Leadership", target: "#leadership", status: "People module" },
   { id: "vendors", label: "Vendor Row", target: "#vendor-row", status: "Vendor module" },
   { id: "brandAssets", label: "Marketing + Brand Assets", target: "#brand-overview", status: "Asset module" },
+  { id: "techConnect", label: "Tech Connect", target: "#tech-overview", status: "Tech module" },
   { id: "productivityCourses", label: "Productivity Coaching", target: "#training", status: "Courses module" }
 ];
 
@@ -177,6 +182,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const marketingTools = brandAssets.marketingTools || [];
   const digitalLogos = brandAssets.digitalLogos || [];
   const sourceFiles = brandAssets.sourceFiles || [];
+  const techConnect = getTechConnectContent(content);
+  const techSections = techConnect.sections;
+  const techJoeSupport = techConnect.joeSupport;
+  const techQuickLinks = techConnect.quickLinks;
+  const techHelpPaths = techConnect.helpPaths;
+  const techPaperCutCards = techConnect.paperCutCards;
+  const techAnswerCards = techConnect.answerCards;
   const office = content?.office || {};
   const officeSection = content?.sections?.office || OFFICE_SECTION_DEFAULT;
   const rooms = office.rooms || {};
@@ -206,6 +218,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const digitalLogoErrors = useMemo(() => validateDigitalLogoDrafts(digitalLogos), [digitalLogos]);
   const sourceFileErrors = useMemo(() => validateSourceFileDrafts(sourceFiles), [sourceFiles]);
   const brandAssetErrors = [...marketingToolErrors, ...digitalLogoErrors, ...sourceFileErrors];
+  const techHelpPathErrors = useMemo(() => validateMarketingToolDrafts(techHelpPaths), [techHelpPaths]);
+  const techPaperCutErrors = useMemo(() => validateMarketingToolDrafts(techPaperCutCards), [techPaperCutCards]);
+  const techAnswerErrors = useMemo(() => validateMarketingToolDrafts(techAnswerCards), [techAnswerCards]);
+  const techErrors = [...techHelpPathErrors, ...techPaperCutErrors, ...techAnswerErrors];
   const activeSection = EDITABLE_SECTIONS.find((section) => section.id === activeSectionId) || EDITABLE_SECTIONS[0];
   const selectedCourseIndex = selectedItem?.type === "course-card"
     ? courses.findIndex((course) => course.id === selectedItem.editableId)
@@ -228,6 +244,15 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedSourceFileIndex = selectedItem?.type === "source-file-card"
     ? sourceFiles.findIndex((file) => file.id === selectedItem.editableId)
     : -1;
+  const selectedTechHelpPathIndex = selectedItem?.type === "tech-help-card"
+    ? techHelpPaths.findIndex((card) => card.id === selectedItem.editableId)
+    : -1;
+  const selectedTechPaperCutIndex = selectedItem?.type === "tech-papercut-card"
+    ? techPaperCutCards.findIndex((card) => card.id === selectedItem.editableId)
+    : -1;
+  const selectedTechAnswerIndex = selectedItem?.type === "tech-answer-card"
+    ? techAnswerCards.findIndex((card) => card.id === selectedItem.editableId)
+    : -1;
   const selectedCourse = selectedCourseIndex >= 0 ? courses[selectedCourseIndex] : null;
   const selectedTrainingResource = selectedTrainingResourceIndex >= 0 ? trainingResources[selectedTrainingResourceIndex] : null;
   const selectedLeader = selectedLeaderIndex >= 0 ? leadership[selectedLeaderIndex] : null;
@@ -235,6 +260,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedMarketingTool = selectedMarketingToolIndex >= 0 ? marketingTools[selectedMarketingToolIndex] : null;
   const selectedDigitalLogo = selectedDigitalLogoIndex >= 0 ? digitalLogos[selectedDigitalLogoIndex] : null;
   const selectedSourceFile = selectedSourceFileIndex >= 0 ? sourceFiles[selectedSourceFileIndex] : null;
+  const selectedTechHelpPath = selectedTechHelpPathIndex >= 0 ? techHelpPaths[selectedTechHelpPathIndex] : null;
+  const selectedTechPaperCut = selectedTechPaperCutIndex >= 0 ? techPaperCutCards[selectedTechPaperCutIndex] : null;
+  const selectedTechAnswer = selectedTechAnswerIndex >= 0 ? techAnswerCards[selectedTechAnswerIndex] : null;
   const selectedOfficeCardKey = getOfficeCardKeyFromItem(selectedItem);
   const selectedOfficeCard = selectedOfficeCardKey ? office[selectedOfficeCardKey] : null;
   const roomErrors = validateRoomsDraft(rooms);
@@ -248,7 +276,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const selectedEditableCardErrors = selectedTrainingResource ? trainingResourceErrors : courseErrors;
   const selectedEditableCardType = selectedTrainingResource ? "training-resource-card" : "course-card";
   const shouldShowPanel = true;
-  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors" || activeSectionId === "brandAssets";
+  const canAddCard = activeSectionId === "trainingResources" || activeSectionId === "productivityCourses" || activeSectionId === "leadership" || activeSectionId === "vendors" || activeSectionId === "brandAssets" || activeSectionId === "techConnect";
 
   useEffect(() => {
     const storedPasscode = window.sessionStorage.getItem(EDITOR_SESSION_PASSCODE_KEY);
@@ -492,6 +520,40 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     }
 
     if (
+      (selectedItem.type === "tech-help-card" || selectedItem.type === "tech-papercut-card" || selectedItem.type === "tech-answer-card") &&
+      selectedItem.editableId
+    ) {
+      setActiveSectionId("techConnect");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this Tech Connect card." } : currentItem);
+      return;
+    }
+
+    if (selectedItem.type === "tech-joe-support") {
+      setActiveSectionId("techConnect");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the Tech Connect Joe support block." } : currentItem);
+      return;
+    }
+
+    if (selectedItem.type === "tech-quick-links") {
+      setActiveSectionId("techConnect");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing the Tech Connect quick links." } : currentItem);
+      return;
+    }
+
+    if (
+      (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
+      (selectedItem.sectionId === "tech-overview" || selectedItem.sectionId === "help-paths" || selectedItem.sectionId === "papercut-hive" || selectedItem.sectionId === "kw-answers" || selectedItem.editableId === "techOverview" || selectedItem.editableId === "techHelpPaths" || selectedItem.editableId === "techPaperCut" || selectedItem.editableId === "techAnswers")
+    ) {
+      setActiveSectionId("techConnect");
+      setEditingItemId(selectedItem.visualId);
+      setSelectedItem((currentItem) => currentItem ? { ...currentItem, panelHint: "Editing this Tech Connect section heading." } : currentItem);
+      return;
+    }
+
+    if (
       (selectedItem.type === "section" || selectedItem.type === "section-eyebrow" || selectedItem.type === "section-heading" || selectedItem.type === "section-summary") &&
       (selectedItem.sectionId === "brand-overview" || selectedItem.sectionId === "marketing-tools" || selectedItem.sectionId === "digital-logos" || selectedItem.sectionId === "source-files" || selectedItem.editableId === "brandOverview" || selectedItem.editableId === "marketingTools" || selectedItem.editableId === "digitalLogos" || selectedItem.editableId === "sourceFiles")
     ) {
@@ -569,6 +631,12 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     if (activeSectionId === "brandAssets") {
       addMarketingTool();
       setStatusMessage("Marketing tool card added. Edit the new card, then save when ready.");
+      return;
+    }
+
+    if (activeSectionId === "techConnect") {
+      addTechHelpPath();
+      setStatusMessage("Tech help-path card added. Edit the new card, then save when ready.");
       return;
     }
 
@@ -718,6 +786,228 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     [nextLinks[linkIndex], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[linkIndex]];
     updateBrandAssetItem(collectionKey, items, index, "links", nextLinks, editableType);
     syncBrandAssetLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function updateTechSection(sectionKey, field, value) {
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          sections: {
+            ...currentTech.sections,
+            [sectionKey]: {
+              ...(currentTech.sections[sectionKey] || {}),
+              [field]: value
+            }
+          }
+        }
+      };
+    });
+    syncTechSectionPreview(sectionKey, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateTechJoeSupport(field, value) {
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          joeSupport: {
+            ...currentTech.joeSupport,
+            [field]: value
+          }
+        }
+      };
+    });
+    syncTechJoeSupportPreview(field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateTechQuickLink(index, field, value) {
+    const nextLinks = techQuickLinks.map((link, linkIndex) => (
+      linkIndex === index
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    setTechQuickLinks(nextLinks);
+  }
+
+  function addTechQuickLink() {
+    setTechQuickLinks([
+      ...techQuickLinks,
+      {
+        label: "New Link",
+        href: "#",
+        external: true
+      }
+    ]);
+  }
+
+  function removeTechQuickLink(index) {
+    setTechQuickLinks(techQuickLinks.filter((_, linkIndex) => linkIndex !== index));
+  }
+
+  function moveTechQuickLink(index, direction) {
+    const nextIndex = index + direction;
+    const nextLinks = [...techQuickLinks];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[index], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[index]];
+    setTechQuickLinks(nextLinks);
+  }
+
+  function setTechQuickLinks(nextLinks) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      techConnect: {
+        ...(currentContent.techConnect || {}),
+        quickLinks: nextLinks
+      }
+    }));
+    syncTechQuickLinksPreview(nextLinks);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateTechItem(collectionKey, items, index, field, value, editableType) {
+    const itemId = items[index]?.id;
+
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          [collectionKey]: (currentTech[collectionKey] || []).map((item, itemIndex) => (
+            itemIndex === index
+              ? {
+                  ...item,
+                  [field]: value
+                }
+              : item
+          ))
+        }
+      };
+    });
+    syncTechItemPreview(editableType, itemId, field, value);
+    setStatusMessage("");
+    setError("");
+  }
+
+  function updateTechHelpPath(index, field, value) {
+    updateTechItem("helpPaths", techHelpPaths, index, field, value, "tech-help-card");
+  }
+
+  function updateTechPaperCut(index, field, value) {
+    updateTechItem("paperCutCards", techPaperCutCards, index, field, value, "tech-papercut-card");
+  }
+
+  function updateTechAnswer(index, field, value) {
+    updateTechItem("answerCards", techAnswerCards, index, field, value, "tech-answer-card");
+  }
+
+  function updateTechLink(collectionKey, items, index, linkIndex, field, value, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = (currentItem.links || []).map((link, currentLinkIndex) => (
+      currentLinkIndex === linkIndex
+        ? {
+            ...link,
+            [field]: value
+          }
+        : link
+    ));
+
+    updateTechItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncTechLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function addTechLink(collectionKey, items, index, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = [
+      ...(currentItem.links || []),
+      {
+        label: "New Link",
+        href: "#",
+        external: true
+      }
+    ];
+
+    updateTechItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncTechLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function removeTechLink(collectionKey, items, index, linkIndex, editableType) {
+    const currentItem = items[index] || {};
+    const nextLinks = (currentItem.links || []).filter((_, currentLinkIndex) => currentLinkIndex !== linkIndex);
+
+    updateTechItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncTechLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  function moveTechLink(collectionKey, items, index, linkIndex, direction, editableType) {
+    const currentItem = items[index] || {};
+    const nextIndex = linkIndex + direction;
+    const nextLinks = [...(currentItem.links || [])];
+
+    if (nextIndex < 0 || nextIndex >= nextLinks.length) {
+      return;
+    }
+
+    [nextLinks[linkIndex], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[linkIndex]];
+    updateTechItem(collectionKey, items, index, "links", nextLinks, editableType);
+    syncTechLinksPreview(editableType, currentItem.id, nextLinks);
+  }
+
+  async function uploadTechJoeSupportPhoto(file) {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setStatusMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "tech");
+
+      const response = await fetch("/api/admin/upload/", {
+        method: "POST",
+        headers: {
+          "x-kwp-admin-passcode": adminPasscode
+        },
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to upload photo.");
+      }
+
+      updateTechJoeSupport("photo", payload.path);
+      setStatusMessage("Tech support photo uploaded. Save Tech Connect when it looks right.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   async function uploadDigitalLogoImage(index, file) {
@@ -1497,6 +1787,86 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     setError("");
   }
 
+  function addTechHelpPath() {
+    const nextCard = {
+      id: createTechHelpPathId(techHelpPaths),
+      kicker: "New Help Path",
+      title: "New Tech Help Card",
+      summary: "Add a short description.",
+      links: [
+        {
+          label: "Open Link",
+          href: "#",
+          external: true
+        }
+      ],
+      active: true
+    };
+
+    addTechItem("helpPaths", nextCard, "tech-help-card");
+  }
+
+  function addTechPaperCut() {
+    const nextCard = {
+      id: createTechPaperCutId(techPaperCutCards),
+      kicker: "PaperCut",
+      title: "New PaperCut Card",
+      summary: "Add a short description.",
+      secondarySummary: "",
+      links: [
+        {
+          label: "Open Link",
+          href: "#",
+          external: true
+        }
+      ],
+      active: true
+    };
+
+    addTechItem("paperCutCards", nextCard, "tech-papercut-card");
+  }
+
+  function addTechAnswer() {
+    const nextCard = {
+      id: createTechAnswerId(techAnswerCards),
+      kicker: "KW Answers",
+      title: "New KW Answers Card",
+      summary: "Add a short description.",
+      links: [
+        {
+          label: "Open Link",
+          href: "#",
+          external: true
+        }
+      ],
+      active: true
+    };
+
+    addTechItem("answerCards", nextCard, "tech-answer-card");
+  }
+
+  function addTechItem(collectionKey, item, editableType) {
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          [collectionKey]: [
+            ...(currentTech[collectionKey] || []),
+            item
+          ]
+        }
+      };
+    });
+    appendTechItemPreview(editableType, item);
+    setEditingItemId("");
+    setSelectedItem(null);
+    setStatusMessage("");
+    setError("");
+  }
+
   function addEditableCard(collectionKey, items, id, editableType) {
     const nextCard = {
       id,
@@ -1595,6 +1965,41 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
   function removeSourceFile(index) {
     removeBrandAssetItem("sourceFiles", sourceFiles, index, "source-file-card");
+  }
+
+  function removeTechHelpPath(index) {
+    removeTechItem("helpPaths", techHelpPaths, index, "tech-help-card");
+  }
+
+  function removeTechPaperCut(index) {
+    removeTechItem("paperCutCards", techPaperCutCards, index, "tech-papercut-card");
+  }
+
+  function removeTechAnswer(index) {
+    removeTechItem("answerCards", techAnswerCards, index, "tech-answer-card");
+  }
+
+  function removeTechItem(collectionKey, items, index, editableType) {
+    const itemId = items[index]?.id;
+
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          [collectionKey]: (currentTech[collectionKey] || []).filter((_, itemIndex) => itemIndex !== index)
+        }
+      };
+    });
+    removeTechItemPreview(editableType, itemId);
+    if (selectedItem?.editableId === itemId && selectedItem?.type === editableType) {
+      setEditingItemId("");
+      setSelectedItem(null);
+    }
+    setStatusMessage("");
+    setError("");
   }
 
   function removeEditableCard(collectionKey, items, index, editableType) {
@@ -1699,6 +2104,43 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     moveBrandAssetItem("sourceFiles", index, direction);
   }
 
+  function moveTechHelpPath(index, direction) {
+    moveTechItem("helpPaths", index, direction);
+  }
+
+  function moveTechPaperCut(index, direction) {
+    moveTechItem("paperCutCards", index, direction);
+  }
+
+  function moveTechAnswer(index, direction) {
+    moveTechItem("answerCards", index, direction);
+  }
+
+  function moveTechItem(collectionKey, index, direction) {
+    setContent((currentContent) => {
+      const currentTech = getTechConnectContent(currentContent);
+      const currentItems = currentTech[collectionKey] || [];
+      const nextIndex = index + direction;
+
+      if (nextIndex < 0 || nextIndex >= currentItems.length) {
+        return currentContent;
+      }
+
+      const nextItems = [...currentItems];
+      [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
+
+      return {
+        ...currentContent,
+        techConnect: {
+          ...(currentContent.techConnect || {}),
+          [collectionKey]: nextItems
+        }
+      };
+    });
+    setStatusMessage("");
+    setError("");
+  }
+
   function moveEditableCard(collectionKey, index, direction) {
     setContent((currentContent) => {
       const currentItems = currentContent[collectionKey] || [];
@@ -1738,6 +2180,18 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
   async function saveBrandAssets() {
     await saveContent(brandAssetErrors, "Brand assets");
+  }
+
+  async function saveTechConnect() {
+    await saveContent(techErrors, "Tech Connect");
+  }
+
+  async function saveTechConnectSection(sectionLabel = "Tech Connect heading") {
+    await saveContent([], sectionLabel);
+  }
+
+  async function saveTechJoeSupport() {
+    await saveContent([], "Tech Connect Joe support");
   }
 
   async function saveBrandAssetSection(sectionLabel = "Brand assets heading") {
@@ -1987,6 +2441,27 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                     sourceFileErrors={sourceFileErrors}
                     sourceFiles={sourceFiles}
                   />
+                ) : activeSectionId === "techConnect" ? (
+                  <TechConnectVisualPanel
+                    answerCards={techAnswerCards}
+                    errors={techErrors}
+                    helpPaths={techHelpPaths}
+                    isSaving={isSaving}
+                    onAddAnswer={addTechAnswer}
+                    onAddHelpPath={addTechHelpPath}
+                    onAddPaperCut={addTechPaperCut}
+                    onMoveAnswer={moveTechAnswer}
+                    onMoveHelpPath={moveTechHelpPath}
+                    onMovePaperCut={moveTechPaperCut}
+                    onRemoveAnswer={removeTechAnswer}
+                    onRemoveHelpPath={removeTechHelpPath}
+                    onRemovePaperCut={removeTechPaperCut}
+                    onSaveTechConnect={saveTechConnect}
+                    onUpdateAnswer={updateTechAnswer}
+                    onUpdateHelpPath={updateTechHelpPath}
+                    onUpdatePaperCut={updateTechPaperCut}
+                    paperCutCards={techPaperCutCards}
+                  />
                 ) : (
                   <div className="visual-editor-empty-state">
                     <strong>{activeSection.label}</strong>
@@ -2050,11 +2525,26 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           marketingToolIndex={selectedMarketingToolIndex}
           marketingTools={marketingTools}
           marketingToolsSectionSettings={marketingToolsSection}
+          selectedTechAnswer={selectedTechAnswer}
+          selectedTechAnswerIndex={selectedTechAnswerIndex}
+          selectedTechHelpPath={selectedTechHelpPath}
+          selectedTechHelpPathIndex={selectedTechHelpPathIndex}
+          selectedTechPaperCut={selectedTechPaperCut}
+          selectedTechPaperCutIndex={selectedTechPaperCutIndex}
           sourceFile={selectedSourceFile}
           sourceFileErrors={sourceFileErrors}
           sourceFileIndex={selectedSourceFileIndex}
           sourceFiles={sourceFiles}
           sourceFilesSectionSettings={sourceFilesSection}
+          techAnswerCards={techAnswerCards}
+          techAnswerErrors={techAnswerErrors}
+          techHelpPathErrors={techHelpPathErrors}
+          techHelpPaths={techHelpPaths}
+          techJoeSupport={techJoeSupport}
+          techPaperCutCards={techPaperCutCards}
+          techPaperCutErrors={techPaperCutErrors}
+          techQuickLinks={techQuickLinks}
+          techSections={techSections}
           vendorDirectorySectionSettings={vendorDirectorySection}
           vendorCoreSectionSettings={vendorCoreSection}
           vendorErrors={vendorErrors}
@@ -2070,6 +2560,8 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onAddRoomAction={addRoomAction}
           onAddRoomCalendar={addRoomCalendar}
           onAddBrandAssetLink={addBrandAssetLink}
+          onAddTechLink={addTechLink}
+          onAddTechQuickLink={addTechQuickLink}
           onAddOfficeChip={addOfficeChip}
           onAddOfficeHoliday={addOfficeHoliday}
           onAddOfficeHour={addOfficeHour}
@@ -2082,18 +2574,31 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onMoveRoomAction={moveRoomAction}
           onMoveRoomCalendar={moveRoomCalendar}
           onMoveBrandAssetLink={moveBrandAssetLink}
+          onMoveTechAnswer={moveTechAnswer}
+          onMoveTechHelpPath={moveTechHelpPath}
+          onMoveTechLink={moveTechLink}
+          onMoveTechPaperCut={moveTechPaperCut}
+          onMoveTechQuickLink={moveTechQuickLink}
           onRemoveOfficeChip={removeOfficeChip}
           onRemoveOfficeHoliday={removeOfficeHoliday}
           onRemoveOfficeHour={removeOfficeHour}
           onRemoveRoomAction={removeRoomAction}
           onRemoveRoomCalendar={removeRoomCalendar}
           onRemoveBrandAssetLink={removeBrandAssetLink}
+          onRemoveTechAnswer={removeTechAnswer}
+          onRemoveTechHelpPath={removeTechHelpPath}
+          onRemoveTechLink={removeTechLink}
+          onRemoveTechPaperCut={removeTechPaperCut}
+          onRemoveTechQuickLink={removeTechQuickLink}
           onSaveOfficeCard={saveOfficeCard}
           onSaveOfficeSection={saveOfficeSection}
           onSaveRooms={saveRooms}
           onSaveRoomsSection={saveRoomsSection}
           onSaveBrandAssets={saveBrandAssets}
           onSaveBrandAssetSection={saveBrandAssetSection}
+          onSaveTechConnect={saveTechConnect}
+          onSaveTechConnectSection={saveTechConnectSection}
+          onSaveTechJoeSupport={saveTechJoeSupport}
           onUpdateOfficeChip={updateOfficeChip}
           onUpdateOfficeHoliday={updateOfficeHoliday}
           onUpdateOfficeHour={updateOfficeHour}
@@ -2105,6 +2610,13 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUpdateRoomsSection={updateRoomsSection}
           onUpdateBrandAssetLink={updateBrandAssetLink}
           onUpdateBrandAssetSection={updateBrandAssetSection}
+          onUpdateTechAnswer={updateTechAnswer}
+          onUpdateTechHelpPath={updateTechHelpPath}
+          onUpdateTechJoeSupport={updateTechJoeSupport}
+          onUpdateTechLink={updateTechLink}
+          onUpdateTechPaperCut={updateTechPaperCut}
+          onUpdateTechQuickLink={updateTechQuickLink}
+          onUpdateTechSection={updateTechSection}
           onUpdateDigitalLogo={updateDigitalLogo}
           onUpdateMarketingTool={updateMarketingTool}
           onUpdateSourceFile={updateSourceFile}
@@ -2125,6 +2637,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           onUploadLeadershipSupportPhoto={uploadLeadershipSupportPhoto}
           onUploadVendorLogo={uploadVendorLogo}
           onUploadDigitalLogoImage={uploadDigitalLogoImage}
+          onUploadTechJoeSupportPhoto={uploadTechJoeSupportPhoto}
           onSaveCards={selectedTrainingResource ? saveTrainingResources : saveCourses}
           onSaveJoeAvailability={saveJoeAvailability}
           onUpdateCard={selectedTrainingResource ? updateTrainingResource : updateCourse}
@@ -2289,6 +2802,30 @@ function getBrandAssetSectionKeyFromItem(item) {
 
   if (item.editableId === "sourceFiles" || item.sectionId === "source-files") {
     return "sourceFiles";
+  }
+
+  return "";
+}
+
+function getTechSectionKeyFromItem(item) {
+  if (!item) {
+    return "";
+  }
+
+  if (item.editableId === "techOverview" || item.sectionId === "tech-overview") {
+    return "techOverview";
+  }
+
+  if (item.editableId === "techHelpPaths" || item.sectionId === "help-paths") {
+    return "techHelpPaths";
+  }
+
+  if (item.editableId === "techPaperCut" || item.sectionId === "papercut-hive") {
+    return "techPaperCut";
+  }
+
+  if (item.editableId === "techAnswers" || item.sectionId === "kw-answers") {
+    return "techAnswers";
   }
 
   return "";
@@ -3211,6 +3748,223 @@ function createBrandAssetLinkPreviewElement(link) {
   return element;
 }
 
+function syncTechSectionPreview(sectionKey, field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = field === "eyebrow"
+    ? `[data-editable-type="section-eyebrow"][data-editable-id="${sectionKey}"]`
+    : field === "summary"
+    ? `[data-editable-type="section-summary"][data-editable-id="${sectionKey}"]`
+    : `[data-editable-type="section-heading"][data-editable-id="${sectionKey}"]`;
+  const element = document.querySelector(selector);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function syncTechJoeSupportPreview(field, value) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const element = document.querySelector('[data-editable-type="tech-joe-support"][data-editable-id="techJoeSupport"]');
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "name") {
+    const name = element.querySelector(".joe-support-profile-copy .eyebrow");
+    if (name) {
+      name.textContent = value;
+    }
+  }
+
+  if (field === "role") {
+    const role = element.querySelector(".joe-support-profile-title");
+    if (role) {
+      role.textContent = value;
+    }
+  }
+
+  if (field === "photo") {
+    const image = element.querySelector(".joe-support-profile-photo");
+    if (image) {
+      image.src = value;
+    }
+  }
+
+  if (field === "photoAlt") {
+    const image = element.querySelector(".joe-support-profile-photo");
+    if (image) {
+      image.alt = value;
+    }
+  }
+
+  if (field === "phone") {
+    const phone = element.querySelectorAll(".joe-support-contact-link")[0];
+    if (phone) {
+      const digits = String(value || "").replace(/\D/g, "");
+      phone.textContent = value || "";
+      phone.href = digits ? `tel:+1${digits.length === 10 ? digits : digits.replace(/^1/, "")}` : "";
+    }
+  }
+
+  if (field === "email") {
+    const email = element.querySelectorAll(".joe-support-contact-link")[1];
+    if (email) {
+      email.textContent = value || "";
+      email.href = `mailto:${value || ""}?subject=KW%20Tech%20Question`;
+    }
+  }
+
+  if (field === "buttonLabel") {
+    const button = element.querySelector(".tech-overview-actions .button.primary");
+    if (button) {
+      button.textContent = value;
+    }
+  }
+
+  if (field === "buttonHref") {
+    const button = element.querySelector(".tech-overview-actions .button.primary");
+    if (button) {
+      button.href = value || "#";
+    }
+  }
+}
+
+function syncTechItemPreview(editableType, itemId, field, value) {
+  const element = getTechElement(editableType, itemId);
+
+  if (!element) {
+    return;
+  }
+
+  if (field === "kicker") {
+    const tag = element.querySelector(".eyebrow, .card-tag");
+    if (tag) {
+      tag.textContent = value;
+    }
+  }
+
+  if (field === "title") {
+    const title = element.querySelector("h3");
+    if (title) {
+      title.textContent = value;
+    }
+  }
+
+  if (field === "summary" || field === "secondarySummary") {
+    const paragraphs = [...element.querySelectorAll(":scope > p")].filter((paragraph) => !paragraph.classList.contains("eyebrow"));
+    const paragraph = field === "secondarySummary" ? paragraphs[1] : paragraphs[0];
+
+    if (paragraph) {
+      paragraph.textContent = value;
+    }
+  }
+
+  if (field === "active") {
+    element.hidden = value === false;
+  }
+}
+
+function syncTechLinksPreview(editableType, itemId, links) {
+  const element = getTechElement(editableType, itemId);
+  let row = element?.querySelector(".chip-row");
+
+  if (!element) {
+    return;
+  }
+
+  if (!row && links?.length) {
+    row = document.createElement("div");
+    row.className = "chip-row asset-downloads";
+    element.append(row);
+  }
+
+  row?.replaceChildren(...(links || []).map(createBrandAssetLinkPreviewElement));
+}
+
+function syncTechQuickLinksPreview(links) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const row = document.querySelector('[data-editable-type="tech-quick-links"][data-editable-id="techQuickLinks"]');
+
+  if (!row) {
+    return;
+  }
+
+  row.replaceChildren(...(links || []).map(createBrandAssetLinkPreviewElement));
+}
+
+function getTechElement(editableType, itemId) {
+  if (!editableType || !itemId || typeof document === "undefined") {
+    return null;
+  }
+
+  const safeEditableType = String(editableType).replace(/"/g, '\\"');
+  const safeItemId = String(itemId).replace(/"/g, '\\"');
+
+  return document.querySelector(`[data-editable-type="${safeEditableType}"][data-editable-id="${safeItemId}"]`);
+}
+
+function appendTechItemPreview(editableType, item) {
+  if (!editableType || !item || typeof document === "undefined") {
+    return;
+  }
+
+  const gridSelector = editableType === "tech-help-card"
+    ? "#help-paths .marketing-tool-grid"
+    : editableType === "tech-papercut-card"
+    ? "#papercut-hive .asset-source-grid"
+    : "#kw-answers .asset-source-grid";
+  const grid = document.querySelector(gridSelector);
+
+  if (!grid) {
+    return;
+  }
+
+  const element = document.createElement("article");
+  const tagElement = editableType === "tech-papercut-card" ? document.createElement("span") : document.createElement("p");
+  const title = document.createElement("h3");
+  const summary = document.createElement("p");
+
+  element.className = editableType === "tech-help-card"
+    ? "asset-source-card marketing-tool-card"
+    : editableType === "tech-papercut-card"
+    ? "support-card support-card-accent"
+    : "asset-source-card";
+  element.dataset.editableType = editableType;
+  element.dataset.editableId = item.id;
+  tagElement.className = editableType === "tech-papercut-card" ? "card-tag" : "eyebrow small";
+  tagElement.textContent = item.kicker || "";
+  title.textContent = item.title || "";
+  summary.textContent = item.summary || "";
+  element.append(tagElement, title, summary);
+
+  if (item.secondarySummary) {
+    const secondarySummary = document.createElement("p");
+    secondarySummary.textContent = item.secondarySummary;
+    element.append(secondarySummary);
+  }
+
+  const row = document.createElement("div");
+  row.className = "chip-row asset-downloads";
+  element.append(row);
+  grid.append(element);
+  syncTechLinksPreview(editableType, item.id, item.links || []);
+}
+
+function removeTechItemPreview(editableType, itemId) {
+  const element = getTechElement(editableType, itemId);
+  element?.remove();
+}
+
 function appendBrandAssetPreview(editableType, item) {
   if (!editableType || !item || typeof document === "undefined") {
     return;
@@ -3419,11 +4173,26 @@ function FloatingItemEditor({
   marketingToolIndex,
   marketingTools,
   marketingToolsSectionSettings,
+  selectedTechAnswer,
+  selectedTechAnswerIndex,
+  selectedTechHelpPath,
+  selectedTechHelpPathIndex,
+  selectedTechPaperCut,
+  selectedTechPaperCutIndex,
   sourceFile,
   sourceFileErrors,
   sourceFileIndex,
   sourceFiles,
   sourceFilesSectionSettings,
+  techAnswerCards,
+  techAnswerErrors,
+  techHelpPathErrors,
+  techHelpPaths,
+  techJoeSupport,
+  techPaperCutCards,
+  techPaperCutErrors,
+  techQuickLinks,
+  techSections,
   vendorDirectorySectionSettings,
   vendorCoreSectionSettings,
   vendorErrors,
@@ -3437,6 +4206,8 @@ function FloatingItemEditor({
   onAddOfficeHoliday,
   onAddOfficeHour,
   onAddBrandAssetLink,
+  onAddTechLink,
+  onAddTechQuickLink,
   onClose,
   onMoveLeader,
   onMoveVendor,
@@ -3444,10 +4215,20 @@ function FloatingItemEditor({
   onMoveOfficeHoliday,
   onMoveOfficeHour,
   onMoveBrandAssetLink,
+  onMoveTechAnswer,
+  onMoveTechHelpPath,
+  onMoveTechLink,
+  onMoveTechPaperCut,
+  onMoveTechQuickLink,
   onRemoveOfficeChip,
   onRemoveOfficeHoliday,
   onRemoveOfficeHour,
   onRemoveBrandAssetLink,
+  onRemoveTechAnswer,
+  onRemoveTechHelpPath,
+  onRemoveTechLink,
+  onRemoveTechPaperCut,
+  onRemoveTechQuickLink,
   onRemoveCard,
   onRemoveLeader,
   onRemoveVendor,
@@ -3460,6 +4241,9 @@ function FloatingItemEditor({
   onSaveVendors,
   onSaveBrandAssets,
   onSaveBrandAssetSection,
+  onSaveTechConnect,
+  onSaveTechConnectSection,
+  onSaveTechJoeSupport,
   onSaveOfficeCard,
   onSaveOfficeSection,
   onUpdateCard,
@@ -3473,6 +4257,13 @@ function FloatingItemEditor({
   onUpdateVendorSection,
   onUpdateBrandAssetLink,
   onUpdateBrandAssetSection,
+  onUpdateTechAnswer,
+  onUpdateTechHelpPath,
+  onUpdateTechJoeSupport,
+  onUpdateTechLink,
+  onUpdateTechPaperCut,
+  onUpdateTechQuickLink,
+  onUpdateTechSection,
   onUpdateDigitalLogo,
   onUpdateMarketingTool,
   onUpdateSourceFile,
@@ -3480,6 +4271,7 @@ function FloatingItemEditor({
   onUploadLeadershipSupportPhoto,
   onUploadVendorLogo,
   onUploadDigitalLogoImage,
+  onUploadTechJoeSupportPhoto,
   onUpdateOfficeChip,
   onUpdateOfficeCard,
   onUpdateOfficeHoliday,
@@ -3528,6 +4320,16 @@ function FloatingItemEditor({
   const isMarketingToolEditable = item.type === "marketing-tool-card" && marketingTool && marketingToolIndex >= 0;
   const isDigitalLogoEditable = item.type === "digital-logo-card" && digitalLogo && digitalLogoIndex >= 0;
   const isSourceFileEditable = item.type === "source-file-card" && sourceFile && sourceFileIndex >= 0;
+  const isTechHelpPathEditable = item.type === "tech-help-card" && selectedTechHelpPath && selectedTechHelpPathIndex >= 0;
+  const isTechPaperCutEditable = item.type === "tech-papercut-card" && selectedTechPaperCut && selectedTechPaperCutIndex >= 0;
+  const isTechAnswerEditable = item.type === "tech-answer-card" && selectedTechAnswer && selectedTechAnswerIndex >= 0;
+  const isTechJoeSupportEditable = item.type === "tech-joe-support";
+  const isTechQuickLinksEditable = item.type === "tech-quick-links";
+  const techSectionKey = (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary")
+    ? getTechSectionKeyFromItem(item)
+    : "";
+  const techSectionSettings = techSectionKey ? techSections[techSectionKey] : null;
+  const isTechSectionEditable = Boolean(techSectionKey && techSectionSettings);
   const brandAssetSectionKey = (item.type === "section" || item.type === "section-eyebrow" || item.type === "section-heading" || item.type === "section-summary")
     ? getBrandAssetSectionKeyFromItem(item)
     : "";
@@ -3568,7 +4370,7 @@ function FloatingItemEditor({
     }
 
     setEditorPosition(getMeasuredFloatingEditorPosition(item, editor));
-  }, [item, cardIndex, cardErrors.length, leaderErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey]);
+  }, [item, cardIndex, cardErrors.length, leaderErrors.length, officeCardErrors.length, roomErrors.length, officeCardKey, techHelpPathErrors.length, techPaperCutErrors.length, techAnswerErrors.length]);
 
   return (
     <div
@@ -3825,6 +4627,152 @@ function FloatingItemEditor({
             {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
           </div>
         </>
+      ) : isTechSectionEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update this Tech Connect heading preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Eyebrow</span>
+            <input value={techSectionSettings.eyebrow || ""} onChange={(event) => onUpdateTechSection(techSectionKey, "eyebrow", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Heading</span>
+            <input value={techSectionSettings.title || ""} onChange={(event) => onUpdateTechSection(techSectionKey, "title", event.target.value)} />
+          </label>
+          {"summary" in techSectionSettings ? (
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={techSectionSettings.summary || ""} rows={3} onChange={(event) => onUpdateTechSection(techSectionKey, "summary", event.target.value)} />
+            </label>
+          ) : null}
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={() => onSaveTechConnectSection("Tech Connect heading")}>
+              {isSaving ? "Saving" : "Save Heading"}
+            </button>
+          </div>
+        </>
+      ) : isTechJoeSupportEditable ? (
+        <>
+          <p className="visual-editor-note">
+            Changes update the Tech Connect support card preview as you type. Save when it looks right.
+          </p>
+          <label className="visual-editor-field">
+            <span>Name</span>
+            <input value={techJoeSupport.name || ""} onChange={(event) => onUpdateTechJoeSupport("name", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Role</span>
+            <input value={techJoeSupport.role || ""} onChange={(event) => onUpdateTechJoeSupport("role", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Photo</span>
+            <input value={techJoeSupport.photo || ""} onChange={(event) => onUpdateTechJoeSupport("photo", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Upload Photo</span>
+            <input accept="image/gif,image/jpeg,image/png,image/webp" type="file" onChange={(event) => onUploadTechJoeSupportPhoto(event.target.files?.[0])} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Alt Text</span>
+            <input value={techJoeSupport.photoAlt || ""} onChange={(event) => onUpdateTechJoeSupport("photoAlt", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Phone</span>
+            <input value={techJoeSupport.phone || ""} onChange={(event) => onUpdateTechJoeSupport("phone", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Email</span>
+            <input value={techJoeSupport.email || ""} onChange={(event) => onUpdateTechJoeSupport("email", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Button Label</span>
+            <input value={techJoeSupport.buttonLabel || ""} onChange={(event) => onUpdateTechJoeSupport("buttonLabel", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Button Link</span>
+            <input value={techJoeSupport.buttonHref || ""} onChange={(event) => onUpdateTechJoeSupport("buttonHref", event.target.value)} />
+          </label>
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveTechJoeSupport}>
+              {isSaving ? "Saving" : "Save Support Card"}
+            </button>
+            {isUploading ? <span className="visual-editor-status">Uploading</span> : null}
+          </div>
+        </>
+      ) : isTechQuickLinksEditable ? (
+        <>
+          <p className="visual-editor-note">
+            These are the quick-link buttons near the top of the Tech Connect page.
+          </p>
+          <SimpleLinksEditor
+            links={techQuickLinks}
+            onAddLink={onAddTechQuickLink}
+            onMoveLink={onMoveTechQuickLink}
+            onRemoveLink={onRemoveTechQuickLink}
+            onUpdateLink={onUpdateTechQuickLink}
+          />
+          <div className="visual-editor-panel-actions">
+            <button className="visual-editor-button" type="button" disabled={isSaving} onClick={onSaveTechConnect}>
+              {isSaving ? "Saving" : "Save Quick Links"}
+            </button>
+          </div>
+        </>
+      ) : isTechHelpPathEditable ? (
+        <TechCardEditor
+          card={selectedTechHelpPath}
+          cardErrors={techHelpPathErrors}
+          collectionKey="helpPaths"
+          editableType="tech-help-card"
+          itemIndex={selectedTechHelpPathIndex}
+          items={techHelpPaths}
+          isSaving={isSaving}
+          onAddLink={onAddTechLink}
+          onMoveCard={onMoveTechHelpPath}
+          onMoveLink={onMoveTechLink}
+          onRemoveCard={onRemoveTechHelpPath}
+          onRemoveLink={onRemoveTechLink}
+          onSave={onSaveTechConnect}
+          onUpdateCard={onUpdateTechHelpPath}
+          onUpdateLink={onUpdateTechLink}
+        />
+      ) : isTechPaperCutEditable ? (
+        <TechCardEditor
+          card={selectedTechPaperCut}
+          cardErrors={techPaperCutErrors}
+          collectionKey="paperCutCards"
+          editableType="tech-papercut-card"
+          includeSecondarySummary
+          itemIndex={selectedTechPaperCutIndex}
+          items={techPaperCutCards}
+          isSaving={isSaving}
+          onAddLink={onAddTechLink}
+          onMoveCard={onMoveTechPaperCut}
+          onMoveLink={onMoveTechLink}
+          onRemoveCard={onRemoveTechPaperCut}
+          onRemoveLink={onRemoveTechLink}
+          onSave={onSaveTechConnect}
+          onUpdateCard={onUpdateTechPaperCut}
+          onUpdateLink={onUpdateTechLink}
+        />
+      ) : isTechAnswerEditable ? (
+        <TechCardEditor
+          card={selectedTechAnswer}
+          cardErrors={techAnswerErrors}
+          collectionKey="answerCards"
+          editableType="tech-answer-card"
+          itemIndex={selectedTechAnswerIndex}
+          items={techAnswerCards}
+          isSaving={isSaving}
+          onAddLink={onAddTechLink}
+          onMoveCard={onMoveTechAnswer}
+          onMoveLink={onMoveTechLink}
+          onRemoveCard={onRemoveTechAnswer}
+          onRemoveLink={onRemoveTechLink}
+          onSave={onSaveTechConnect}
+          onUpdateCard={onUpdateTechAnswer}
+          onUpdateLink={onUpdateTechLink}
+        />
       ) : isBrandAssetSectionEditable ? (
         <>
           <p className="visual-editor-note">
@@ -4354,6 +5302,134 @@ function FloatingItemEditor({
   );
 }
 
+function TechCardEditor({
+  card,
+  cardErrors,
+  collectionKey,
+  editableType,
+  includeSecondarySummary = false,
+  isSaving,
+  itemIndex,
+  items,
+  onAddLink,
+  onMoveCard,
+  onMoveLink,
+  onRemoveCard,
+  onRemoveLink,
+  onSave,
+  onUpdateCard,
+  onUpdateLink
+}) {
+  return (
+    <>
+      <p className="visual-editor-note">
+        Changes update this Tech Connect card preview as you type. Save when it looks right.
+      </p>
+      <label className="visual-editor-field">
+        <span>Tag</span>
+        <input value={card.kicker || ""} onChange={(event) => onUpdateCard(itemIndex, "kicker", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Title</span>
+        <input value={card.title || ""} onChange={(event) => onUpdateCard(itemIndex, "title", event.target.value)} />
+      </label>
+      <label className="visual-editor-field">
+        <span>Description</span>
+        <textarea value={card.summary || ""} rows={3} onChange={(event) => onUpdateCard(itemIndex, "summary", event.target.value)} />
+      </label>
+      {includeSecondarySummary ? (
+        <label className="visual-editor-field">
+          <span>Second Description</span>
+          <textarea value={card.secondarySummary || ""} rows={3} onChange={(event) => onUpdateCard(itemIndex, "secondarySummary", event.target.value)} />
+        </label>
+      ) : null}
+      <AssetLinksEditor
+        collectionKey={collectionKey}
+        editableType={editableType}
+        item={card}
+        itemIndex={itemIndex}
+        items={items}
+        links={card.links || []}
+        onAddLink={onAddLink}
+        onMoveLink={onMoveLink}
+        onRemoveLink={onRemoveLink}
+        onUpdateLink={onUpdateLink}
+      />
+      <div className="visual-editor-check-row">
+        <label>
+          <input type="checkbox" checked={card.active !== false} onChange={(event) => onUpdateCard(itemIndex, "active", event.target.checked)} />
+          Visible
+        </label>
+      </div>
+      {cardErrors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {cardErrors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+        </div>
+      ) : null}
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(cardErrors.length) || isSaving} onClick={onSave}>
+          {isSaving ? "Saving" : "Save Tech Connect"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={itemIndex === 0} onClick={() => onMoveCard(itemIndex, -1)}>
+          Up
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={itemIndex === items.length - 1} onClick={() => onMoveCard(itemIndex, 1)}>
+          Down
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => onRemoveCard(itemIndex)}>
+          Delete
+        </button>
+      </div>
+    </>
+  );
+}
+
+function SimpleLinksEditor({ links, onAddLink, onMoveLink, onRemoveLink, onUpdateLink }) {
+  return (
+    <div className="visual-editor-repeat-list">
+      <div className="visual-editor-repeat-header">
+        <span>Buttons</span>
+        <button type="button" onClick={onAddLink}>Add Button</button>
+      </div>
+      {links.map((link, index) => (
+        <div className="visual-editor-repeat-item" key={`${link.label}-${index}`}>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveLink(index, -1)}>Up</button>
+            <button type="button" disabled={index === links.length - 1} onClick={() => onMoveLink(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveLink(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Label</span>
+            <input value={link.label || ""} onChange={(event) => onUpdateLink(index, "label", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Link</span>
+            <input value={link.href || ""} onChange={(event) => onUpdateLink(index, "href", event.target.value)} />
+          </label>
+          <div className="visual-editor-check-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.external)}
+                onChange={(event) => onUpdateLink(index, "external", event.target.checked)}
+              />
+              Opens externally
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(link.download)}
+                onChange={(event) => onUpdateLink(index, "download", event.target.checked)}
+              />
+              Download
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function OfficeHoursEditor({ hours, onAddHour, onMoveHour, onRemoveHour, onUpdateHour }) {
   return (
     <div className="visual-editor-repeat-list">
@@ -4687,6 +5763,135 @@ function AssetLinksEditor({ collectionKey, editableType, itemIndex, items, links
             </label>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function TechConnectVisualPanel({
+  answerCards,
+  errors,
+  helpPaths,
+  isSaving,
+  onAddAnswer,
+  onAddHelpPath,
+  onAddPaperCut,
+  onMoveAnswer,
+  onMoveHelpPath,
+  onMovePaperCut,
+  onRemoveAnswer,
+  onRemoveHelpPath,
+  onRemovePaperCut,
+  onSaveTechConnect,
+  onUpdateAnswer,
+  onUpdateHelpPath,
+  onUpdatePaperCut,
+  paperCutCards
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{helpPaths.length + paperCutCards.length + answerCards.length} Tech Connect cards</strong>
+        </div>
+      </div>
+      <div className="visual-editor-add-grid">
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddHelpPath}>Add Help Path</button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddPaperCut}>Add PaperCut Card</button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddAnswer}>Add KW Answer</button>
+      </div>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => (
+            <p key={validationError}>{validationError}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <TechCardDetailsList
+        items={helpPaths}
+        label="Help Paths"
+        onMoveItem={onMoveHelpPath}
+        onRemoveItem={onRemoveHelpPath}
+        onUpdateItem={onUpdateHelpPath}
+        typeLabel="Help Path"
+      />
+      <TechCardDetailsList
+        includeSecondarySummary
+        items={paperCutCards}
+        label="PaperCut Hive"
+        onMoveItem={onMovePaperCut}
+        onRemoveItem={onRemovePaperCut}
+        onUpdateItem={onUpdatePaperCut}
+        typeLabel="PaperCut"
+      />
+      <TechCardDetailsList
+        items={answerCards}
+        label="KW Answers"
+        onMoveItem={onMoveAnswer}
+        onRemoveItem={onRemoveAnswer}
+        onUpdateItem={onUpdateAnswer}
+        typeLabel="Answer"
+      />
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSaveTechConnect}>
+          {isSaving ? "Saving" : "Save Tech Connect"}
+        </button>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={() => window.location.reload()}>
+          Refresh Preview
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TechCardDetailsList({ includeSecondarySummary = false, items, label, onMoveItem, onRemoveItem, onUpdateItem, typeLabel }) {
+  return (
+    <div className="visual-editor-course-list">
+      <div className="visual-editor-repeat-header">
+        <span>{label}</span>
+      </div>
+      {items.map((item, index) => (
+        <details className="visual-editor-course" key={item.id || index}>
+          <summary>
+            <span>{item.title || `${typeLabel} ${index + 1}`}</span>
+            <strong>{item.active === false ? "Hidden" : "Visible"}</strong>
+          </summary>
+          <div className="visual-editor-course-controls">
+            <button type="button" disabled={index === 0} onClick={() => onMoveItem(index, -1)}>Up</button>
+            <button type="button" disabled={index === items.length - 1} onClick={() => onMoveItem(index, 1)}>Down</button>
+            <button type="button" onClick={() => onRemoveItem(index)}>Remove</button>
+          </div>
+          <label className="visual-editor-field">
+            <span>Tag</span>
+            <input value={item.kicker || ""} onChange={(event) => onUpdateItem(index, "kicker", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Title</span>
+            <input value={item.title || ""} onChange={(event) => onUpdateItem(index, "title", event.target.value)} />
+          </label>
+          <label className="visual-editor-field">
+            <span>Description</span>
+            <textarea value={item.summary || ""} rows={3} onChange={(event) => onUpdateItem(index, "summary", event.target.value)} />
+          </label>
+          {includeSecondarySummary ? (
+            <label className="visual-editor-field">
+              <span>Second Description</span>
+              <textarea value={item.secondarySummary || ""} rows={3} onChange={(event) => onUpdateItem(index, "secondarySummary", event.target.value)} />
+            </label>
+          ) : null}
+          <div className="visual-editor-check-row">
+            <label>
+              <input type="checkbox" checked={item.active !== false} onChange={(event) => onUpdateItem(index, "active", event.target.checked)} />
+              Visible
+            </label>
+          </div>
+        </details>
       ))}
     </div>
   );

@@ -305,6 +305,18 @@ export function createSourceFileId(files) {
   return createDraftId(files, "new-source-file");
 }
 
+export function createTechHelpPathId(cards) {
+  return createDraftId(cards, "new-help-path");
+}
+
+export function createTechPaperCutId(cards) {
+  return createDraftId(cards, "new-papercut-card");
+}
+
+export function createTechAnswerId(cards) {
+  return createDraftId(cards, "new-kw-answer");
+}
+
 function validateLinkList(links, labelPrefix, errors) {
   if (!Array.isArray(links)) {
     errors.push(`${labelPrefix.replace(/ Link$/, "")}: links must be a list.`);

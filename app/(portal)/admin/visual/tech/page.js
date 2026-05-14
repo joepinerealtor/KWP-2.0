@@ -22,7 +22,7 @@ export default function TechVisualAdminPage() {
       <VisualEditorOverlay
         currentEditorPage="tech"
         initialContent={portalContent}
-        initialSectionId="overview"
+        initialSectionId="techConnect"
         previewHref="/tech/"
       />
       <PortalScripts />

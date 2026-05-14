@@ -6,8 +6,10 @@ import { createAlcPosterGridHtml, createLeadershipGridHtml } from "@/components/
 import { createOfficeGridHtml, createRoomBookingCardHtml } from "@/components/OfficeCards";
 import { PortalBodyState } from "@/components/PortalBodyState";
 import { PortalShell } from "@/components/PortalShell";
+import { createTechCardGridHtml, createTechJoeSupportHtml, createTechQuickLinksHtml } from "@/components/TechConnectCards";
 import { createVendorGridHtml } from "@/components/VendorCards";
 import portalContent from "@/data/portal-content.json";
+import { getTechConnectContent } from "@/lib/tech-connect-content";
 import { escapeHtml, escapeHtmlAttribute } from "@/lib/portal-html";
 import { portalPages } from "@/lib/portal-config";
 
@@ -83,7 +85,63 @@ function hydrateLegacyMainHtml(source, mainHtml) {
     return replaceLegacyBrandAssetGrids(mainHtml);
   }
 
+  if (source === "tech/index.html") {
+    return replaceLegacyTechConnect(mainHtml);
+  }
+
   return mainHtml;
+}
+
+function replaceLegacyTechConnect(mainHtml) {
+  const techConnect = getTechConnectContent(portalContent);
+  const { sections } = techConnect;
+  const legacyOverviewHeadPattern = /(<section class="panel directory-panel" id="tech-overview">\s*<div class="directory-head tech-overview-head">\s*<div class="directory-title-block">\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h1>[\s\S]*?<\/h1>\s*<p class="dashboard-summary">[\s\S]*?<\/p>/;
+  const legacyJoeSupportPattern = /<div class="tech-overview-aside" id="meet-with-joe"[\s\S]*?<\/div>\s*<\/div>\s*(?=<div class="asset-utility-row">)/;
+  const legacyQuickLinksPattern = /<div class="asset-utility-row">\s*(?:<a class="chip chip-link"[\s\S]*?<\/a>\s*)+<\/div>/;
+  const legacyHelpHeadPattern = /(<section class="panel" id="help-paths">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const legacyHelpGridPattern = /(<section class="panel" id="help-paths">[\s\S]*?)<div class="marketing-tool-grid">\s*(?:<article class="asset-source-card marketing-tool-card">[\s\S]*?<\/article>\s*)+<\/div>/;
+  const legacyPaperCutHeadPattern = /(<section class="panel" id="papercut-hive">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const legacyPaperCutGridPattern = /(<section class="panel" id="papercut-hive">[\s\S]*?)<div class="asset-source-grid">\s*(?:<article class="support-card support-card-accent">[\s\S]*?<\/article>\s*)+<\/div>/;
+  const legacyAnswersHeadPattern = /(<section class="panel" id="kw-answers">\s*<div class="section-head">\s*<div>\s*)<p class="eyebrow small">[\s\S]*?<\/p>\s*<h2>[\s\S]*?<\/h2>/;
+  const legacyAnswersGridPattern = /(<section class="panel" id="kw-answers">[\s\S]*?)<div class="asset-source-grid">\s*(?:<article class="asset-source-card">[\s\S]*?<\/article>\s*)+<\/div>/;
+  const overviewHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="techOverview">${escapeHtml(sections.techOverview.eyebrow)}</p><h1 data-editable-type="section-heading" data-editable-id="techOverview">${escapeHtml(sections.techOverview.title)}</h1><p class="dashboard-summary" data-editable-type="section-summary" data-editable-id="techOverview">${escapeHtml(sections.techOverview.summary)}</p>`;
+  const helpHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="techHelpPaths">${escapeHtml(sections.techHelpPaths.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="techHelpPaths">${escapeHtml(sections.techHelpPaths.title)}</h2>`;
+  const paperCutHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="techPaperCut">${escapeHtml(sections.techPaperCut.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="techPaperCut">${escapeHtml(sections.techPaperCut.title)}</h2>`;
+  const answersHeadHtml = `<p class="eyebrow small" data-editable-type="section-eyebrow" data-editable-id="techAnswers">${escapeHtml(sections.techAnswers.eyebrow)}</p><h2 data-editable-type="section-heading" data-editable-id="techAnswers">${escapeHtml(sections.techAnswers.title)}</h2>`;
+
+  return mainHtml
+    .replace(legacyOverviewHeadPattern, `$1${overviewHeadHtml}`)
+    .replace(legacyJoeSupportPattern, `${createTechJoeSupportHtml(techConnect.joeSupport)}
+            </div>
+
+            `)
+    .replace(legacyQuickLinksPattern, createTechQuickLinksHtml(techConnect.quickLinks))
+    .replace(legacyHelpHeadPattern, `$1${helpHeadHtml}`)
+    .replace(
+      legacyHelpGridPattern,
+      `$1${createTechCardGridHtml(techConnect.helpPaths, {
+        cardClassName: "asset-source-card marketing-tool-card",
+        editableType: "tech-help-card",
+        gridClassName: "marketing-tool-grid"
+      })}`
+    )
+    .replace(legacyPaperCutHeadPattern, `$1${paperCutHeadHtml}`)
+    .replace(
+      legacyPaperCutGridPattern,
+      `$1${createTechCardGridHtml(techConnect.paperCutCards, {
+        cardClassName: "support-card support-card-accent",
+        editableType: "tech-papercut-card",
+        tagClassName: "card-tag",
+        tagElement: "span"
+      })}`
+    )
+    .replace(legacyAnswersHeadPattern, `$1${answersHeadHtml}`)
+    .replace(
+      legacyAnswersGridPattern,
+      `$1${createTechCardGridHtml(techConnect.answerCards, {
+        editableType: "tech-answer-card"
+      })}`
+    );
 }
 
 function replaceLegacyTrainingResourceGrid(mainHtml) {
