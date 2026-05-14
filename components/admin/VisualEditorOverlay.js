@@ -23,6 +23,13 @@ import {
   validateVendorDrafts
 } from "./contentDrafts";
 import { portalPages } from "@/lib/portal-config";
+import {
+  createCustomPageDraft,
+  createCustomPagePortalConfig,
+  duplicateCustomPageDraft,
+  getCustomPageById,
+  getCustomPages
+} from "@/lib/custom-pages";
 import { createCustomSectionCardId, createCustomSectionId, getCustomSectionsForPage } from "@/lib/custom-sections";
 import { LEADERSHIP_SUPPORT_DEFAULT, getLeadershipSupportContent } from "@/lib/leadership-support";
 import { getOverviewContent } from "@/lib/overview-content";
@@ -31,6 +38,7 @@ import { getSiteChromeContent } from "@/lib/portal-site-chrome";
 import { getTechConnectContent } from "@/lib/tech-connect-content";
 
 const EDITABLE_SECTIONS = [
+  { id: "pages", label: "Pages", target: "", status: "Page manager" },
   { id: "navigation", label: "Navigation", target: "", status: "Page menu" },
   { id: "siteChrome", label: "Site Chrome", target: "", status: "Brand + footer" },
   { id: "customSections", label: "Custom Sections", target: "", status: "Section builder" },
@@ -160,6 +168,17 @@ const JOE_AVAILABILITY_DEFAULT = {
   noSlotsSummary: "No open tech-help slots are listed right now."
 };
 
+function getEditorPageLinks(content) {
+  return [
+    ...EDITOR_PAGE_LINKS,
+    ...getCustomPages(content).filter((page) => page.active !== false).map((page) => ({
+      id: page.id,
+      label: page.title || page.slug,
+      href: `/admin/visual/p/${page.slug}/`
+    }))
+  ];
+}
+
 export function VisualEditorOverlay({ currentEditorPage = "home", initialContent, initialSectionId = "productivityCourses", previewHref = "/" }) {
   const [activeSectionId, setActiveSectionId] = useState(initialSectionId);
   const [content, setContent] = useState(initialContent);
@@ -175,7 +194,15 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
 
-  const pageDefaults = portalPages[currentEditorPage] || portalPages.home;
+  const customPages = getCustomPages(content);
+  const currentCustomPage = getCustomPageById(content, currentEditorPage);
+  const editorPageLinks = getEditorPageLinks(content);
+  const pageDefaults = currentCustomPage
+    ? createCustomPagePortalConfig({
+        ...currentCustomPage,
+        sections: getCustomSectionsForPage(content, currentCustomPage.id)
+      })
+    : portalPages[currentEditorPage] || portalPages.home;
   const navigation = getNavigationContent(content, currentEditorPage, pageDefaults);
   const navigationErrors = useMemo(() => validateNavigationDraft(navigation), [navigation]);
   const siteChrome = getSiteChromeContent(content, currentEditorPage, pageDefaults);
@@ -963,6 +990,82 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
 
     [nextLinks[index], nextLinks[nextIndex]] = [nextLinks[nextIndex], nextLinks[index]];
     updateOverviewGroup(groupKey, "links", nextLinks);
+  }
+
+  function setCustomPages(nextPages) {
+    setContent((currentContent) => ({
+      ...currentContent,
+      customPages: nextPages
+    }));
+    setStatusMessage("");
+    setError("");
+  }
+
+  function addCustomPage() {
+    const nextPage = createCustomPageDraft("New Page", customPages);
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      customPages: [
+        ...getCustomPages(currentContent),
+        nextPage
+      ],
+      customSections: {
+        ...(currentContent.customSections || {}),
+        [nextPage.id]: []
+      }
+    }));
+    setActiveSectionId("pages");
+    setStatusMessage("Page added. Rename it, save pages, then open it from the editor page switcher.");
+    setError("");
+  }
+
+  function duplicateCustomPage(index) {
+    const sourcePage = customPages[index];
+
+    if (!sourcePage) {
+      return;
+    }
+
+    const nextPage = duplicateCustomPageDraft(sourcePage, customPages);
+
+    setContent((currentContent) => ({
+      ...currentContent,
+      customPages: [
+        ...getCustomPages(currentContent),
+        nextPage
+      ],
+      customSections: {
+        ...(currentContent.customSections || {}),
+        [nextPage.id]: [...(((currentContent.customSections || {})[sourcePage.id]) || [])]
+      }
+    }));
+    setStatusMessage("Page duplicated. Save pages when ready.");
+    setError("");
+  }
+
+  function updateCustomPage(index, field, value) {
+    const nextPages = customPages.map((page, pageIndex) => (
+      pageIndex === index
+        ? {
+            ...page,
+            [field]: value
+          }
+        : page
+    ));
+
+    setCustomPages(nextPages);
+  }
+
+  function removeCustomPage(index) {
+    const page = customPages[index];
+
+    if (!page) {
+      return;
+    }
+
+    setCustomPages(customPages.filter((_, pageIndex) => pageIndex !== index));
+    setStatusMessage("Page removed from the draft. Save pages when ready.");
   }
 
   function setCustomSections(nextSections) {
@@ -2763,6 +2866,10 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
     await saveContent(customSectionErrors, "Custom sections");
   }
 
+  async function savePages() {
+    await saveContent(validateCustomPagesDraft(customPages), "Pages");
+  }
+
   async function saveBrandAssetSection(sectionLabel = "Brand assets heading") {
     await saveContent([], sectionLabel);
   }
@@ -2840,7 +2947,7 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           <strong>KWP Visual Editor</strong>
         </div>
         <nav className="visual-editor-page-switcher" aria-label="Editor pages">
-          {EDITOR_PAGE_LINKS.map((pageLink) => (
+          {editorPageLinks.map((pageLink) => (
             <a
               className={`visual-editor-page-link${pageLink.id === currentEditorPage ? " is-active" : ""}`}
               href={pageLink.href}
@@ -2859,6 +2966,9 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
           </button>
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={openAddSectionTools}>
             Add Section
+          </button>
+          <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setActiveSectionId("pages")}>
+            Add Page
           </button>
           <button className="visual-editor-button visual-editor-button--secondary" type="button" disabled={!isUnlocked} onClick={() => setToolbarStatus("Undo")}>
             Undo
@@ -2936,7 +3046,19 @@ export function VisualEditorOverlay({ currentEditorPage = "home", initialContent
                   ))}
                 </div>
 
-                {activeSectionId === "trainingResources" ? (
+                {activeSectionId === "pages" ? (
+                  <PagesVisualPanel
+                    currentEditorPage={currentEditorPage}
+                    errors={validateCustomPagesDraft(customPages)}
+                    isSaving={isSaving}
+                    pages={customPages}
+                    onAddPage={addCustomPage}
+                    onDuplicatePage={duplicateCustomPage}
+                    onRemovePage={removeCustomPage}
+                    onSavePages={savePages}
+                    onUpdatePage={updateCustomPage}
+                  />
+                ) : activeSectionId === "trainingResources" ? (
                   <CourseVisualPanel
                     addLabel="Add Card"
                     courses={trainingResources}
@@ -3508,6 +3630,33 @@ function validateSiteChromeDraft(siteChrome) {
     if (!String(footer[field] || "").trim()) {
       errors.push(`${label} is required.`);
     }
+  });
+
+  return errors;
+}
+
+function validateCustomPagesDraft(pages) {
+  const errors = [];
+  const seenSlugs = new Set();
+
+  pages.forEach((page, index) => {
+    if (!String(page.id || "").trim()) {
+      errors.push(`Page ${index + 1}: id is required.`);
+    }
+
+    if (!String(page.title || "").trim()) {
+      errors.push(`Page ${index + 1}: title is required.`);
+    }
+
+    if (!String(page.slug || "").trim()) {
+      errors.push(`Page ${index + 1}: URL slug is required.`);
+    }
+
+    if (page.slug && seenSlugs.has(page.slug)) {
+      errors.push(`Page ${index + 1}: URL slug is already used.`);
+    }
+
+    seenSlugs.add(page.slug);
   });
 
   return errors;
@@ -8138,6 +8287,82 @@ function NavigationDetailsList({ items, label, listKey, onAddLink, onMoveLink, o
           </div>
         </details>
       ))}
+    </div>
+  );
+}
+
+function PagesVisualPanel({
+  currentEditorPage,
+  errors,
+  isSaving,
+  pages,
+  onAddPage,
+  onDuplicatePage,
+  onRemovePage,
+  onSavePages,
+  onUpdatePage
+}) {
+  return (
+    <div className="visual-editor-module">
+      <div className="visual-editor-module-header">
+        <div>
+          <span className={errors.length ? "visual-editor-status visual-editor-status--error" : "visual-editor-status visual-editor-status--ok"}>
+            {errors.length ? `${errors.length} issue${errors.length === 1 ? "" : "s"}` : "Valid draft"}
+          </span>
+          <strong>{pages.length} custom page{pages.length === 1 ? "" : "s"}</strong>
+        </div>
+        <button className="visual-editor-button visual-editor-button--secondary" type="button" onClick={onAddPage}>Add Page</button>
+      </div>
+      <p className="visual-editor-note">
+        Custom pages use the same portal shell and section/card templates. After saving, open a page from the editor switcher to add sections.
+      </p>
+
+      {errors.length ? (
+        <div className="visual-editor-validation" role="status">
+          {errors.map((validationError) => <p key={validationError}>{validationError}</p>)}
+        </div>
+      ) : null}
+
+      <div className="visual-editor-course-list">
+        {pages.map((page, index) => (
+          <details className="visual-editor-course" key={page.id || index} open={page.id === currentEditorPage}>
+            <summary>
+              <span>{page.title || `Page ${index + 1}`}</span>
+              <strong>{page.active === false ? "Hidden" : "Visible"}</strong>
+            </summary>
+            <div className="visual-editor-course-controls">
+              <a href={`/admin/visual/p/${page.slug}/`}>Open Editor</a>
+              <a href={`/p/${page.slug}/`}>Preview</a>
+              <button type="button" onClick={() => onDuplicatePage(index)}>Duplicate</button>
+              <button type="button" onClick={() => onRemovePage(index)}>Delete</button>
+            </div>
+            <label className="visual-editor-field">
+              <span>Page Title</span>
+              <input value={page.title || ""} onChange={(event) => onUpdatePage(index, "title", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>URL Slug</span>
+              <input value={page.slug || ""} onChange={(event) => onUpdatePage(index, "slug", event.target.value)} />
+            </label>
+            <label className="visual-editor-field">
+              <span>Description</span>
+              <textarea value={page.summary || ""} rows={3} onChange={(event) => onUpdatePage(index, "summary", event.target.value)} />
+            </label>
+            <div className="visual-editor-check-row">
+              <label>
+                <input type="checkbox" checked={page.active !== false} onChange={(event) => onUpdatePage(index, "active", event.target.checked)} />
+                Visible
+              </label>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div className="visual-editor-panel-actions">
+        <button className="visual-editor-button" type="button" disabled={Boolean(errors.length) || isSaving} onClick={onSavePages}>
+          {isSaving ? "Saving" : "Save Pages"}
+        </button>
+      </div>
     </div>
   );
 }
