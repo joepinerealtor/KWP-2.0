@@ -97,7 +97,7 @@ function hydrateLegacyMainHtml(source, mainHtml) {
   }
 
   if (source === "lonewolf/index.html") {
-    return appendCustomSections("loneWolf", mainHtml);
+    return appendCustomSections("loneWolf", restoreLoneWolfArticleModalTriggers(mainHtml));
   }
 
   return mainHtml;
@@ -398,6 +398,7 @@ function replaceLegacyBrandAssetGrids(mainHtml) {
 }
 
 function replaceLegacyOfficeCards(mainHtml) {
+  const leadershipSupport = getLeadershipSupportContent(portalContent);
   const officeSection = portalContent.sections?.office || {
     eyebrow: "Office Hub",
     title: "Resources, office information, and internal support"
@@ -416,12 +417,19 @@ function replaceLegacyOfficeCards(mainHtml) {
     .replace(legacyRoomsHeadPattern, `$1${roomsHeadHtml}`)
     .replace(
       /<div class="office-grid">\s*(?:<article class="office-card(?: [^"]+)?">[\s\S]*?<\/article>\s*)+<\/div>/,
-      createOfficeGridHtml(portalContent.office)
+      createOfficeGridHtml(portalContent.office, leadershipSupport)
     )
     .replace(
       /<article class="office-card office-booking-card">[\s\S]*?<\/article>/,
       createRoomBookingCardHtml(portalContent.office.rooms)
     );
+}
+
+function restoreLoneWolfArticleModalTriggers(mainHtml) {
+  return mainHtml.replace(
+    /<a class="transition-article-card" href="(https:\/\/answers\.kw\.com\/[^"]+)" target="_blank" rel="noreferrer">/g,
+    '<a class="transition-article-card" href="$1" target="_blank" rel="noreferrer" data-lone-wolf-modal-trigger aria-haspopup="dialog" aria-controls="loneWolfArticleTitle">'
+  );
 }
 
 export function LegacyPortalPage({ pageKey, source }) {

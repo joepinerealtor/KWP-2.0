@@ -4,6 +4,7 @@ import {
   PortalSidebar,
   QuickLinksStrip
 } from "@/components/PortalChrome";
+import { PortalOverlays } from "@/components/PortalOverlays";
 
 export function TopRail() {
   return <div className="top-rail" aria-hidden="true" />;
@@ -28,6 +29,7 @@ export function PortalShell({ mainHtml, overlaysHtml = "", page }) {
       {overlaysHtml ? (
         <div data-portal-overlays dangerouslySetInnerHTML={{ __html: overlaysHtml }} />
       ) : null}
+      <PortalOverlays page={page} />
     </>
   );
 }

@@ -73,6 +73,8 @@ function SiteHeader({ page }) {
         </div>
       </a>
 
+      {page.showHeaderJoeTracker ? <HeaderJoeTracker page={page} /> : null}
+
       <div className={page.timeCardClassName || "header-time-card"} aria-label="Current date and time">
         <strong data-header-clock>--:-- ET</strong>
         <span data-header-date>Loading today...</span>
@@ -83,13 +85,39 @@ function SiteHeader({ page }) {
   );
 }
 
+function HeaderJoeTracker({ page }) {
+  const joeSupport = page.leadershipSupport || {};
+
+  return (
+    <a
+      className="header-tech-help-tracker"
+      href={joeSupport.buttonHref || "https://calendly.com/joepinerealtor/tech-meeting-with-joe"}
+      target="_blank"
+      rel="noreferrer"
+      data-joe-availability-card
+      data-joe-availability-src={page.joeStatusSrc}
+      data-joe-primary-action
+      aria-label="Schedule tech help with Joe"
+    >
+      <span className="joe-availability-panel joe-availability-panel--header" data-status="unavailable" aria-live="polite">
+        <span className="joe-availability-light" data-joe-availability-light aria-hidden="true" />
+        <span className="joe-availability-copy">
+          <span className="mobile-tech-help-kicker">{joeSupport.eyebrow || "Market Center Tech Trainer"}</span>
+          <span className="joe-availability-label" data-joe-availability-label>Joe is unavailable</span>
+          <span className="joe-availability-summary" data-joe-availability-summary>No open tech-help slots are listed right now.</span>
+        </span>
+      </span>
+    </a>
+  );
+}
+
 function TransitionNoticeCard({ notice }) {
   if (!notice) {
     return null;
   }
 
   return (
-    <a className="docusign-countdown-card docusign-countdown-card--link" href={notice.href} aria-label={notice.ariaLabel || notice.title}>
+    <a className="docusign-countdown-card docusign-countdown-card--link" href={notice.href} aria-label={notice.ariaLabel || notice.title} data-docusign-countdown-card>
       <span className="docusign-countdown-card__badge">{notice.badge}</span>
       <strong>{notice.title}</strong>
       <p>{notice.summary}</p>
