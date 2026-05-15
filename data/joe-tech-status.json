@@ -1,16 +1,34 @@
 {
   "status": "unavailable",
-  "trackerEnabled": true,
   "timezone": "America/New_York",
   "eventDurationMinutes": 30,
-  "nextOpenSlotIso": "2026-05-01T18:00:00.000Z",
-  "nextOpenSlotWorkingWindowEndIso": "2026-05-01T20:00:00.000Z",
+  "nextOpenSlotIso": "2026-05-13T13:30:00.000Z",
+  "nextOpenSlotWorkingWindowEndIso": "",
   "availableNowEndIso": "",
   "busyNowStartIso": "",
   "busyNowEndIso": "",
-  "nextBusyStartIso": "",
-  "nextBusyEndIso": "",
-  "nextAppointmentAvailableIso": "2026-05-01T18:00:00.000Z",
+  "nextBusyStartIso": "2026-05-12T16:30:00.000Z",
+  "nextBusyEndIso": "2026-05-12T18:00:00.000Z",
+  "nextAppointmentAvailableIso": "2026-05-13T13:30:00.000Z",
+  "availabilitySummary": "Wednesday, May 13 has several openings, including 9:30 AM, 11:00 AM, 1:00 PM-3:00 PM, and 3:30 PM-5:15 PM. Reserve your slot now.",
+  "availabilitySummaryGeneratedAtIso": "2026-05-11T22:50:46.268Z",
+  "nextAvailableDaySlotIsos": [
+    "2026-05-13T13:30:00.000Z",
+    "2026-05-13T15:00:00.000Z",
+    "2026-05-13T17:00:00.000Z",
+    "2026-05-13T17:15:00.000Z",
+    "2026-05-13T17:30:00.000Z",
+    "2026-05-13T17:45:00.000Z",
+    "2026-05-13T18:00:00.000Z",
+    "2026-05-13T18:15:00.000Z",
+    "2026-05-13T18:30:00.000Z",
+    "2026-05-13T19:30:00.000Z",
+    "2026-05-13T19:45:00.000Z",
+    "2026-05-13T20:00:00.000Z",
+    "2026-05-13T20:15:00.000Z",
+    "2026-05-13T20:30:00.000Z",
+    "2026-05-13T20:45:00.000Z"
+  ],
   "workingHours": [
     {
       "day": "Wednesday",
@@ -32,5 +50,6 @@
   "availableNowSummary": "Schedule an appointment with Joe.",
   "busyNowLabel": "Joe is in another appointment",
   "unavailableLabel": "Joe is unavailable",
-  "noSlotsSummary": "No open tech-help slots are listed right now."
+  "noSlotsSummary": "No open tech-help slots are listed right now.",
+  "trackerEnabled": true
 }

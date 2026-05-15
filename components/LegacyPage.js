@@ -31,6 +31,8 @@ function resolveLegacySourcePath(source) {
       return path.join(process.cwd(), "brand-assets.html");
     case "tech/index.html":
       return path.join(process.cwd(), "tech", "index.html");
+    case "lonewolf/index.html":
+      return path.join(process.cwd(), "lonewolf", "index.html");
     default:
       throw new Error(`Unsupported legacy page source: ${source}`);
   }
@@ -92,6 +94,10 @@ function hydrateLegacyMainHtml(source, mainHtml) {
 
   if (source === "tech/index.html") {
     return appendCustomSections("tech", replaceLegacyTechConnect(mainHtml));
+  }
+
+  if (source === "lonewolf/index.html") {
+    return appendCustomSections("loneWolf", mainHtml);
   }
 
   return mainHtml;

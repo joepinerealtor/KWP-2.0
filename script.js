@@ -192,7 +192,8 @@ const RATE_STORAGE_KEY = "kw-leading-edge-portal.rates.v1";
 const RATE_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 const RI_MARKET_STORAGE_KEY = "kw-leading-edge-portal.ri-market.v1";
 const RI_MARKET_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000;
-const RI_MARKET_SOURCE_URL = "https://www.rirealtors.org/";
+const RI_MARKET_FEED_URL = "data/ri-market.json";
+const RI_MARKET_CACHE_BUST_WINDOW_MS = 15 * 60 * 1000;
 const JOE_AVAILABILITY_STORAGE_KEY = "kw-leading-edge-portal.joe-tech-status.v1";
 const JOE_AVAILABILITY_REFRESH_INTERVAL_MS = 60 * 1000;
 const JOE_AVAILABILITY_CACHE_BUST_WINDOW_MS = 60 * 1000;
@@ -2714,6 +2715,17 @@ function parseRiRealtorsMarketTrends(html) {
   };
 }
 
+function isValidRiMarketState(state) {
+  return Boolean(
+    state
+    && state.periodLabel
+    && state.medianSalesPrice
+    && state.homesSold
+    && state.pendingSales
+    && state.activeInventory
+  );
+}
+
 async function fetchTextViaProxy(sourceUrl) {
   const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(sourceUrl)}`;
   const response = await fetch(proxyUrl, { cache: "no-store" });
@@ -3037,11 +3049,20 @@ async function refreshRiMarket() {
   riMarketRefreshInFlight = true;
 
   try {
-    const html = await fetchTextViaProxy(RI_MARKET_SOURCE_URL);
-    const nextState = parseRiRealtorsMarketTrends(html);
+    const cacheBust = Math.floor(Date.now() / RI_MARKET_CACHE_BUST_WINDOW_MS);
+    const separator = RI_MARKET_FEED_URL.includes("?") ? "&" : "?";
+    const response = await fetch(`${RI_MARKET_FEED_URL}${separator}v=${cacheBust}`, {
+      cache: "no-store"
+    });
 
-    if (!nextState) {
-      throw new Error("Could not parse RI market trends");
+    if (!response.ok) {
+      throw new Error(`Request failed for ${RI_MARKET_FEED_URL}`);
+    }
+
+    const nextState = await response.json();
+
+    if (!isValidRiMarketState(nextState)) {
+      throw new Error("Could not parse RI market data feed");
     }
 
     writeRiMarket(nextState);

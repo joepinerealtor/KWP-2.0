@@ -5865,3 +5865,794 @@ body.has-handbook-modal .page-content {
     min-height: 420px;
   }
 }
+
+/* Migrated Lone Wolf transition page styles */
+.docusign-countdown-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  width: min(100%, 250px);
+  margin: 0 auto;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background:
+    linear-gradient(135deg, #b40101 0%, #7c0101 48%, #111111 100%);
+  color: #fff;
+  box-shadow: 0 18px 32px -26px rgba(17, 17, 17, 0.86);
+  text-align: center;
+}
+
+.docusign-countdown-card--link {
+  text-decoration: none;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.docusign-countdown-card--link:hover,
+.docusign-countdown-card--link:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 38px -24px rgba(17, 17, 17, 0.92);
+}
+
+.docusign-countdown-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.docusign-countdown-card__badge {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0.25rem 0.56rem;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: #ffe8a3;
+  color: #4a0505;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  animation: docusign-attention-pulse 1800ms ease-in-out infinite;
+}
+
+.docusign-countdown-card > strong {
+  position: relative;
+  z-index: 1;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.24rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.docusign-countdown-card__timer {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.docusign-countdown-card__timer span {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 8px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(17, 17, 17, 0.32);
+}
+
+.docusign-countdown-card__timer strong {
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.46rem;
+  line-height: 1;
+}
+
+.docusign-countdown-card__timer small {
+  color: rgba(255, 255, 255, 0.78);
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.docusign-countdown-card p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.docusign-countdown-card__cta {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+
+body.has-lone-wolf-modal,
+body.has-docusign-modal {
+  overflow: hidden;
+}
+
+body.has-calendar-modal .portal-content,
+body.has-handbook-modal .portal-content,
+body.has-lone-wolf-modal .portal-content,
+body.has-docusign-modal .portal-content {
+  overflow: hidden;
+}
+
+body.has-calendar-modal .page-content,
+body.has-handbook-modal .page-content,
+body.has-lone-wolf-modal .page-content,
+body.has-docusign-modal .page-content {
+  overflow: hidden;
+}
+
+.calendar-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 17, 17, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  transition: opacity 180ms ease;
+  z-index: 140;
+}
+
+.calendar-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lone-wolf-modal {
+  z-index: 170;
+}
+
+.calendar-modal__backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.calendar-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  max-height: calc(100vh - 48px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid rgba(221, 212, 200, 0.92);
+  background:
+    linear-gradient(180deg, #fff, #faf6f1),
+    radial-gradient(circle at top right, rgba(180, 1, 1, 0.08), transparent 28%);
+  box-shadow: 0 28px 54px -34px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.calendar-modal__head,
+.calendar-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.calendar-modal__head {
+  border-bottom: 1px solid rgba(221, 212, 200, 0.92);
+  background: #fff;
+}
+
+.calendar-modal__footer {
+  border-top: 1px solid rgba(221, 212, 200, 0.92);
+  background: #fff;
+}
+
+.calendar-modal__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-modal__copy .eyebrow,
+.calendar-modal__summary,
+.calendar-modal__note {
+  margin: 0;
+}
+
+.docusign-reminder-modal[hidden] {
+  display: none;
+}
+
+.docusign-reminder-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 17, 17, 0.76);
+  opacity: 0;
+  pointer-events: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  transition: opacity 180ms ease;
+}
+
+.docusign-reminder-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.docusign-reminder-modal__backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.docusign-reminder-modal__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 18px;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid rgba(221, 212, 200, 0.92);
+  background:
+    linear-gradient(180deg, #fff, #faf6f1);
+  box-shadow: 0 28px 54px -34px rgba(0, 0, 0, 0.5);
+}
+
+.docusign-reminder-modal__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8px;
+  background: var(--kw-red);
+}
+
+.docusign-reminder-modal__signal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-top: 6px;
+  border: 2px solid rgba(180, 1, 1, 0.18);
+  background: var(--kw-red);
+  color: #fff;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.docusign-reminder-modal__copy,
+.docusign-reminder-modal__actions {
+  min-width: 0;
+}
+
+.docusign-reminder-modal__copy {
+  display: grid;
+  gap: 10px;
+}
+
+.docusign-reminder-modal__copy .eyebrow,
+.docusign-reminder-modal__copy h2,
+.docusign-reminder-modal__copy p {
+  margin: 0;
+}
+
+.docusign-reminder-modal__copy h2 {
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 2.5rem;
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+.docusign-reminder-modal__copy p {
+  color: var(--kw-gray);
+  line-height: 1.6;
+}
+
+.docusign-reminder-modal__articles,
+.docusign-reminder-modal__actions {
+  grid-column: 2;
+}
+
+.docusign-reminder-modal__articles {
+  display: grid;
+  gap: 8px;
+}
+
+.docusign-reminder-modal__article-link {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--kw-border);
+  background: var(--kw-paper-soft);
+  color: var(--kw-ink);
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.docusign-reminder-modal__article-link:hover,
+.docusign-reminder-modal__article-link:focus-visible {
+  border-color: rgba(180, 1, 1, 0.32);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.docusign-reminder-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.docusign-reminder-modal__register-button {
+  flex: 1 1 100%;
+  min-height: 46px;
+  box-shadow: 0 14px 28px rgba(180, 1, 1, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docusign-countdown-card__badge {
+
+.transition-page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.transition-page-hero__copy,
+.transition-page-hero__note,
+.transition-training-copy {
+  min-width: 0;
+}
+
+.transition-page-hero__copy {
+  display: grid;
+  gap: 16px;
+}
+
+.transition-page-hero__copy h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: clamp(2.7rem, 6vw, 6.4rem);
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+.transition-page-hero__note {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid rgba(180, 1, 1, 0.2);
+  background:
+    radial-gradient(circle at top right, rgba(180, 1, 1, 0.1), transparent 34%),
+    linear-gradient(180deg, #fffefe, #faf6f1);
+}
+
+.transition-page-hero__note h2,
+.transition-training-copy h3 {
+  margin: 0;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.transition-page-hero__note p,
+.transition-training-copy p {
+  margin: 0;
+  color: var(--kw-gray);
+  line-height: 1.6;
+}
+
+.transition-priority-panel {
+  display: grid;
+  gap: 18px;
+  border-color: rgba(180, 1, 1, 0.22);
+  background:
+    linear-gradient(135deg, rgba(180, 1, 1, 0.07), rgba(180, 1, 1, 0) 34%),
+    linear-gradient(180deg, #fffefe, #faf6f1);
+}
+
+.transition-priority-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.transition-priority-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--kw-border);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.transition-priority-card h3 {
+  margin: 0;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.34rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.transition-priority-card--timing {
+  grid-column: 1 / -1;
+}
+
+.transition-timing-intro {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--kw-gray);
+  line-height: 1.6;
+}
+
+.transition-timing-intro strong {
+  color: var(--kw-ink);
+}
+
+.transition-timing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.transition-timing-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  background: #b40101;
+  color: #fff;
+}
+
+.transition-timing-card h4 {
+  margin: 0;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.transition-timing-card p,
+.transition-timing-card strong {
+  margin: 0;
+  color: #fff;
+  line-height: 1.45;
+}
+
+.transition-timing-card strong {
+  font-weight: 900;
+}
+
+.transition-checklist--compact {
+  margin-top: 0;
+  gap: 8px;
+}
+
+.transition-checklist--compact li {
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.transition-checklist--compact li strong {
+  font-size: 0.92rem;
+}
+
+.transition-terminology-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(27, 31, 38, 0.72);
+  background: #fff;
+}
+
+.transition-terminology-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  color: var(--kw-ink);
+}
+
+.transition-terminology-table th,
+.transition-terminology-table td {
+  padding: 10px 12px;
+  border: 1px solid rgba(27, 31, 38, 0.72);
+  text-align: left;
+  vertical-align: top;
+}
+
+.transition-terminology-table th {
+  background: #fbf8f4;
+  font-weight: 900;
+}
+
+.transition-training-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.transition-training-flyer {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--kw-border);
+  background: #fff;
+  box-shadow: var(--kw-shadow);
+}
+
+.transition-training-flyer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.transition-training-copy {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--kw-border);
+  background:
+    radial-gradient(circle at top right, rgba(180, 1, 1, 0.08), transparent 34%),
+    linear-gradient(180deg, #fffefe, #faf6f1);
+}
+
+.transition-article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.transition-article-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--kw-border);
+  background: linear-gradient(180deg, #ffffff, #faf6f1);
+  color: var(--kw-ink);
+  text-decoration: none;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.transition-article-card:hover,
+.transition-article-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(180, 1, 1, 0.26);
+  box-shadow: var(--kw-shadow);
+}
+
+.transition-article-card strong {
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.12rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.transition-article-card p {
+  margin: 0;
+  color: var(--kw-gray);
+  line-height: 1.55;
+}
+
+.transition-checklist,
+.transition-mini-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.transition-checklist {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.transition-checklist li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--kw-border);
+  background: var(--kw-paper-soft);
+}
+
+.transition-checklist li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: var(--kw-red);
+  box-shadow: 0 0 0 6px rgba(180, 1, 1, 0.08);
+}
+
+.transition-checklist li strong {
+  display: block;
+  margin-bottom: 4px;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 0.98rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.transition-checklist li span {
+  color: var(--kw-gray);
+  line-height: 1.55;
+}
+
+.transition-faq-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.transition-faq-group {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.transition-faq-group h3 {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(221, 212, 200, 0.92);
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-size: 1.26rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.transition-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.transition-faq-item {
+  border: 1px solid var(--kw-border);
+  background: linear-gradient(180deg, #ffffff, #fbf8f4);
+}
+
+.transition-faq-item[open] {
+  border-color: rgba(180, 1, 1, 0.24);
+  box-shadow: 0 14px 30px rgba(27, 31, 38, 0.07);
+}
+
+.transition-faq-item summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 14px 16px;
+  color: var(--kw-ink);
+  cursor: pointer;
+  font-weight: 800;
+  line-height: 1.25;
+  list-style: none;
+}
+
+.transition-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.transition-faq-item summary::after {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(180, 1, 1, 0.22);
+  border-radius: 999px;
+  color: var(--kw-red);
+  background: rgba(180, 1, 1, 0.06);
+  font-size: 1.12rem;
+  line-height: 1;
+}
+
+.transition-faq-item[open] summary::after {
+  content: "-";
+}
+
+.transition-faq-item summary:focus-visible {
+  outline: 3px solid rgba(180, 1, 1, 0.28);
+  outline-offset: 2px;
+}
+
+.transition-faq-answer {
+  padding: 0 16px 16px;
+}
+
+.transition-faq-answer p,
+.transition-faq-answer li,
+.transition-glossary-intro,
+.transition-glossary-table td {
+  color: var(--kw-gray);
+  line-height: 1.65;
+}
+
+.transition-faq-answer p {
+  margin: 0;
+}
+
+.transition-faq-answer ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.transition-glossary-intro {
+  margin: 0;
+}
+
+.transition-glossary-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--kw-border);
+  background: #fff;
+}
+
+.transition-glossary-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.transition-glossary-table th,
+.transition-glossary-table td {
+  padding: 12px 14px;
+  border: 1px solid var(--kw-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.transition-glossary-table th {
+  color: var(--kw-ink);
+  background: #fbf8f4;
+  font-weight: 900;
+}
+
+.transition-glossary-table td {
+  margin: 0;
+}
+
+.transition-glossary-table td:first-child,
+.transition-glossary-table td:nth-child(2) {
+  color: var(--kw-ink);
+  font-weight: 800;
+}
+
+/* End migrated Lone Wolf transition page styles */
