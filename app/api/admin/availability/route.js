@@ -1,7 +1,6 @@
-import crypto from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { NextResponse } from "next/server";
+import { noStoreJson, requireAdminAccess } from "@/lib/admin-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +10,9 @@ const PUBLIC_AVAILABILITY_PATH = path.join(process.cwd(), "public", "data", "joe
 const ALLOWED_STATUSES = new Set(["available", "available_now", "unavailable"]);
 
 export async function GET(request) {
-  const access = requireAdminAccess(request);
+  const access = requireAdminAccess(request, {
+    disabledMessage: "Availability admin API is disabled."
+  });
 
   if (access) {
     return access;
@@ -29,7 +30,9 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  const access = requireAdminAccess(request);
+  const access = requireAdminAccess(request, {
+    disabledMessage: "Availability admin API is disabled."
+  });
 
   if (access) {
     return access;
@@ -81,47 +84,4 @@ function normalizeAvailabilityPayload(value) {
     trackerEnabled: trackerEnabled !== false,
     ...rest
   };
-}
-
-function requireAdminAccess(request) {
-  if (process.env.KWP_ADMIN_ENABLED !== "true") {
-    return noStoreJson({ error: "Availability admin API is disabled." }, { status: 404 });
-  }
-
-  if (!isAuthorized(request)) {
-    return noStoreJson({ error: "Valid admin passcode required." }, { status: 401 });
-  }
-
-  return null;
-}
-
-function isAuthorized(request) {
-  const configuredPasscode = process.env.KWP_ADMIN_PASSCODE || "";
-  const headerPasscode = request.headers.get("x-kwp-admin-passcode") || "";
-  const authorization = request.headers.get("authorization") || "";
-  const bearerPasscode = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-
-  return passcodeMatches(headerPasscode, configuredPasscode) || passcodeMatches(bearerPasscode, configuredPasscode);
-}
-
-function passcodeMatches(candidatePasscode, configuredPasscode) {
-  if (!candidatePasscode || !configuredPasscode) {
-    return false;
-  }
-
-  const candidateBuffer = Buffer.from(candidatePasscode);
-  const configuredBuffer = Buffer.from(configuredPasscode);
-
-  if (candidateBuffer.length !== configuredBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(candidateBuffer, configuredBuffer);
-}
-
-function noStoreJson(body, init = {}) {
-  const response = NextResponse.json(body, init);
-  response.headers.set("Cache-Control", "no-store");
-
-  return response;
 }

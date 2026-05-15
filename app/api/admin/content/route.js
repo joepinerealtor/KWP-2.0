@@ -1,6 +1,5 @@
-import crypto from "node:crypto";
 import path from "node:path";
-import { NextResponse } from "next/server";
+import { noStoreJson, requireAdminAccess } from "@/lib/admin-access";
 import portalContent from "../../../../lib/portal-content";
 
 const {
@@ -18,12 +17,10 @@ const {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const DISABLED_RESPONSE = {
-  error: "Content admin API is disabled."
-};
-
 export function GET(request) {
-  const access = requireAdminAccess(request);
+  const access = requireAdminAccess(request, {
+    disabledMessage: "Content admin API is disabled."
+  });
 
   if (access) {
     return access;
@@ -39,7 +36,9 @@ export function GET(request) {
 }
 
 export async function PUT(request) {
-  const access = requireAdminAccess(request);
+  const access = requireAdminAccess(request, {
+    disabledMessage: "Content admin API is disabled."
+  });
 
   if (access) {
     return access;
@@ -86,47 +85,6 @@ export async function PUT(request) {
   }
 }
 
-function requireAdminAccess(request) {
-  if (process.env.KWP_ADMIN_ENABLED !== "true") {
-    return noStoreJson(DISABLED_RESPONSE, { status: 404 });
-  }
-
-  if (!isAuthorized(request)) {
-    return noStoreJson({ error: "Valid admin passcode required." }, { status: 401 });
-  }
-
-  return null;
-}
-
-function isAuthorized(request) {
-  const configuredPasscode = process.env.KWP_ADMIN_PASSCODE || "";
-
-  if (!configuredPasscode) {
-    return false;
-  }
-
-  const headerPasscode = request.headers.get("x-kwp-admin-passcode") || "";
-  const authorization = request.headers.get("authorization") || "";
-  const bearerPasscode = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-
-  return passcodeMatches(headerPasscode, configuredPasscode) || passcodeMatches(bearerPasscode, configuredPasscode);
-}
-
-function passcodeMatches(candidatePasscode, configuredPasscode) {
-  if (!candidatePasscode || !configuredPasscode) {
-    return false;
-  }
-
-  const candidateBuffer = Buffer.from(candidatePasscode);
-  const configuredBuffer = Buffer.from(configuredPasscode);
-
-  if (candidateBuffer.length !== configuredBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(candidateBuffer, configuredBuffer);
-}
-
 function extractContentPayload(body) {
   if (body && typeof body === "object" && !Array.isArray(body) && body.content) {
     return body.content;
@@ -140,13 +98,6 @@ function validationErrorResponse(error) {
     error: "Portal content validation failed.",
     validationErrors: error.validationErrors || [error.message]
   }, { status: 422 });
-}
-
-function noStoreJson(body, init = {}) {
-  const response = NextResponse.json(body, init);
-  response.headers.set("Cache-Control", "no-store");
-
-  return response;
 }
 
 function toRepoPath(filePath) {
