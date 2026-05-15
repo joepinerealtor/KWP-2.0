@@ -77,7 +77,24 @@ function SiteHeader({ page }) {
         <strong data-header-clock>--:-- ET</strong>
         <span data-header-date>Loading today...</span>
       </div>
+
+      <TransitionNoticeCard notice={page.transitionNotice} />
     </div>
+  );
+}
+
+function TransitionNoticeCard({ notice }) {
+  if (!notice) {
+    return null;
+  }
+
+  return (
+    <a className="docusign-countdown-card docusign-countdown-card--link" href={notice.href} aria-label={notice.ariaLabel || notice.title}>
+      <span className="docusign-countdown-card__badge">{notice.badge}</span>
+      <strong>{notice.title}</strong>
+      <p>{notice.summary}</p>
+      <span className="docusign-countdown-card__cta">{notice.cta}</span>
+    </a>
   );
 }
 
