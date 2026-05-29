@@ -82,6 +82,15 @@
       "href": "https://agent.kwleadingedge.com/courses/lead-conversion/",
       "external": true,
       "active": true
+    },
+    {
+      "id": "new-course-6",
+      "tag": "test",
+      "title": "testing",
+      "summary": "test 1",
+      "href": "www.JoePine.com",
+      "external": true,
+      "active": true
     }
   ],
   "brandAssets": {
@@ -92,8 +101,16 @@
         "title": "Canva for KW",
         "summary": "Use Keller Williams Canva templates and tools for listing graphics, social posts, presentations, and other day-to-day marketing pieces.",
         "links": [
-          { "label": "Open Canva", "href": "https://canva.kw.com/", "external": true },
-          { "label": "KW Canva Setup", "href": "https://answers.kw.com/hc/en-us/articles/44040408220819-Get-Started-with-Your-KW-Canva-Account", "external": true }
+          {
+            "label": "Open Canva",
+            "href": "https://canva.kw.com/",
+            "external": true
+          },
+          {
+            "label": "KW Canva Setup",
+            "href": "https://answers.kw.com/hc/en-us/articles/44040408220819-Get-Started-with-Your-KW-Canva-Account",
+            "external": true
+          }
         ],
         "active": true
       },
@@ -103,8 +120,16 @@
         "title": "Brand guardrails",
         "summary": "Reference the official Keller Williams standards before building new marketing pieces or handing creative direction to a vendor.",
         "links": [
-          { "label": "Open Standards", "href": "https://images.kw.com/shared/mykw/logos/KellerWilliams_QuickReferenceGuide.pdf", "external": true },
-          { "label": "Full Logo Pack", "href": "downloads/leading-edge-logos.zip", "download": true }
+          {
+            "label": "Open Standards",
+            "href": "https://images.kw.com/shared/mykw/logos/KellerWilliams_QuickReferenceGuide.pdf",
+            "external": true
+          },
+          {
+            "label": "Full Logo Pack",
+            "href": "downloads/leading-edge-logos.zip",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -114,8 +139,15 @@
         "title": "Business cards and print files",
         "summary": "Order cards, then use the print-ready source files when you need artwork that goes beyond basic digital downloads.",
         "links": [
-          { "label": "Order Business Cards", "href": "https://agentstore.com/product-category/kw/keller-williams-business-cards/", "external": true },
-          { "label": "View Source Files", "href": "#source-files" }
+          {
+            "label": "Order Business Cards",
+            "href": "https://agentstore.com/product-category/kw/keller-williams-business-cards/",
+            "external": true
+          },
+          {
+            "label": "View Source Files",
+            "href": "#source-files"
+          }
         ],
         "active": true
       },
@@ -125,8 +157,14 @@
         "title": "Digital downloads and vectors",
         "summary": "Jump straight to previewable digital logos or vector source files when the only thing you need is the mark itself.",
         "links": [
-          { "label": "Digital Logos", "href": "#digital-logos" },
-          { "label": "Source Files", "href": "#source-files" }
+          {
+            "label": "Digital Logos",
+            "href": "#digital-logos"
+          },
+          {
+            "label": "Source Files",
+            "href": "#source-files"
+          }
         ],
         "active": true
       }
@@ -138,10 +176,21 @@
         "title": "Standard RGB logo",
         "summary": "Best for web, slides, email signatures, and general digital use on light backgrounds.",
         "previewClass": "asset-preview--light",
-        "image": { "src": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.png", "alt": "KW Leading Edge RGB logo" },
+        "image": {
+          "src": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.png",
+          "alt": "KW Leading Edge RGB logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.png", "download": true },
-          { "label": "Download JPG", "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.jpg", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.png",
+            "download": true
+          },
+          {
+            "label": "Download JPG",
+            "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.jpg",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -151,9 +200,16 @@
         "title": "Reverse RGB logo",
         "summary": "Use this version when the logo needs to sit on a darker image or background.",
         "previewClass": "asset-preview--dark",
-        "image": { "src": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.png", "alt": "KW Leading Edge RGB reverse logo" },
+        "image": {
+          "src": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.png",
+          "alt": "KW Leading Edge RGB reverse logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.png", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.png",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -163,10 +219,21 @@
         "title": "Standard CMYK logo",
         "summary": "Useful for print workflows when you want a previewable file before moving to source artwork.",
         "previewClass": "asset-preview--light",
-        "image": { "src": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.png", "alt": "KW Leading Edge CMYK logo" },
+        "image": {
+          "src": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.png",
+          "alt": "KW Leading Edge CMYK logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.png", "download": true },
-          { "label": "Download JPG", "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.jpg", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.png",
+            "download": true
+          },
+          {
+            "label": "Download JPG",
+            "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.jpg",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -176,9 +243,16 @@
         "title": "Reverse CMYK logo",
         "summary": "For darker printed or presentation backgrounds when the standard CMYK logo will not read well.",
         "previewClass": "asset-preview--dark",
-        "image": { "src": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.png", "alt": "KW Leading Edge CMYK reverse logo" },
+        "image": {
+          "src": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.png",
+          "alt": "KW Leading Edge CMYK reverse logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.png", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.png",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -188,10 +262,21 @@
         "title": "Standard grayscale logo",
         "summary": "Use when color is not available or when a clean neutral treatment is the better fit.",
         "previewClass": "asset-preview--light",
-        "image": { "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.png", "alt": "KW Leading Edge grayscale logo" },
+        "image": {
+          "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.png",
+          "alt": "KW Leading Edge grayscale logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.png", "download": true },
-          { "label": "Download JPG", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.jpg", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.png",
+            "download": true
+          },
+          {
+            "label": "Download JPG",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.jpg",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -201,9 +286,16 @@
         "title": "Reverse grayscale logo",
         "summary": "For dark backgrounds when you still want a grayscale treatment instead of full color.",
         "previewClass": "asset-preview--dark",
-        "image": { "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.png", "alt": "KW Leading Edge grayscale reverse logo" },
+        "image": {
+          "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.png",
+          "alt": "KW Leading Edge grayscale reverse logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.png", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.png",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -213,9 +305,16 @@
         "title": "White reverse logo",
         "summary": "For the darkest backgrounds when the logo needs maximum contrast and the cleanest read.",
         "previewClass": "asset-preview--deep",
-        "image": { "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.png", "alt": "KW Leading Edge white reverse logo" },
+        "image": {
+          "src": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.png",
+          "alt": "KW Leading Edge white reverse logo"
+        },
         "links": [
-          { "label": "Download PNG", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.png", "download": true }
+          {
+            "label": "Download PNG",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.png",
+            "download": true
+          }
         ],
         "active": true
       }
@@ -226,8 +325,16 @@
         "kicker": "RGB EPS",
         "title": "Screen-focused vector files",
         "links": [
-          { "label": "Standard EPS", "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.eps", "download": true },
-          { "label": "Reverse EPS", "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.eps", "download": true }
+          {
+            "label": "Standard EPS",
+            "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB.eps",
+            "download": true
+          },
+          {
+            "label": "Reverse EPS",
+            "href": "brand-assets/RGB/KellerWilliams_Realty_LeadingEdge_Logo_RGB-rev.eps",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -236,8 +343,16 @@
         "kicker": "CMYK EPS",
         "title": "Print workflow source files",
         "links": [
-          { "label": "Standard EPS", "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.eps", "download": true },
-          { "label": "Reverse EPS", "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.eps", "download": true }
+          {
+            "label": "Standard EPS",
+            "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK.eps",
+            "download": true
+          },
+          {
+            "label": "Reverse EPS",
+            "href": "brand-assets/CMYK/KellerWilliams_Realty_LeadingEdge_Logo_CMYK-rev.eps",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -246,9 +361,21 @@
         "kicker": "Grayscale EPS",
         "title": "Neutral and reverse source files",
         "links": [
-          { "label": "Standard EPS", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.eps", "download": true },
-          { "label": "Reverse EPS", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.eps", "download": true },
-          { "label": "White Reverse EPS", "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.eps", "download": true }
+          {
+            "label": "Standard EPS",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY.eps",
+            "download": true
+          },
+          {
+            "label": "Reverse EPS",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev.eps",
+            "download": true
+          },
+          {
+            "label": "White Reverse EPS",
+            "href": "brand-assets/Black_White/KellerWilliams_Realty_LeadingEdge_Logo_GRY-rev-W.eps",
+            "download": true
+          }
         ],
         "active": true
       },
@@ -258,8 +385,16 @@
         "title": "Spot-color source files",
         "summary": "PMS200 is included as vector artwork only in the original logo pack.",
         "links": [
-          { "label": "Standard EPS", "href": "brand-assets/PMS200/KellerWilliams_Realty_LeadingEdge_Logo_PMS200.eps", "download": true },
-          { "label": "Reverse EPS", "href": "brand-assets/PMS200/KellerWilliams_Realty_LeadingEdge_Logo_PMS200-rev.eps", "download": true }
+          {
+            "label": "Standard EPS",
+            "href": "brand-assets/PMS200/KellerWilliams_Realty_LeadingEdge_Logo_PMS200.eps",
+            "download": true
+          },
+          {
+            "label": "Reverse EPS",
+            "href": "brand-assets/PMS200/KellerWilliams_Realty_LeadingEdge_Logo_PMS200-rev.eps",
+            "download": true
+          }
         ],
         "active": true
       }
@@ -276,7 +411,9 @@
           "href": "downloads/kwle-agent-handbook-march-2026.pdf",
           "handbookModal": true
         },
-        { "label": "Preferred Vendors" },
+        {
+          "label": "Preferred Vendors"
+        },
         {
           "label": "Open Office Info",
           "href": "https://agent.kwleadingedge.com/important_info/",
@@ -294,8 +431,14 @@
       "title": "When the office is open",
       "hoursLabel": "Office Hours",
       "hours": [
-        { "days": "Monday - Thursday", "time": "9:00 am - 5:00 pm" },
-        { "days": "Friday", "time": "9:00 am - 4:00 pm" }
+        {
+          "days": "Monday - Thursday",
+          "time": "9:00 am - 5:00 pm"
+        },
+        {
+          "days": "Friday",
+          "time": "9:00 am - 4:00 pm"
+        }
       ],
       "holidaysLabel": "2026 Office Holidays",
       "holidays": [
@@ -311,20 +454,34 @@
       "title": "Grab-and-go marketing assets",
       "summary": "Canva, logos, brand standards, internal references, and vendor access should all be easy to open from one workspace.",
       "chips": [
-        { "label": "Marketing + Brand Assets", "href": "brand-assets.html" },
-        { "label": "Full Logo Pack", "href": "downloads/leading-edge-logos.zip", "download": true },
+        {
+          "label": "Marketing + Brand Assets",
+          "href": "brand-assets.html"
+        },
+        {
+          "label": "Full Logo Pack",
+          "href": "downloads/leading-edge-logos.zip",
+          "download": true
+        },
         {
           "label": "Brand Standards",
           "href": "https://images.kw.com/shared/mykw/logos/KellerWilliams_QuickReferenceGuide.pdf",
           "external": true
         },
-        { "label": "Canva for KW", "href": "https://canva.kw.com/", "external": true },
+        {
+          "label": "Canva for KW",
+          "href": "https://canva.kw.com/",
+          "external": true
+        },
         {
           "label": "Order Business Cards",
           "href": "https://agentstore.com/product-category/kw/keller-williams-business-cards/",
           "external": true
         },
-        { "label": "Vendor Row", "href": "#vendor-row" }
+        {
+          "label": "Vendor Row",
+          "href": "#vendor-row"
+        }
       ]
     },
     "rooms": {
@@ -367,7 +524,7 @@
       "email": "louisbarrows@kw.com",
       "phone": "401-640-3520",
       "notes": "",
-      "featured": false,
+      "featured": true,
       "active": true
     },
     {
@@ -379,7 +536,7 @@
       "email": "mbrown715@kw.com",
       "phone": "401-499-2978",
       "notes": "",
-      "featured": true,
+      "featured": false,
       "active": true
     },
     {
@@ -391,7 +548,7 @@
       "email": "klrw715@kw.com",
       "phone": "401-333-4900",
       "notes": "",
-      "featured": false,
+      "featured": true,
       "active": true
     },
     {
